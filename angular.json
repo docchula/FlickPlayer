@@ -35,7 +35,13 @@
                                 "input": "src/global.scss"
                             }
                         ],
-                        "scripts": []
+                        "scripts": [],
+                        "sourceMap": {
+                            "scripts": true,
+                            "styles": false,
+                            "hidden": true,
+                            "vendor": true
+                        }
                     },
                     "configurations": {
                         "production": {

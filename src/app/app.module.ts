@@ -1,6 +1,7 @@
-import { NgModule } from '@angular/core';
+import {APP_INITIALIZER, ErrorHandler, NgModule} from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { RouteReuseStrategy } from '@angular/router';
+import {Router, RouteReuseStrategy} from '@angular/router';
+import * as Sentry from "@sentry/angular";
 
 import { IonicRouteStrategy, provideIonicAngular, IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
 
@@ -21,12 +22,16 @@ import { getRemoteConfig, provideRemoteConfig } from '@angular/fire/remote-confi
 import { getFirestore, provideFirestore } from '@angular/fire/firestore';
 
 @NgModule({ declarations: [AppComponent],
-    bootstrap: [AppComponent], imports: [BrowserModule,
+    bootstrap: [AppComponent],
+    imports: [
+        BrowserModule,
         AppRoutingModule,
         WelcomePageModule,
         ServiceWorkerModule.register('ngsw-worker.js', { enabled: environment.production }),
         IonApp,
-        IonRouterOutlet], providers: [
+        IonRouterOutlet
+    ],
+    providers: [
         { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
         UserTrackingService,
         { provide: INSTRUMENTATION_ENABLED, useValue: environment.production },
@@ -42,6 +47,23 @@ import { getFirestore, provideFirestore } from '@angular/fire/firestore';
         provideHttpClient(withInterceptorsFromDi()),
         ScreenTrackingService,
         UserTrackingService_alias,
-    ] })
+        {
+            provide: ErrorHandler,
+            useValue: Sentry.createErrorHandler({
+                showDialog: false,
+            }),
+        }, {
+            provide: Sentry.TraceService,
+            deps: [Router],
+        },
+        {
+            provide: APP_INITIALIZER,
+            useFactory: () => () => {
+            },
+            deps: [Sentry.TraceService],
+            multi: true,
+        },
+    ],
+})
 export class AppModule {
 }

@@ -36,3 +36,6 @@ npm-debug.log*
 .firebase
 *-debug.log
 .runtimeconfig.json
+
+# Sentry Config File
+.sentryclirc
