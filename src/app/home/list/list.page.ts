@@ -11,7 +11,6 @@ import { NgStyle, AsyncPipe } from '@angular/common';
     selector: 'app-list',
     templateUrl: './list.page.html',
     styleUrls: ['./list.page.scss'],
-    standalone: true,
     imports: [IonHeader, IonToolbar, IonButtons, RouterLink, IonBackButton, IonTitle, NgStyle, IonContent, IonList, IonItem, IonLabel, AsyncPipe]
 })
 export class ListPage implements OnInit {

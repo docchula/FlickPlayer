@@ -13,7 +13,6 @@ import { NgStyle, AsyncPipe } from '@angular/common';
     selector: 'app-home',
     templateUrl: 'home.page.html',
     styleUrls: ['home.page.scss'],
-    standalone: true,
     imports: [IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon, IonContent, IonGrid, IonRow, IonCol, IonCard, RouterLink, NgStyle, IonCardHeader, IonCardTitle, AsyncPipe]
 })
 export class HomePage implements OnInit {
