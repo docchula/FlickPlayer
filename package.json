@@ -6,7 +6,8 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build && pnpm sentry:sourcemaps",
+    "build": "ng build",
+    "build-and-deploy": "ng build && pnpm sentry:sourcemaps && firebase deploy --only hosting",
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e",
