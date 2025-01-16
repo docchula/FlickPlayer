@@ -96,10 +96,13 @@ export class ManService {
         return timer(1, 60000).pipe(
             switchMap(() => this.get<JSend<{
                 records: PlayHistory
-            }>>('v1/play_records', {params}).pipe(map(response => response?.data.records))),
+            }>>('v1/play_records', {params}).pipe(map(response => response?.data?.records))),
             // Replace value with update from play tracker if available
             combineLatestWith(this.playTracker.retrieve().pipe(startWith(null))),
             map(([records, update]) => {
+                if (!records) {
+                    records = {};
+                }
                 if (update) {
                     if (!records[update.video_id] ||
                         (records[update.video_id].updated_at < update.updated_at)) {
