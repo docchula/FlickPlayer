@@ -1,23 +1,29 @@
 <ion-header>
-    <ion-toolbar>
-        <ion-buttons slot="start" routerLink="/home">
-            <ion-back-button defaultHref="/home"></ion-back-button>
-        </ion-buttons>
-        <ion-title>
-            <span [ngStyle]="{'background-color': colorByFolderName(year)}">{{ year || 'Loading'}}</span>
-        </ion-title>
-    </ion-toolbar>
+  <ion-toolbar>
+    <ion-buttons slot="start" routerLink="/home">
+      <ion-back-button defaultHref="/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>
+      <span [ngStyle]="{'background-color': colorByFolderName(year)}">{{ year || 'Loading'}}</span>
+    </ion-title>
+  </ion-toolbar>
 </ion-header>
 
 <ion-content>
-    <ion-list *ngIf="list$ | async as list">
-        <ion-item button *ngFor="let course of list" [routerLink]="course.name">
-            <ion-label>
-                <span class="e-learning-tag" *ngIf="course.is_remote">
-                    MDCU <small>E-Learning</small>
-                </span>
-                {{ course.name }}
-            </ion-label>
+  @if (list$ | async; as list) {
+    <ion-list>
+      @for (course of list; track course) {
+        <ion-item button [routerLink]="course.name">
+          <ion-label>
+            @if (course.is_remote) {
+              <span class="e-learning-tag">
+                MDCU <small>E-Learning</small>
+              </span>
+            }
+            {{ course.name }}
+          </ion-label>
         </ion-item>
+      }
     </ion-list>
+  }
 </ion-content>

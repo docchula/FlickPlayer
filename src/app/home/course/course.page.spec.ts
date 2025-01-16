@@ -14,15 +14,14 @@ describe('CoursePage', () => {
 
     beforeEach(waitForAsync(() => {
         TestBed.configureTestingModule({
-            declarations: [CoursePage],
-            imports: [IonicModule.forRoot(), RouterTestingModule],
-            providers: [
-                { provide: ActivatedRoute, useValue: ActivatedRouteStub },
-                { provide: AngularFireAnalytics, useValue: FireAnalyticsStub },
-                { provide: AngularFireAuth, useValue: FireAuthStub },
-                { provide: ManService, useValue: ManServiceStub },
-            ]
-        }).compileComponents();
+    imports: [IonicModule.forRoot(), RouterTestingModule, CoursePage],
+    providers: [
+        { provide: ActivatedRoute, useValue: ActivatedRouteStub },
+        { provide: AngularFireAnalytics, useValue: FireAnalyticsStub },
+        { provide: AngularFireAuth, useValue: FireAuthStub },
+        { provide: ManService, useValue: ManServiceStub },
+    ]
+}).compileComponents();
 
         fixture = TestBed.createComponent(CoursePage);
         component = fixture.componentInstance;

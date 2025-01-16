@@ -13,14 +13,13 @@ describe('WelcomePage', () => {
 
     beforeEach(waitForAsync(() => {
         TestBed.configureTestingModule({
-            declarations: [WelcomePage],
-            imports: [RouterTestingModule],
-            providers: [
-                {provide: AngularFireAuth, useValue: FireAuthStub},
-                {provide: ManService, useValue: ManServiceStub}
-            ],
-            schemas: [CUSTOM_ELEMENTS_SCHEMA]
-        }).compileComponents();
+    imports: [RouterTestingModule, WelcomePage],
+    providers: [
+        { provide: AngularFireAuth, useValue: FireAuthStub },
+        { provide: ManService, useValue: ManServiceStub }
+    ],
+    schemas: [CUSTOM_ELEMENTS_SCHEMA]
+}).compileComponents();
     }));
 
     beforeEach(() => {

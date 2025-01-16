@@ -20,15 +20,15 @@ describe('AppComponent', () => {
         platformSpy = jasmine.createSpyObj('Platform', { ready: platformReadySpy });
 
         TestBed.configureTestingModule({
-            declarations: [AppComponent],
-            schemas: [CUSTOM_ELEMENTS_SCHEMA],
-            providers: [
-                { provide: StatusBar, useValue: statusBarSpy },
-                { provide: SplashScreen, useValue: splashScreenSpy },
-                { provide: Platform, useValue: platformSpy },
-                { provide: AngularFireRemoteConfig, useValue: FireRemoteConfigStub }
-            ],
-        }).compileComponents();
+    declarations: [AppComponent],
+    schemas: [CUSTOM_ELEMENTS_SCHEMA],
+    providers: [
+        { provide: StatusBar, useValue: statusBarSpy },
+        { provide: SplashScreen, useValue: splashScreenSpy },
+        { provide: Platform, useValue: platformSpy },
+        { provide: AngularFireRemoteConfig, useValue: FireRemoteConfigStub }
+    ],
+}).compileComponents();
     }));
 
     it('should create the app', () => {

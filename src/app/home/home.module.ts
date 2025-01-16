@@ -54,8 +54,8 @@ import { IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon, IonCon
         IonContent,
         IonList,
         IonItem,
-        IonLabel
-    ],
-    declarations: [HomePage, ListPage, CoursePage]
+        IonLabel,
+        HomePage, ListPage, CoursePage
+    ]
 })
 export class HomePageModule { }

@@ -1,37 +1,42 @@
 <ion-content class="ion-text-center ion-padding" color="light">
-    <ion-card id="mainCard">
-        <ion-card-header>
-            <ion-card-title>MDCU Recorded Lecture</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
+  <ion-card id="mainCard">
+    <ion-card-header>
+      <ion-card-title>MDCU Recorded Lecture</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
 
-            <div *ngIf="user else loginMessage">
-                <h2>Hello, {{ user.displayName }}!</h2><br/>
-                <ion-button expand="block" color="tertiary" (click)="goToHome()">
-                    View Courses
-                </ion-button>
-                <ion-button expand="block" color="secondary" (click)="logout()">
-                    Sign out
-                </ion-button>
-            </div>
+      @if (user) {
+        <div>
+          <h2>Hello, {{ user.displayName }}!</h2><br/>
+          <ion-button expand="block" color="tertiary" (click)="goToHome()">
+            View Courses
+          </ion-button>
+          <ion-button expand="block" color="secondary" (click)="logout()">
+            Sign out
+          </ion-button>
+        </div>
+      } @else {
+        <p>Sign in with your Docchula account</p><br/>
+        <ion-button shape="round" slot="start" expand="full" color="tertiary" (click)="login()">
+          Sign in with Docchula
+        </ion-button>
+      }
 
-            <ng-template #loginMessage>
-                <p>Sign in with your Docchula account</p><br/>
-                <ion-button shape="round" slot="start" expand="full" color="tertiary" (click)="login()">
-                    Sign in with Docchula
-                </ion-button>
-            </ng-template>
-        </ion-card-content>
+    </ion-card-content>
+  </ion-card>
+  @if (isIAB) {
+    <ion-card color="danger" class="browserCard">
+      <ion-card-content>
+        In-app browser is not supported. Please open this website in Safari/Chrome.
+      </ion-card-content>
     </ion-card>
-    <ion-card *ngIf="isIAB" color="danger" class="browserCard">
-        <ion-card-content>
-            In-app browser is not supported. Please open this website in Safari/Chrome.
-        </ion-card-content>
+  }
+  @if (isSafari) {
+    <ion-card color="warning" class="browserCard">
+      <ion-card-content>
+        Your browser may not be able to play some video. Please try again using Google Chrome or Mozilla Firefox on Windows/Linux/macOS/Android.
+      </ion-card-content>
     </ion-card>
-    <ion-card *ngIf="isSafari" color="warning" class="browserCard">
-        <ion-card-content>
-            Your browser may not be able to play some video. Please try again using Google Chrome or Mozilla Firefox on Windows/Linux/macOS/Android.
-        </ion-card-content>
-    </ion-card>
-    <ion-text class="small-text" color="medium">The Student Union of the Faculty of Medicine, Chulalongkorn University</ion-text>
+  }
+  <ion-text class="small-text" color="medium">The Student Union of the Faculty of Medicine, Chulalongkorn University</ion-text>
 </ion-content>

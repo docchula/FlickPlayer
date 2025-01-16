@@ -1,50 +1,57 @@
 <ion-header [translucent]="true">
-    <ion-toolbar>
-        <ion-title>
-            MDCU Recorded Lecture
-        </ion-title>
-        <ion-buttons slot="secondary">
-            <ion-button fill="solid" color="secondary" (click)="logout()">
-                Sign out
-                <ion-icon slot="end" name="log-out-outline"></ion-icon>
-            </ion-button>
-        </ion-buttons>
-    </ion-toolbar>
+  <ion-toolbar>
+    <ion-title>
+      MDCU Recorded Lecture
+    </ion-title>
+    <ion-buttons slot="secondary">
+      <ion-button fill="solid" color="secondary" (click)="logout()">
+        Sign out
+        <ion-icon slot="end" name="log-out-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-    <div *ngIf="response$ | async as response; else notLoaded">
-        <ion-grid>
-            <ion-row>
-                <ion-col size-xs="6" size-sm="4" size-md="3" size-lg="2" *ngFor="let folder of Object.keys(response.years)">
-                    <ion-card [routerLink]="folder" [ngStyle]="{'background-color': colorByFolderName(folder)}">
-                        <ion-card-header>
-                            <ion-card-title>{{ folder }}</ion-card-title>
-                        </ion-card-header>
-                    </ion-card>
-                </ion-col>
-            </ion-row>
-        </ion-grid>
-        <div *ngIf="response.last_played">
-            <p>
-                Last played:
-                <a (click)="goToLastVideo(response.last_played.video)" (keyup)="goToLastVideo(response.last_played.video)" tabindex="0">
-                    <span class="course-name">{{ response.last_played.video.course.name }}</span>
-                    <ion-icon name="play"></ion-icon>
-                </a>
-            </p>
+  @if (response$ | async; as response) {
+    <div>
+      <ion-grid>
+        <ion-row>
+          @for (folder of Object.keys(response.years); track folder) {
+            <ion-col size-xs="6" size-sm="4" size-md="3" size-lg="2">
+              <ion-card [routerLink]="folder" [ngStyle]="{'background-color': colorByFolderName(folder)}">
+                <ion-card-header>
+                  <ion-card-title>{{ folder }}</ion-card-title>
+                </ion-card-header>
+              </ion-card>
+            </ion-col>
+          }
+        </ion-row>
+      </ion-grid>
+      @if (response.last_played) {
+        <div>
+          <p>
+            Last played:
+            <a (click)="goToLastVideo(response.last_played.video)" (keyup)="goToLastVideo(response.last_played.video)" tabindex="0">
+              <span class="course-name">{{ response.last_played.video.course.name }}</span>
+              <ion-icon name="play"></ion-icon>
+            </a>
+          </p>
         </div>
-        <p class="small-text">
-            <span *ngIf="response.last_fetched_at">
-                Last fetched from MDCU E-Learning at {{ response.last_fetched_at }}<br/>
-            </span>
-            Your feedback and suggestions are welcome. Please email them to <a href="mailto:siwat.techa@docchula.com" target="_blank">siwat.techa&#64;docchula.com</a>.<br/>
-            Contents are provided for MDCU students only. You may not copy, reproduce, distribute, publish, display, create derivative works,
-            transmit, or
-            in any way exploit any such content.
-        </p>
+      }
+      <p class="small-text">
+        @if (response.last_fetched_at) {
+          <span>
+            Last fetched from MDCU E-Learning at {{ response.last_fetched_at }}<br/>
+          </span>
+        }
+        Your feedback and suggestions are welcome. Please email them to <a href="mailto:siwat.techa@docchula.com" target="_blank">siwat.techa&#64;docchula.com</a>.<br/>
+        Contents are provided for MDCU students only. You may not copy, reproduce, distribute, publish, display, create derivative works,
+        transmit, or
+        in any way exploit any such content.
+      </p>
     </div>
-    <ng-template #notLoaded>
-        <h4 class="center-text">Loading...</h4>
-    </ng-template>
+  } @else {
+    <h4 class="center-text">Loading...</h4>
+  }
 </ion-content>

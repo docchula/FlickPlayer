@@ -11,13 +11,12 @@ describe('ListPage', () => {
 
     beforeEach(waitForAsync(() => {
         TestBed.configureTestingModule({
-            declarations: [ListPage],
-            imports: [IonicModule.forRoot(), RouterTestingModule],
-            providers: [
-                { provide: ActivatedRoute, useValue: ActivatedRouteStub },
-                { provide: ManService, useValue: ManServiceStub }
-            ]
-        }).compileComponents();
+    imports: [IonicModule.forRoot(), RouterTestingModule, ListPage],
+    providers: [
+        { provide: ActivatedRoute, useValue: ActivatedRouteStub },
+        { provide: ManService, useValue: ManServiceStub }
+    ]
+}).compileComponents();
 
         fixture = TestBed.createComponent(ListPage);
         component = fixture.componentInstance;

@@ -1,114 +1,154 @@
 <link rel="stylesheet" href="course.page.scss">
 <ion-header>
-    <ion-toolbar>
-        <ion-buttons slot="start" [routerLink]="'/home/'+year">
-            <ion-back-button [defaultHref]="'/home/'+year"></ion-back-button>
-        </ion-buttons>
-        <ion-title>
-            {{ course ? course.replace(' [E-Learning]', '') : 'Course' }}
-            <span class="e-learning-tag" *ngIf="course && course.endsWith(' [E-Learning]')">
-                MDCU <small>E-Learning</small>
-            </span>
-            <small *ngIf="courseProgress.duration > 0">{{ (courseProgress.duration - courseProgress.viewed) / 3600 | number:'1.0-1' }} hours left</small>
-        </ion-title>
-    </ion-toolbar>
+  <ion-toolbar>
+    <ion-buttons slot="start" [routerLink]="'/home/'+year">
+      <ion-back-button [defaultHref]="'/home/'+year"></ion-back-button>
+    </ion-buttons>
+    <ion-title>
+      {{ course ? course.replace(' [E-Learning]', '') : 'Course' }}
+      @if (course && course.endsWith(' [E-Learning]')) {
+        <span class="e-learning-tag">
+          MDCU <small>E-Learning</small>
+        </span>
+      }
+      @if (courseProgress.duration > 0) {
+        <small>{{ (courseProgress.duration - courseProgress.viewed) / 3600 | number:'1.0-1' }} hours left</small>
+      }
+    </ion-title>
+  </ion-toolbar>
 </ion-header>
 
 <ion-content>
-    <ion-grid>
-        <ion-row>
-            <ion-col size="12" size-lg [hidden]="!currentVideo">
-                <video #videoPlayer class="video-js vjs-default-skin fullwidth" controls preload="metadata"
-                       data-setup='{"aspectRatio":"1280:640", "playbackRates": [0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3]}'
-                       [hidden]="currentVideo && currentVideo.sources.length === 0"
-                       (contextmenu)="preventMouseEvent($event)" tabindex="1">
-                    Your browser does not support the video tag.
-                </video>
-                <ng-container *ngIf="currentVideo">
-                    <ion-text color="medium">
-                        <p>
-                            {{ currentVideo.title }}<span *ngIf="currentVideo.lecturer"> - {{ currentVideo.lecturer }}</span><br/>
-                            <ion-button (click)="setPlaybackSpeed()" (keyup)="setPlaybackSpeed()" fill="outline" size="small" tabindex="0" class="set-playback-speed-button">Set playback speed</ion-button>
-                            <span *ngIf="currentVideo.sourceExternal?.includes('1.mp4')">
+  <ion-grid>
+    <ion-row>
+      <ion-col size="12" size-lg [hidden]="!currentVideo">
+        <video #videoPlayer class="video-js vjs-default-skin fullwidth" controls preload="metadata"
+          data-setup='{"aspectRatio":"1280:640", "playbackRates": [0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3]}'
+          [hidden]="currentVideo && currentVideo.sources.length === 0"
+          (contextmenu)="preventMouseEvent($event)" tabindex="1">
+          Your browser does not support the video tag.
+        </video>
+        @if (currentVideo) {
+          <ion-text color="medium">
+            <p>
+              {{ currentVideo.title }}@if (currentVideo.lecturer) {
+              <span> - {{ currentVideo.lecturer }}</span>
+              }<br/>
+              <ion-button (click)="setPlaybackSpeed()" (keyup)="setPlaybackSpeed()" fill="outline" size="small" tabindex="0" class="set-playback-speed-button">Set playback speed</ion-button>
+              @if (currentVideo.sourceExternal?.includes('1.mp4')) {
+                <span>
                                 | <a [href]="sanitize('//player.docchula.com/?url='+currentVideo.sourceExternal)" rel="noreferrer" target="_blank">
                                 Play with Docchula Player</a>
                             </span>
-                            <span *ngIf="isAndroid && currentVideo.sourceExternal">
+}
+                            @if (isAndroid && currentVideo.sourceExternal) {
+<span>
                                 | <a [href]="sanitize('intent:'+currentVideo.sourceExternal+'#Intent;S.title='+encodeURIComponent(currentVideo.title)+';package=com.mxtech.videoplayer.ad;end')" rel="noreferrer">Play with MX Player</a>
                             </span>
-                            <span *ngIf="(isIos || isAndroid) && currentVideo.sourceExternal">
+}
+                            @if ((isIos || isAndroid) && currentVideo.sourceExternal) {
+<span>
                                 | <a [href]="sanitize('vlc://'+currentVideo.sourceExternal)" rel="noreferrer">Play with VLC</a>
                             </span>
+}
                         </p>
                         <p class="ion-hide-md-down small-text">
                             <strong>Hotkeys</strong>&emsp;&ensp; Space: Pause, ▲/▼: Volume, ◄/►: Seek, F: Fullscreen
                         </p>
                     </ion-text>
-                    <ion-card *ngIf="currentVideo.sources.length === 0" color="warning">
+                    @if (currentVideo.sources.length === 0) {
+<ion-card color="warning">
                         <ion-card-header>
                             <ion-card-title>Format not supported</ion-card-title>
                         </ion-card-header>
                         <ion-card-content>
                             Your browser can't play this video. Please try again using Google Chrome or Mozilla Firefox on Windows/Linux/macOS/Android.
-                        </ion-card-content>
-                    </ion-card>
-                    <ion-list *ngIf="currentVideo.attachments.length !== 0">
-                        <ion-list-header lines="inset">
-                            <ion-label>Attachments</ion-label>
-                        </ion-list-header>
-                        <ion-item *ngFor="let attachment of currentVideo.attachments">
-                            <ion-label>{{ attachment.name }}</ion-label>
-                            <a [href]="attachment.src" download target="_blank">
-                                <ion-icon name="download" size="small" slot="end"></ion-icon>
-                            </a>
-                        </ion-item>
-                    </ion-list>
-                </ng-container>
-            </ion-col>
-            <ion-col size="12" size-lg [ngClass]="currentVideo ? 'scroll-area' : ''">
-                <ion-list *ngIf="list$ | async as list">
-                    <ion-item button *ngFor="let lecture of list trackBy: lectureById" (click)="viewVideo(lecture)"
-                              [color]="(currentVideo && currentVideo.id && currentVideo.id === lecture.id) ? 'secondary' : ((lastPlayedVideoKey === lecture.id && !currentVideo) ? 'tertiary' : '')">
-                        <ion-label class="ion-text-wrap">
-                            <span *ngIf="lecture.date" class="date">{{ lecture.date | date:"dd MMM y" }}</span>
-                            <span *ngIf="lecture.date" class="date-divider"> | </span>
-                            {{ lecture.title }}
-                            <small>
-                                {{ lecture.lecturer}}
-                                <span class="time-info" *ngIf="lecture.durationInMin">- {{ lecture.durationInMin}} min </span>
-                                <span class="time-info" *ngIf="lecture.history.end_time && lecture.history.end_time > 3">
-                                    <span *ngIf="!lecture.duration">
-                                        - {{ (lecture.history.end_time) / 60 | number:'1.0-0'}} min played
-                                    </span>
-                                    <span *ngIf="lecture.duration && lecture.history.end_time/lecture.duration < 0.995">
-                                        - {{ (lecture.duration - lecture.history.end_time) / 60 | number:'1.0-0'}} min left
-                                    </span>
-                                </span>
-                                <ion-icon *ngIf="lecture.attachments.length !== 0" name="document-attach-outline" size="small" color="medium"></ion-icon>
-                            </small>
-                            <ion-progress-bar
-                                    *ngIf="lecture.history.end_time && lecture.duration && lecture.history.end_time > 3 && (lecture.history.end_time/lecture.duration < 0.995)"
-                                    [value]="lecture.history.end_time/lecture.duration"></ion-progress-bar>
-                        </ion-label>
-                        <ion-icon
-                                class="check-icon"
-                                *ngIf="lecture.history.end_time && lecture.duration && (lecture.history.end_time/lecture.duration >= 0.995)"
-                                name="checkmark-outline"
-                                slot="end"
-                                color="success"></ion-icon>
-                        <ion-icon
-                                *ngIf="lecture.sources.length === 0"
-                                name="close-outline"
-                                slot="end"
-                                color="danger"></ion-icon>
-                        <ion-icon
-                                *ngIf="lastPlayedVideoKey === lecture.id"
-                                name="pause-circle-outline"
-                                slot="end"
-                                color="medium"></ion-icon>
-                    </ion-item>
-                </ion-list>
-            </ion-col>
-        </ion-row>
-    </ion-grid>
+            </ion-card-content>
+          </ion-card>
+        }
+        @if (currentVideo.attachments.length !== 0) {
+          <ion-list>
+            <ion-list-header lines="inset">
+              <ion-label>Attachments</ion-label>
+            </ion-list-header>
+            @for (attachment of currentVideo.attachments; track attachment) {
+              <ion-item>
+                <ion-label>{{ attachment.name }}</ion-label>
+                <a [href]="attachment.src" download target="_blank">
+                  <ion-icon name="download" size="small" slot="end"></ion-icon>
+                </a>
+              </ion-item>
+            }
+          </ion-list>
+        }
+      }
+    </ion-col>
+    <ion-col size="12" size-lg [ngClass]="currentVideo ? 'scroll-area' : ''">
+      @if (list$ | async; as list) {
+        <ion-list>
+          @for (lecture of list; track lectureById($index, lecture)) {
+            <ion-item button (click)="viewVideo(lecture)"
+              [color]="(currentVideo && currentVideo.id && currentVideo.id === lecture.id) ? 'secondary' : ((lastPlayedVideoKey === lecture.id && !currentVideo) ? 'tertiary' : '')">
+              <ion-label class="ion-text-wrap">
+                @if (lecture.date) {
+                  <span class="date">{{ lecture.date | date:"dd MMM y" }}</span>
+                }
+                @if (lecture.date) {
+                  <span class="date-divider"> | </span>
+                }
+                {{ lecture.title }}
+                <small>
+                  {{ lecture.lecturer}}
+                  @if (lecture.durationInMin) {
+                    <span class="time-info">- {{ lecture.durationInMin}} min </span>
+                  }
+                  @if (lecture.history.end_time && lecture.history.end_time > 3) {
+                    <span class="time-info">
+                      @if (!lecture.duration) {
+                        <span>
+                          - {{ (lecture.history.end_time) / 60 | number:'1.0-0'}} min played
+                        </span>
+                      }
+                      @if (lecture.duration && lecture.history.end_time/lecture.duration < 0.995) {
+                        <span>
+                          - {{ (lecture.duration - lecture.history.end_time) / 60 | number:'1.0-0'}} min left
+                        </span>
+                      }
+                    </span>
+                  }
+                  @if (lecture.attachments.length !== 0) {
+                    <ion-icon name="document-attach-outline" size="small" color="medium"></ion-icon>
+                  }
+                </small>
+                @if (lecture.history.end_time && lecture.duration && lecture.history.end_time > 3 && (lecture.history.end_time/lecture.duration < 0.995)) {
+                  <ion-progress-bar
+                  [value]="lecture.history.end_time/lecture.duration"></ion-progress-bar>
+                }
+              </ion-label>
+              @if (lecture.history.end_time && lecture.duration && (lecture.history.end_time/lecture.duration >= 0.995)) {
+                <ion-icon
+                  class="check-icon"
+                  name="checkmark-outline"
+                  slot="end"
+                color="success"></ion-icon>
+              }
+              @if (lecture.sources.length === 0) {
+                <ion-icon
+                  name="close-outline"
+                  slot="end"
+                color="danger"></ion-icon>
+              }
+              @if (lastPlayedVideoKey === lecture.id) {
+                <ion-icon
+                  name="pause-circle-outline"
+                  slot="end"
+                color="medium"></ion-icon>
+              }
+            </ion-item>
+          }
+        </ion-list>
+      }
+    </ion-col>
+  </ion-row>
+</ion-grid>
 </ion-content>

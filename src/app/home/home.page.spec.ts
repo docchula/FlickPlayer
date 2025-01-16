@@ -12,13 +12,12 @@ describe('HomePage', () => {
 
     beforeEach(waitForAsync(() => {
         TestBed.configureTestingModule({
-            declarations: [HomePage],
-            imports: [IonicModule.forRoot(), RouterTestingModule],
-            providers: [
-                { provide: AngularFireAuth, useValue: FireAuthStub },
-                { provide: ManService, useValue: ManServiceStub }
-            ],
-        }).compileComponents();
+    imports: [IonicModule.forRoot(), RouterTestingModule, HomePage],
+    providers: [
+        { provide: AngularFireAuth, useValue: FireAuthStub },
+        { provide: ManService, useValue: ManServiceStub }
+    ],
+}).compileComponents();
 
         fixture = TestBed.createComponent(HomePage);
         component = fixture.componentInstance;

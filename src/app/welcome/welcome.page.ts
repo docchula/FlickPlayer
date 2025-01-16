@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { AlertController, LoadingController } from '@ionic/angular/standalone';
+import { AlertController, LoadingController, IonContent, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonButton, IonText } from '@ionic/angular/standalone';
 import { Router } from '@angular/router';
 import { ManService } from '../man.service';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -10,7 +10,9 @@ import { AuthService } from '../auth.service';
 @Component({
     selector: 'app-welcome',
     templateUrl: './welcome.page.html',
-    styleUrls: ['./welcome.page.scss']
+    styleUrls: ['./welcome.page.scss'],
+    standalone: true,
+    imports: [IonContent, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonButton, IonText]
 })
 export class WelcomePage implements OnInit, OnDestroy {
     authStateSubscription: Subscription;

@@ -1,12 +1,12 @@
 import {AfterViewInit, Component, ElementRef, OnInit, ViewChild, OnDestroy} from '@angular/core';
 import {combineLatest, EMPTY, Observable, startWith, Subject} from 'rxjs';
-import {ActivatedRoute, Router} from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {CourseMembers, Lecture, ManService} from '../../man.service';
 import {map, switchMap} from 'rxjs/operators';
 import videojs from 'video.js';
 import 'videojs-hotkeys';
 import 'videojs-youtube';
-import {AlertController} from '@ionic/angular/standalone';
+import { AlertController, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent, IonGrid, IonRow, IonCol, IonText, IonButton, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonList, IonListHeader, IonLabel, IonItem, IonIcon, IonProgressBar } from '@ionic/angular/standalone';
 import {DomSanitizer} from '@angular/platform-browser';
 import {PlayHistory} from '../../play-tracker.service';
 import {Analytics, logEvent} from '@angular/fire/analytics';
@@ -14,11 +14,41 @@ import {addIcons} from "ionicons";
 import {checkmarkOutline, closeOutline, documentAttachOutline, download, pauseCircleOutline} from "ionicons/icons";
 import type Player from 'video.js/dist/types/player';
 import {ulid} from 'ulid';
+import { NgClass, AsyncPipe, DecimalPipe, DatePipe } from '@angular/common';
 
 @Component({
     selector: 'app-course',
     templateUrl: './course.page.html',
     styleUrls: ['./course.page.scss'],
+    standalone: true,
+    imports: [
+        IonHeader,
+        IonToolbar,
+        IonButtons,
+        RouterLink,
+        IonBackButton,
+        IonTitle,
+        IonContent,
+        IonGrid,
+        IonRow,
+        IonCol,
+        IonText,
+        IonButton,
+        IonCard,
+        IonCardHeader,
+        IonCardTitle,
+        IonCardContent,
+        IonList,
+        IonListHeader,
+        IonLabel,
+        IonItem,
+        IonIcon,
+        NgClass,
+        IonProgressBar,
+        AsyncPipe,
+        DecimalPipe,
+        DatePipe,
+    ],
 })
 export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     @ViewChild('videoPlayer') videoPlayerElement: ElementRef;

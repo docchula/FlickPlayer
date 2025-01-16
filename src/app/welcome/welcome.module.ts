@@ -23,8 +23,8 @@ const routes: Routes = [
         IonCardTitle,
         IonCardContent,
         IonButton,
-        IonText
-    ],
-    declarations: [WelcomePage]
+        IonText,
+        WelcomePage
+    ]
 })
 export class WelcomePageModule { }
