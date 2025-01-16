@@ -26,8 +26,9 @@ if (environment.production) {
         'NG04002', // Angular routing error a.k.a. 404
         // Benign Firebase Auth errors
         'auth/cancelled-popup-request', 'auth/popup-blocked', 'auth/popup-closed-by-user',
+        'auth/network-request-failed', 'Pending promise was never set',
         // HTTP errors
-        '[401]',
+        ' 401', ' 504',
     ],
   });
 }

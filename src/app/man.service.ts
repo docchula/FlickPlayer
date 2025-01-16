@@ -212,7 +212,7 @@ export interface Lecture {
     id?: number; // Server-side ID
     identifier?: string; // Client-side ID, deprecated
     sources: {
-        path: string,
+        path?: string,
         type: string,
         server: string | null,
         src: string

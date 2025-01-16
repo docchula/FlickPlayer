@@ -230,7 +230,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
 
     preventMouseEvent($event: MouseEvent) {
         // Prevent right-click only if video is downloadable
-        if (this.currentVideo?.sources?.filter(s => s.path.endsWith('.mp4') || s.path.endsWith('.webm')).length > 0) {
+        if (this.currentVideo?.sources?.filter(s => s.path?.endsWith('.mp4') || s.src?.endsWith('.mp4') || s.path?.endsWith('.webm')).length > 0) {
             $event.preventDefault();
         }
     }
