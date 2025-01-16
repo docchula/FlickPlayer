@@ -16,7 +16,7 @@ import { NgStyle, AsyncPipe } from '@angular/common';
 })
 export class ListPage implements OnInit {
     year: string;
-    list$: Observable<{ name: string, is_remote: boolean }[]>;
+    list$: Observable<{ name: string, is_remote: boolean, id: number }[]>;
 
     constructor(private route: ActivatedRoute, private router: Router, private manService: ManService) {
     }

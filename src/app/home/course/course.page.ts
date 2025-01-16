@@ -56,6 +56,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     currentVideo: Lecture;
     year: string;
     course: string;
+    courseId?: string;
     list$: Observable<Lecture[]>;
     courseProgress = {
         viewed: 0,
@@ -78,10 +79,11 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             switchMap(s => {
                 this.year = s.get('year');
                 this.course = s.get('course');
+                this.courseId = s.get('id');
                 if (this.year && this.course) {
                     return combineLatest([
-                        this.manService.getVideosInCourse(this.year, this.course),
-                        this.manService.getPlayRecord(this.year, this.course, this.stopPolling).pipe(startWith(null)),
+                        this.manService.getVideosInCourse(this.year, this.course, this.courseId),
+                        this.manService.getPlayRecord(this.year, this.course, this.courseId, this.stopPolling).pipe(startWith(null)),
                     ]).pipe(map(([videos, history]) => this.mergeVideoInfo(videos, history)));
                 } else if (this.year) {
                     this.router.navigate(['home/' + this.year]);

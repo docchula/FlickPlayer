@@ -13,7 +13,7 @@
   @if (list$ | async; as list) {
     <ion-list>
       @for (course of list; track course) {
-        <ion-item button [routerLink]="course.name">
+        <ion-item button [routerLink]="course.id + '/' + course.name">
           <ion-label>
             @if (course.is_remote) {
               <span class="e-learning-tag">

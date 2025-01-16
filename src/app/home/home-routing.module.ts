@@ -21,6 +21,10 @@ const routes: Routes = [
             {
                 path: ':year/:course',
                 component: CoursePage
+            },
+            {
+                path: ':year/:id/:course',
+                component: CoursePage
             }
         ]
     }

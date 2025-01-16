@@ -45,12 +45,13 @@ export class ManService {
         return this.videoList;
     }
 
-    getVideosInCourse(year: string, course: string) {
+    getVideosInCourse(year: string, course: string, courseId: string | null) {
         return this.get<JSend<{
             lectures: CourseMembers,
             key: string,
             server?: string
-        }>>('v1/video/' + year + '/' + course).pipe(map(response => {
+        }>>('v1/video/' + (courseId ?? (year + '/' + course)))
+            .pipe(map(response => {
             let server = response.data.server ?? (this.getEndpointLocation() + 'stream');
             if (!server.endsWith('/')) {
                 server += '/';
@@ -90,8 +91,11 @@ export class ManService {
         }));
     }
 
-    getPlayRecord(year: string, course: string, stopPolling: Observable<boolean>): Observable<PlayHistory> {
-        const params = new HttpParams().set("year", year).set("course", course);
+    getPlayRecord(year: string, course: string, courseId: string|null, stopPolling: Observable<boolean>): Observable<PlayHistory> {
+        let params = new HttpParams().set("year", year).set("course", course);
+        if (courseId) {
+            params = params.set("course_id", courseId ?? '');
+        }
         this.playTracker.retrieve().subscribe(console.log);
         return timer(1, 60000).pipe(
             switchMap(() => this.get<JSend<{
@@ -192,6 +196,7 @@ export interface CourseMembers {
 export interface CourseListResponse {
     years: {
         [key: string]: {
+            id: number;
             name: string;
             is_remote: boolean;
         }[];

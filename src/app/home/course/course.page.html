@@ -5,12 +5,7 @@
       <ion-back-button [defaultHref]="'/home/'+year"></ion-back-button>
     </ion-buttons>
     <ion-title>
-      {{ course ? course.replace(' [E-Learning]', '') : 'Course' }}
-      @if (course && course.endsWith(' [E-Learning]')) {
-        <span class="e-learning-tag">
-          MDCU <small>E-Learning</small>
-        </span>
-      }
+      {{ course ?? 'Course' }}
       @if (courseProgress.duration > 0) {
         <small>{{ (courseProgress.duration - courseProgress.viewed) / 3600 | number:'1.0-1' }} hours left</small>
       }
