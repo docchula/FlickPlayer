@@ -57,10 +57,8 @@ import { getFirestore, provideFirestore } from '@angular/fire/firestore';
             deps: [Router],
         },
         provideAppInitializer(() => {
-        const initializerFn = (() => () => {
-            })(inject(Sentry.TraceService));
-        return initializerFn();
-      }),
+            inject(Sentry.TraceService);
+          }),
     ],
 })
 export class AppModule {
