@@ -15,6 +15,10 @@ const routes: Routes = [
                 component: HomePage
             },
             {
+                path: 'course/:id',
+                component: CoursePage
+            },
+            {
                 path: ':year',
                 component: ListPage
             },

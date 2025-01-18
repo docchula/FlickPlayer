@@ -1,5 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {first, map, mergeMap, tap} from 'rxjs/operators';
+import {first, map, mergeMap, switchMap, tap} from 'rxjs/operators';
 import {fromEventPattern, Observable} from 'rxjs';
 import {FieldValue, Timestamp} from '@angular/fire/firestore';
 import Pusher from 'pusher-js';
@@ -37,10 +37,10 @@ export class PlayTrackerService {
                 }
             }),
             // combine the idToken with the user information (for UID)
-            mergeMap(idToken => this.user$.pipe(first(), map(user => ({idToken, user})))),
+            switchMap(idToken => this.user$.pipe(map(user => ({idToken, user})))),
             first(),
             // Return observable only once
-            mergeMap(userAndToken =>
+            switchMap(userAndToken =>
                 fromEventPattern(handler => {
                     echo.channel("user." + userAndToken.user.email).listen(".PlayRecordUpdated", handler);
                 }, () => echo.leaveChannel("user." + userAndToken.user.email))),

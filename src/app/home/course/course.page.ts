@@ -2,7 +2,7 @@ import {AfterViewInit, Component, ElementRef, OnInit, ViewChild, OnDestroy} from
 import {combineLatest, EMPTY, Observable, startWith, Subject} from 'rxjs';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {CourseMembers, Lecture, ManService} from '../../man.service';
-import {map, switchMap} from 'rxjs/operators';
+import {first, map, switchMap} from 'rxjs/operators';
 import videojs from 'video.js';
 import 'videojs-hotkeys';
 import 'videojs-youtube';
@@ -76,15 +76,23 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
 
     ngOnInit() {
         this.list$ = this.route.paramMap.pipe(
+            first(),
             switchMap(s => {
                 this.year = s.get('year');
-                this.course = s.get('course');
+                this.course = decodeURIComponent(s.get('course'));
                 this.courseId = s.get('id');
-                if (this.year && this.course) {
+                if ((this.year && this.course) || this.courseId) {
                     return combineLatest([
                         this.manService.getVideosInCourse(this.year, this.course, this.courseId),
                         this.manService.getPlayRecord(this.year, this.course, this.courseId, this.stopPolling).pipe(startWith(null)),
-                    ]).pipe(map(([videos, history]) => this.mergeVideoInfo(videos, history)));
+                    ]).pipe(map(([courseData, history]) => {
+                        if (!courseData) {
+                            return [];
+                        }
+                        this.year = courseData.category;
+                        this.course = courseData.name;
+                        return this.mergeVideoInfo(courseData.lectures, history);
+                    }));
                 } else if (this.year) {
                     this.router.navigate(['home/' + this.year]);
                 } else {

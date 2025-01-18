@@ -16,7 +16,7 @@ import { NgStyle, AsyncPipe } from '@angular/common';
 })
 export class ListPage implements OnInit {
     year: string;
-    list$: Observable<{ name: string, is_remote: boolean, id: number }[]>;
+    list$: Observable<{ name: string, is_remote: boolean, id: number, link: string[] }[]>;
 
     constructor(private route: ActivatedRoute, private router: Router, private manService: ManService) {
     }
@@ -31,7 +31,10 @@ export class ListPage implements OnInit {
                     return EMPTY;
                 }
                 return this.manService.getVideoList().pipe(map(list => {
-                    return list.years[year];
+                    return list?.years[year].map(course => ({
+                        ...course,
+                        link: ['/', 'home', 'course', String(course.id)]
+                    })) ?? [];
                 }));
             })
         );

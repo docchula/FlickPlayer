@@ -10,20 +10,22 @@
 </ion-header>
 
 <ion-content>
-  @if (list$ | async; as list) {
-    <ion-list>
-      @for (course of list; track course) {
-        <ion-item button [routerLink]="course.id + '/' + course.name">
-          <ion-label>
-            @if (course.is_remote) {
-              <span class="e-learning-tag">
-                MDCU <small>E-Learning</small>
-              </span>
-            }
-            {{ course.name }}
-          </ion-label>
-        </ion-item>
-      }
-    </ion-list>
-  }
+    @if (list$ | async; as list) {
+        @if (list) {
+            <ion-list>
+                @for (course of list; track course.id) {
+                    <ion-item button [routerLink]="course.link">
+                        <ion-label>
+                            @if (course.is_remote) {
+                                <span class="e-learning-tag">MDCU <small>E-Learning</small></span>
+                            }
+                            {{ course.name }}
+                        </ion-label>
+                    </ion-item>
+                }
+            </ion-list>
+        } @else {
+            <p>Empty.</p>
+        }
+    }
 </ion-content>

@@ -40,62 +40,64 @@ export class ManService {
 
     getVideoList(): Observable<CourseListResponse> {
         if (!this.videoList) {
-            this.videoList = this.get<JSend<CourseListResponse>>('v1/video').pipe(map(response => response.data));
+            this.videoList = this.get<JSend<CourseListResponse>>('v1/video').pipe(map(response => response?.data));
         }
         return this.videoList;
     }
 
-    getVideosInCourse(year: string, course: string, courseId: string | null) {
+    getVideosInCourse(year: string | null, course: string | null, courseId: string | null) {
         return this.get<JSend<{
             lectures: CourseMembers,
             key: string,
-            server?: string
+            server?: string,
+            category: string,
+            name: string,
         }>>('v1/video/' + (courseId ?? (year + '/' + course)))
             .pipe(map(response => {
-            let server = response.data.server ?? (this.getEndpointLocation() + 'stream');
-            if (!server.endsWith('/')) {
-                server += '/';
-            }
-            for (const courseKey of Object.keys(response.data.lectures)) {
-                let thisLecture = response.data.lectures[courseKey];
-                thisLecture = {
-                    ...thisLecture,
-                    sources: thisLecture.sources ? thisLecture.sources.map(source => {
-                        source.src = source.src
-                            ?? ((source.server ?? server) + source.path);
-                        if (source.src.includes('docchula.com')) {
-                            source.src += (source.src.includes('?') ? '&key=' : '?key=') + encodeURIComponent(response.data.key);
-                        }
-                        return source;
-                    }) : [],
-                    attachments: thisLecture.attachments ? thisLecture.attachments.map(source => {
-                        source.src = source.src
-                            ?? ((source.server ?? server) + source.path);
-                        source.src += (source.src.includes('?') ? '&key=' : '?key=') + encodeURIComponent(response.data.key);
-                        source.name = source.name ?? (source.path.startsWith('DL ') ? source.path.substring(3) : source.path);
-                        return source;
-                    }) : [],
-                    identifier: thisLecture.identifier
-                        ?? ((course.includes('[E-Learning]') && thisLecture.id) ? String(thisLecture.id) : (year.substring(0, 3).trim() + '/' + course.substring(0, 7).trim() + '/' + courseKey)),
-                    durationInMin: thisLecture.duration ? Math.round(thisLecture.duration / 60) : 0
-                };
-                for (const source of thisLecture.sources) {
-                    if (!source.type.startsWith('application/dash+xml')) {
-                        thisLecture.sourceExternal = source.src;
-                        break;
-                    }
+                if (!response || !response.data) {
+                    return null;
                 }
-                response.data.lectures[courseKey] = thisLecture;
-            }
-            return response.data.lectures;
-        }));
+                const data = response.data;
+                let server = data.server ?? (this.getEndpointLocation() + 'stream');
+                if (!server.endsWith('/')) {
+                    server += '/';
+                }
+                for (const courseKey of Object.keys(data.lectures)) {
+                    let thisLecture = data.lectures[courseKey];
+                    thisLecture = {
+                        ...thisLecture,
+                        sources: thisLecture.sources ? thisLecture.sources.map(source => {
+                            source.src = source.src
+                                ?? ((source.server ?? server) + source.path);
+                            if (source.src.includes('docchula.com')) {
+                                source.src += (source.src.includes('?') ? '&key=' : '?key=') + encodeURIComponent(data.key);
+                            }
+                            return source;
+                        }) : [],
+                        attachments: thisLecture.attachments ? thisLecture.attachments.map(source => {
+                            source.src = source.src
+                                ?? ((source.server ?? server) + source.path);
+                            source.src += (source.src.includes('?') ? '&key=' : '?key=') + encodeURIComponent(data.key);
+                            source.name = source.name ?? (source.path.startsWith('DL ') ? source.path.substring(3) : source.path);
+                            return source;
+                        }) : [],
+                        identifier: thisLecture.identifier ?? String(thisLecture.id),
+                        durationInMin: thisLecture.duration ? Math.round(thisLecture.duration / 60) : 0,
+                    };
+                    for (const source of thisLecture.sources) {
+                        if (!source.type.startsWith('application/dash+xml')) {
+                            thisLecture.sourceExternal = source.src;
+                            break;
+                        }
+                    }
+                    data.lectures[courseKey] = thisLecture;
+                }
+                return data;
+            }));
     }
 
     getPlayRecord(year: string, course: string, courseId: string|null, stopPolling: Observable<boolean>): Observable<PlayHistory> {
-        let params = new HttpParams().set("year", year).set("course", course);
-        if (courseId) {
-            params = params.set("course_id", courseId ?? '');
-        }
+        const params = courseId ? new HttpParams().set("course_id", courseId ?? '') : new HttpParams().set("year", year).set("course", course);
         this.playTracker.retrieve().subscribe(console.log);
         return timer(1, 60000).pipe(
             switchMap(() => this.get<JSend<{
@@ -183,10 +185,9 @@ export class ManService {
 }
 
 export const ManServiceStub: Partial<ManService> = {
-    getVideosInCourse: () => of({}),
+    getVideosInCourse: () => of({lectures: {}, key: '', category: '', name: ''}),
     getVideoList: () => of({years: {}, last_fetched_at: '', last_played: null}),
-    setIdToken: (idToken: string) => {
-    }
+    setIdToken: () => {},
 };
 
 export interface CourseMembers {
@@ -228,6 +229,7 @@ export interface Lecture {
     durationInMin?: number;
     history?: PlayHistoryValue;
     course?: {
+        id: number;
         name: string;
         category: string;
     };

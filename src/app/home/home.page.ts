@@ -36,7 +36,7 @@ export class HomePage implements OnInit {
     protected readonly colorByFolderName = colorByFolderName;
 
     goToLastVideo(lastVideo: Lecture) {
-        return this.router.navigate(['home', lastVideo.course.category, lastVideo.course.name]);
+        return this.router.navigate(['home', 'course', lastVideo.course.id]);
     }
 
     protected readonly Object = Object;
