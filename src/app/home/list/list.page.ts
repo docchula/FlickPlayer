@@ -31,7 +31,7 @@ export class ListPage implements OnInit {
                     return EMPTY;
                 }
                 return this.manService.getVideoList().pipe(map(list => {
-                    return list?.years[year].map(course => ({
+                    return list?.years[year]?.map(course => ({
                         ...course,
                         link: ['/', 'home', 'course', String(course.id)]
                     })) ?? [];
