@@ -11,7 +11,6 @@ import { AuthService } from '../auth.service';
     selector: 'app-welcome',
     templateUrl: './welcome.page.html',
     styleUrls: ['./welcome.page.scss'],
-    standalone: true,
     imports: [IonContent, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonButton, IonText]
 })
 export class WelcomePage implements OnInit, OnDestroy {

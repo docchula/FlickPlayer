@@ -20,7 +20,6 @@ import { NgClass, AsyncPipe, DecimalPipe, DatePipe } from '@angular/common';
     selector: 'app-course',
     templateUrl: './course.page.html',
     styleUrls: ['./course.page.scss'],
-    standalone: true,
     imports: [
         IonHeader,
         IonToolbar,
@@ -48,7 +47,7 @@ import { NgClass, AsyncPipe, DecimalPipe, DatePipe } from '@angular/common';
         AsyncPipe,
         DecimalPipe,
         DatePipe,
-    ],
+    ]
 })
 export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     @ViewChild('videoPlayer') videoPlayerElement: ElementRef;
