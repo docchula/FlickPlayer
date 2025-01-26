@@ -38,7 +38,7 @@ export class PlayTrackerService {
             }),
             // combine the idToken with the user information (for UID)
             switchMap(idToken => this.user$.pipe(map(user => ({idToken, user})))),
-            first(),
+            first(userAndToken => userAndToken.user !== null),
             // Return observable only once
             switchMap(userAndToken =>
                 fromEventPattern(handler => {
