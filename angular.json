@@ -10,11 +10,12 @@
             "prefix": "app",
             "architect": {
                 "build": {
-                    "builder": "@angular-devkit/build-angular:browser",
+                    "builder": "@angular-devkit/build-angular:application",
                     "options": {
-                        "outputPath": "www",
+                        "outputPath": {
+                          "base": "www"
+                        },
                         "index": "src/index.html",
-                        "main": "src/main.ts",
                         "polyfills": [
                             "zone.js"
                         ],
@@ -41,7 +42,8 @@
                             "styles": false,
                             "hidden": true,
                             "vendor": true
-                        }
+                        },
+                        "browser": "src/main.ts"
                     },
                     "configurations": {
                         "production": {
@@ -64,8 +66,7 @@
                                     "maximumError": "4kb"
                                 }
                             ],
-                            "serviceWorker": true,
-                            "ngswConfigPath": "ngsw-config.json"
+                            "serviceWorker": "ngsw-config.json"
                         },
                         "ci": {
                             "budgets": [
@@ -77,9 +78,7 @@
                             "progress": false
                         },
                         "development": {
-                            "buildOptimizer": false,
-                            "optimization": false,
-                            "vendorChunk": true,
+                          "optimization": false,
                             "extractLicenses": false,
                             "sourceMap": true,
                             "namedChunks": true
