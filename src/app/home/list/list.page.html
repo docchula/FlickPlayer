@@ -1,8 +1,6 @@
 <ion-header>
   <ion-toolbar>
-    <ion-buttons slot="start" routerLink="/home">
-      <ion-back-button defaultHref="/home"></ion-back-button>
-    </ion-buttons>
+    <ion-back-button slot="start" defaultHref="/home"></ion-back-button>
     <ion-title>
       <span [ngStyle]="{'background-color': colorByFolderName(year)}">{{ year || 'Loading'}}</span>
     </ion-title>
