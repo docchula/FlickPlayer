@@ -1,9 +1,7 @@
 <link rel="stylesheet" href="course.page.scss">
 <ion-header>
     <ion-toolbar>
-        <ion-buttons slot="start" [routerLink]="'/home/'+year">
-            <ion-back-button [defaultHref]="'/home/'+year"></ion-back-button>
-        </ion-buttons>
+        <ion-back-button slot="start" [defaultHref]="'/home/'+year"></ion-back-button>
         <ion-title>
             {{ course ?? 'Course' }}
             @if (courseProgress.duration > 0) {

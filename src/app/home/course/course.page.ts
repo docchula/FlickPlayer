@@ -1,6 +1,6 @@
 import {AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {combineLatest, EMPTY, Observable, startWith, Subject} from 'rxjs';
-import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {ActivatedRoute, Router} from '@angular/router';
 import {CourseMembers, Lecture, ManService} from '../../man.service';
 import {first, map, switchMap} from 'rxjs/operators';
 import videojs from 'video.js';
@@ -46,8 +46,6 @@ import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
     imports: [
         IonHeader,
         IonToolbar,
-        IonButtons,
-        RouterLink,
         IonBackButton,
         IonTitle,
         IonContent,

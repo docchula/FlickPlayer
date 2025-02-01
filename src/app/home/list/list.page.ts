@@ -4,14 +4,14 @@ import { EMPTY, Observable } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { ManService } from '../../man.service';
 import { colorByFolderName } from '../../../helpers';
-import { IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent, IonList, IonItem, IonLabel } from '@ionic/angular/standalone';
+import { IonHeader, IonToolbar, IonBackButton, IonTitle, IonContent, IonList, IonItem, IonLabel } from '@ionic/angular/standalone';
 import { NgStyle, AsyncPipe } from '@angular/common';
 
 @Component({
     selector: 'app-list',
     templateUrl: './list.page.html',
     styleUrls: ['./list.page.scss'],
-    imports: [IonHeader, IonToolbar, IonButtons, RouterLink, IonBackButton, IonTitle, NgStyle, IonContent, IonList, IonItem, IonLabel, AsyncPipe]
+    imports: [IonHeader, IonToolbar, RouterLink, IonBackButton, IonTitle, NgStyle, IonContent, IonList, IonItem, IonLabel, AsyncPipe]
 })
 export class ListPage implements OnInit {
     year: string;
