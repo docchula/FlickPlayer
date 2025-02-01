@@ -10,7 +10,6 @@ import {
     AlertController,
     IonBackButton,
     IonButton,
-    IonButtons,
     IonCard,
     IonCardContent,
     IonCardHeader,
@@ -101,7 +100,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             first(),
             switchMap(s => {
                 this.year = s.get('year');
-                this.course = decodeURIComponent(s.get('course'));
+                this.course = s.get('course') ? decodeURIComponent(s.get('course')) : null;
                 this.courseId = s.get('id');
                 if ((this.year && this.course) || this.courseId) {
                     return combineLatest([
