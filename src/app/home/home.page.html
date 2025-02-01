@@ -18,7 +18,7 @@
       <ion-grid>
         <ion-row>
           @for (folder of Object.keys(response.years); track folder) {
-            <ion-col size-xs="6" size-sm="4" size-md="3" size-lg="2">
+            <ion-col size-xs="12" size-sm="6" size-md="4" size-lg="3" size-xl="2">
               <ion-card [routerLink]="folder" [ngStyle]="{'background-color': colorByFolderName(folder)}">
                 <ion-card-header>
                   <ion-card-title>{{ folder }}</ion-card-title>
