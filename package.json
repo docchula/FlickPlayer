@@ -11,7 +11,7 @@
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e",
-    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org docchula --project flickplayer www && sentry-cli sourcemaps upload --org docchula --project flickplayer www"
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org docchula --project flickplayer www/browser && sentry-cli sourcemaps upload --org docchula --project flickplayer www/browser"
   },
   "private": true,
   "dependencies": {
