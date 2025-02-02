@@ -121,13 +121,13 @@ export class ManService {
         );
     }
 
-    updatePlayRecord(uid: string, video_id: string | number, progress: number, speed: number) {
-        // @todo Throttle this function
+    updatePlayRecord(uid: string, video_id: string | number, progress: number, speed: number, log: object[]) {
         return this.post<JSend<null>>('v1/play_records', {
             uid,
             video_id,
             progress,
             speed,
+            log,
         });
     }
 

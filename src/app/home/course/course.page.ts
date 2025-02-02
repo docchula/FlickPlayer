@@ -1,5 +1,5 @@
 import {AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild} from '@angular/core';
-import {combineLatest, EMPTY, Observable, startWith, Subject} from 'rxjs';
+import {combineLatest, EMPTY, fromEvent, mergeAll, Observable, of, pairwise, startWith, Subject, takeUntil, throttleTime} from 'rxjs';
 import {ActivatedRoute, Router} from '@angular/router';
 import {CourseMembers, Lecture, ManService} from '../../man.service';
 import {first, map, switchMap} from 'rxjs/operators';
@@ -31,7 +31,6 @@ import {
 } from '@ionic/angular/standalone';
 import {DomSanitizer} from '@angular/platform-browser';
 import {PlayHistory} from '../../play-tracker.service';
-import {Analytics, logEvent} from '@angular/fire/analytics';
 import {addIcons} from "ionicons";
 import {checkmarkOutline, closeOutline, documentAttachOutline, download, pauseCircleOutline} from "ionicons/icons";
 import type Player from 'video.js/dist/types/player';
@@ -84,14 +83,15 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     isAndroid = /Android/i.test(navigator.userAgent);
     isIos = /iPad/i.test(navigator.userAgent) || /iPhone/i.test(navigator.userAgent);
     lastPlayedVideoKey: number = null;
+    playLog: { startTime: number, endTime: number | null, playbackRate: number, createdAt: number, updatedAt: number }[] = [];
     progressTimedOut: string | null;
     progressNetworkError: boolean | null;
     sessionUid: string; // Unique ID for session x video (new id for each video)
-    stopPolling = new Subject<boolean>();
+    stopPolling$ = new Subject<boolean>();
 
     constructor(private route: ActivatedRoute, private router: Router,
         private manService: ManService, private alertController: AlertController,
-                private analytics: Analytics, private sanitizer: DomSanitizer) {
+                private sanitizer: DomSanitizer) {
         addIcons({ download, documentAttachOutline, checkmarkOutline, closeOutline, pauseCircleOutline });
     }
 
@@ -105,7 +105,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 if ((this.year && this.course) || this.courseId) {
                     return combineLatest([
                         this.manService.getVideosInCourse(this.year, this.course, this.courseId),
-                        this.manService.getPlayRecord(this.year, this.course, this.courseId, this.stopPolling).pipe(startWith(null)),
+                        this.manService.getPlayRecord(this.year, this.course, this.courseId, this.stopPolling$).pipe(startWith(null)),
                     ]).pipe(map(([courseData, history]) => {
                         if (!courseData) {
                             return [];
@@ -141,28 +141,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 enableModifiersForNumbers: false,
                 enableVolumeScroll: false,
             });
-            this.videoPlayer.on('pause', () => {
-                if (!this.videoPlayer.seeking()) {
-                    // is paused, not seeking
-                    this.updatePlayRecord();
-                }
-            });
             this.videoPlayer.on('ended', () => this.updatePlayRecord());
-            let lastUpdated = 0;
-            this.videoPlayer.on('timeupdate', () => {
-                // Update while playing every 20 seconds
-                if (Date.now() - lastUpdated > 20000) {
-                    lastUpdated = Date.now();
-                    this.updatePlayRecord();
-                }
-            });
-            this.videoPlayer.on('tracking:performance', (_e: never, data: never) => {
-                console.log('performance');
-                if (this.videoPlayer.currentTime() > 30) {
-                    logEvent(this.analytics, 'video_performance', this.attachEventLabel(data, true));
-                    this.updatePlayRecord();
-                }
-            });
             this.videoPlayer.on('loadedmetadata', () => {
                 // On video load, seek to last played position
                 if (this.currentVideo.history.end_time
@@ -170,11 +149,72 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                     this.videoPlayer.currentTime(this.currentVideo.history.end_time);
                 }
             });
+
+            // Listen for video time updates
+            let lastUpdated = 0;
+            const allUpdate$ = of(
+                fromEvent(this.videoPlayer, 'timeupdate').pipe(throttleTime(2000)),
+                fromEvent(this.videoPlayer, 'pause'),
+            ).pipe(
+                mergeAll(),
+                takeUntil(this.stopPolling$),
+                map(() => ({
+                    currentTime: this.videoPlayer.currentTime(),
+                    playbackRate: this.videoPlayer.playbackRate(),
+                    isPaused: this.videoPlayer.paused(),
+                    isSeeking: this.videoPlayer.seeking(),
+                })),
+                pairwise(), // Groups pairs of consecutive emissions together
+            );
+            allUpdate$.subscribe(([previous, current]) => {
+                const currentTimestamp = Date.now();
+                // Update play log
+                const lastLogKey = this.playLog.length - 1;
+                const lastLog = this.playLog[lastLogKey] ?? null;
+                if (current.isPaused) {
+                    if (lastLog && lastLog.endTime === null) {
+                        lastLog.endTime = current.currentTime;
+                        lastLog.updatedAt = currentTimestamp;
+                        this.playLog[lastLogKey] = lastLog;
+                    }
+                } else {
+                    if (!lastLog // New
+                        || lastLog.playbackRate !== current.playbackRate // Playback rate changed
+                        || (current.currentTime - lastLog.endTime > 10) // Seek to next position
+                        || (lastLog.endTime - current.currentTime > 3) // Seek to previous position
+                        || (currentTimestamp - lastLog.updatedAt > 5000) // Disrupted logging
+                    ) {
+                        this.playLog.push({
+                            startTime: current.currentTime,
+                            endTime: current.currentTime,
+                            playbackRate: current.playbackRate,
+                            createdAt: currentTimestamp,
+                            updatedAt: currentTimestamp,
+                        });
+                    } else {
+                        lastLog.endTime = current.currentTime;
+                        lastLog.updatedAt = currentTimestamp;
+                        this.playLog[lastLogKey] = lastLog;
+                    }
+                }
+
+                // Push to server
+                if (current.currentTime !== previous.currentTime) {
+                    if (currentTimestamp - lastUpdated > 20000) {
+                        // Save progress while playing every 20 seconds
+                        lastUpdated = currentTimestamp;
+                        this.updatePlayRecord();
+                    } else if (current.isPaused && !current.isSeeking) {
+                        // Save progress when pause but not seeking
+                        this.updatePlayRecord();
+                    }
+                }
+            });
         });
     }
 
     ngOnDestroy() {
-        this.stopPolling.next(true);
+        this.stopPolling$.next(true);
     }
 
     mergeVideoInfo(videos: CourseMembers, history: PlayHistory|null) {
@@ -223,6 +263,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         this.currentVideo = video;
         this.videoPlayerElement.nativeElement.focus();
         this.sessionUid = ulid();
+        this.playLog = [];
     }
 
     async setPlaybackSpeed() {
@@ -272,18 +313,6 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         return encodeURIComponent(url);
     }
 
-    lectureById(index: number, lecture: Lecture) {
-        return lecture.identifier;
-    }
-
-    protected attachEventLabel(data: object, isNonInteraction?: boolean) {
-        return {
-            ...data,
-            event_label: this.currentVideo.identifier,
-            non_interaction: isNonInteraction === true
-        };
-    }
-
     protected getCurrentPlayTimeString() {
         const time = this.videoPlayer.currentTime();
         const seconds = Math.floor(time % 60);
@@ -295,10 +324,21 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     protected updatePlayRecord() {
-        this.manService.updatePlayRecord(this.sessionUid, this.currentVideo.id, this.videoPlayer.currentTime(), this.videoPlayer.playbackRate()).subscribe({
+        const requestTime = Date.now();
+        // Clean play log: remove unnecessary logs
+        this.playLog = this.playLog.filter((log, i) => log.startTime !== log.endTime || i >= this.playLog.length - 1);
+        this.manService.updatePlayRecord(
+            this.sessionUid,
+            this.currentVideo.id,
+            this.videoPlayer.currentTime(),
+            this.videoPlayer.playbackRate(),
+            this.playLog,
+        ).subscribe({
             next: () => {
                 this.progressTimedOut = null;
                 this.progressNetworkError = null;
+                // Clear play log, except the last or new one
+                this.playLog = this.playLog.filter((log, i) => log.updatedAt > requestTime || i >= this.playLog.length - 1);
             },
             error: e => {
                 if (e.status === 0) {
