@@ -1,0 +1,34 @@
+<ion-header>
+    <ion-toolbar>
+        <ion-title>Evaluation</ion-title>
+        <ion-buttons slot="end">
+            <ion-button (click)="confirm()" [strong]="true">Continue</ion-button>
+        </ion-buttons>
+    </ion-toolbar>
+</ion-header>
+<ion-content class="ion-padding">
+    @if (video) {
+        <div style="border-left: 4px solid #1976d2; padding-left: 1rem;">
+            <span style="font-weight: bold">Lecture:</span> {{ video.title }}<br/>
+            <span style="font-weight: bold">Instructor:</span> {{ video.lecturer }}
+        </div>
+    }
+    <p>
+        Please rate the following aspects of this lecture (optional), then click Continue.
+    </p>
+    <ion-item>
+        <ion-label>Instructor's Delivery</ion-label>
+        <p-rating [(ngModel)]="result.delivery"/>
+    </ion-item>
+    <ion-item>
+        <ion-label>Usefulness of Material</ion-label>
+        <p-rating [(ngModel)]="result.material"/>
+    </ion-item>
+    <ion-item>
+        <ion-label>Audio/Video Quality</ion-label>
+        <p-rating [(ngModel)]="result.video"/>
+    </ion-item>
+    <p style="margin-top: 2rem">
+        Thank you for taking the time to complete the survey.
+    </p>
+</ion-content>

@@ -1,7 +1,7 @@
 import {AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {combineLatest, EMPTY, fromEvent, mergeAll, Observable, of, pairwise, startWith, Subject, takeUntil, throttleTime} from 'rxjs';
 import {ActivatedRoute, Router} from '@angular/router';
-import {CourseMembers, Lecture, ManService} from '../../man.service';
+import {CourseMembers, EvaluationRecord, Lecture, ManService} from '../../man.service';
 import {first, map, switchMap} from 'rxjs/operators';
 import videojs from 'video.js';
 import 'videojs-hotkeys';
@@ -28,6 +28,7 @@ import {
     IonText,
     IonTitle,
     IonToolbar,
+    ModalController,
 } from '@ionic/angular/standalone';
 import {DomSanitizer} from '@angular/platform-browser';
 import {PlayHistory} from '../../play-tracker.service';
@@ -36,6 +37,7 @@ import {checkmarkOutline, closeOutline, documentAttachOutline, download, pauseCi
 import type Player from 'video.js/dist/types/player';
 import {ulid} from 'ulid';
 import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
+import {ModalEvaluationComponent} from './modal-evaluation.component';
 
 @Component({
     selector: 'app-course',
@@ -91,7 +93,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
 
     constructor(private route: ActivatedRoute, private router: Router,
         private manService: ManService, private alertController: AlertController,
-                private sanitizer: DomSanitizer) {
+                private sanitizer: DomSanitizer, private modalCtrl: ModalController) {
         addIcons({ download, documentAttachOutline, checkmarkOutline, closeOutline, pauseCircleOutline });
     }
 
@@ -112,7 +114,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                         }
                         this.year = courseData.category;
                         this.course = courseData.name;
-                        return this.mergeVideoInfo(courseData.lectures, history);
+                        return this.mergeVideoInfo(courseData.lectures, history?.records ?? {}, history?.evaluations ?? {});
                     }));
                 } else if (this.year) {
                     this.router.navigate(['home/' + this.year]);
@@ -141,7 +143,12 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 enableModifiersForNumbers: false,
                 enableVolumeScroll: false,
             });
-            this.videoPlayer.on('ended', () => this.updatePlayRecord());
+            this.videoPlayer.on('ended', () => {
+                this.updatePlayRecord();
+                if (!this.currentVideo.is_evaluated) {
+                    this.openEvaluationModal();
+                }
+            });
             this.videoPlayer.on('loadedmetadata', () => {
                 // On video load, seek to last played position
                 if (this.currentVideo.history.end_time
@@ -217,10 +224,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         this.stopPolling$.next(true);
     }
 
-    mergeVideoInfo(videos: CourseMembers, history: PlayHistory|null) {
-        if (!history) {
-            history = {};
-        }
+    mergeVideoInfo(videos: CourseMembers, history: PlayHistory, evaluations: { [key: number]: EvaluationRecord }) {
         const progress = {
             viewed: 0,
             duration: 0
@@ -230,17 +234,22 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             // @ts-ignore
             return ('' + history[b].updated_at).localeCompare(history[a].updated_at);
         }).slice(0, 1)[0] ?? null;
-        Object.keys(videos).forEach(lectureKey => {
-            videos[lectureKey].history = history[videos[lectureKey].id] ?? { end_time: null, updated_at: null };
-            if (videos[lectureKey].duration) {
-                progress.duration -= -videos[lectureKey].duration;
-                if (videos[lectureKey].history.end_time) {
-                    progress.viewed -= -videos[lectureKey].history.end_time;
+        const videoInfo = Object.values(videos).map(lecture => {
+            lecture.history = history[lecture.id] ?? ((lecture.id in evaluations && lecture.duration) ? { // If evaluation exists, treat as watched
+                end_time: lecture.duration,
+                updated_at: null,
+            } : {end_time: null, updated_at: null});
+            if (lecture.duration) {
+                progress.duration -= -lecture.duration;
+                if (lecture.history.end_time) {
+                    progress.viewed -= -lecture.history.end_time;
                 }
             }
+            lecture.is_evaluated = evaluations[lecture.id]?.type === 'end_play';
+            return lecture;
         });
         this.courseProgress = progress;
-        return Object.values(videos);
+        return videoInfo;
     }
 
     viewVideo(video: Lecture) {
@@ -296,6 +305,14 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         });
 
         await alert.present();
+    }
+
+    async openEvaluationModal() {
+        const modal = await this.modalCtrl.create({
+            component: ModalEvaluationComponent,
+            componentProps: {video: this.currentVideo},
+        });
+        await modal.present();
     }
 
     preventMouseEvent($event: MouseEvent) {

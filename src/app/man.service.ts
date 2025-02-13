@@ -96,26 +96,31 @@ export class ManService {
             }));
     }
 
-    getPlayRecord(year: string, course: string, courseId: string|null, stopPolling: Observable<boolean>): Observable<PlayHistory> {
+    getPlayRecord(year: string, course: string, courseId: string | null, stopPolling: Observable<boolean>): Observable<{
+        records: PlayHistory,
+        evaluations: { [key: number]: EvaluationRecord },
+    }> {
         const params = courseId ? new HttpParams().set("course_id", courseId ?? '') : new HttpParams().set("year", year).set("course", course);
         this.playTracker.retrieve().subscribe(console.log);
         return timer(1, 60000).pipe(
             switchMap(() => this.get<JSend<{
-                records: PlayHistory
-            }>>('v1/play_records', {params}).pipe(map(response => response?.data?.records))),
+                records: PlayHistory,
+                evaluations: { [key: number]: EvaluationRecord },
+            }>>('v1/play_records', {params}).pipe(map(response => response?.data))),
             // Replace value with update from play tracker if available
             combineLatestWith(this.playTracker.retrieve().pipe(startWith(null))),
-            map(([records, update]) => {
-                if (!records) {
-                    records = {};
-                }
+            map(([data, update]) => {
+                const records = data?.records ?? {};
                 if (update) {
                     if (!records[update.video_id] ||
                         (records[update.video_id].updated_at < update.updated_at)) {
                         records[update.video_id] = update;
                     }
                 }
-                return records;
+                return {
+                    records,
+                    evaluations: data?.evaluations ?? {},
+                };
             }),
             takeUntil(stopPolling),
         );
@@ -129,6 +134,10 @@ export class ManService {
             speed,
             log,
         });
+    }
+
+    sendEvaluation(type: string, video: string | number, result: { delivery: number | null, material: number | null, video: number | null }) {
+        return this.post<JSend<null>>('v1/evaluations', {type, video, result});
     }
 
     checkAuthorization(): Observable<boolean> {
@@ -206,6 +215,12 @@ export interface CourseListResponse {
     last_played: { video: Lecture, updated_at: string, end_time: number } | null;
 }
 
+export interface EvaluationRecord {
+    id: number;
+    type: string;
+    video_id: number;
+}
+
 export interface Lecture {
     title: string;
     lecturer: string;
@@ -228,6 +243,7 @@ export interface Lecture {
     duration?: number;
     durationInMin?: number;
     history?: PlayHistoryValue;
+    is_evaluated?: boolean;
     course?: {
         id: number;
         name: string;

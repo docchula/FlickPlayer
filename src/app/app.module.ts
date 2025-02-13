@@ -20,6 +20,9 @@ import { getAnalytics, provideAnalytics, ScreenTrackingService, UserTrackingServ
 import { getPerformance, providePerformance } from '@angular/fire/performance';
 import { getRemoteConfig, provideRemoteConfig } from '@angular/fire/remote-config';
 import { getFirestore, provideFirestore } from '@angular/fire/firestore';
+import {providePrimeNG} from 'primeng/config';
+import {provideAnimationsAsync} from '@angular/platform-browser/animations/async';
+import Aura from '@primeng/themes/aura';
 
 @NgModule({ declarations: [AppComponent],
     bootstrap: [AppComponent],
@@ -59,6 +62,12 @@ import { getFirestore, provideFirestore } from '@angular/fire/firestore';
         provideAppInitializer(() => {
             inject(Sentry.TraceService);
           }),
+        provideAnimationsAsync(),
+        providePrimeNG({
+            theme: {
+                preset: Aura
+            }
+        })
     ],
 })
 export class AppModule {

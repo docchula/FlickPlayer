@@ -27,13 +27,14 @@ if (environment.production) {
         // Benign Firebase Auth errors
         'auth/cancelled-popup-request', 'auth/popup-blocked', 'auth/popup-closed-by-user',
         'auth/network-request-failed', 'auth/internal-error', 'Pending promise was never set',
-        'auth/user-cancelled',
+        'auth/user-cancelled', 'auth/missing-or-invalid-nonce',
         // HTTP errors
         'Http failure response', ' 401', ' 404', ' 504', 'Unknown Error',
+        'Connection to Indexed Database',
         // Video player errors
         'Picture-in-Picture', 'requestFullscreen', 'triggered by a user activation', 'Illegal invocation',
         'not allowed by the user agent', 'FullScreen', 'InvalidStateError', 'video track', 'exitFullscreen',
-        'TextTrackCue', 'ResizeObserver',
+        'TextTrackCue', 'ResizeObserver', 'Maximum call stack size exceeded.',
     ],
   });
 }
