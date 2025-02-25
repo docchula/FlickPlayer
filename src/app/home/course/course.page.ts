@@ -259,10 +259,10 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             } else if (videojs.browser.IS_SAFARI
                 && (source.type.startsWith('application/dash+xml') || source.type.startsWith('video/webm'))) {
                 return false;
-            } else if (/Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) && source.type.startsWith('application/x-mpegURL')) {
+            } /* else if (/Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) && source.type.startsWith('application/x-mpegURL')) {
                 // Don't play HLS on Safari
                 return false;
-            }
+            } */
             return this.videoPlayerElement.nativeElement.canPlayType(
                 source.type.replace('application/dash+xml', 'video/mp4')
                     .replace('application/x-mpegURL', 'video/mp4')
