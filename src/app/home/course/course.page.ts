@@ -90,6 +90,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     progressNetworkError: boolean | null;
     sessionUid: string; // Unique ID for session x video (new id for each video)
     stopPolling$ = new Subject<boolean>();
+    isEvaluated = false;
 
     constructor(private route: ActivatedRoute, private router: Router,
         private manService: ManService, private alertController: AlertController,
@@ -145,8 +146,9 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             });
             this.videoPlayer.on('ended', () => {
                 this.updatePlayRecord();
-                if (!this.currentVideo.is_evaluated) {
+                if (!this.currentVideo.is_evaluated && !this.isEvaluated) {
                     this.openEvaluationModal();
+                    this.isEvaluated = true;
                 }
             });
             this.videoPlayer.on('loadedmetadata', () => {
@@ -183,6 +185,11 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                         lastLog.endTime = current.currentTime;
                         lastLog.updatedAt = currentTimestamp;
                         this.playLog[lastLogKey] = lastLog;
+                    }
+                    // Show evaluation modal when video is paused in the last 5% of the video
+                    if (!current.isSeeking && !this.currentVideo.is_evaluated && !this.isEvaluated && this.currentVideo.duration && (current.currentTime > this.currentVideo.duration * 0.95)) {
+                        this.openEvaluationModal();
+                        this.isEvaluated = true;
                     }
                 } else {
                     if (!lastLog // New
@@ -271,6 +278,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         this.videoPlayer.src(video.sources);
         this.currentVideo = video;
         this.videoPlayerElement.nativeElement.focus();
+        this.isEvaluated = false;
         this.sessionUid = ulid();
         this.playLog = [];
     }
