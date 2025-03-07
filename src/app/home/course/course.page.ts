@@ -256,7 +256,11 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             return lecture;
         });
         this.courseProgress = progress;
-        return videoInfo;
+
+        // For local courses, sort by title
+        return videoInfo.find(v => v.sources.find(s => s.path?.includes('.m3u8')))
+            ? videoInfo.sort((a, b) => a.title.localeCompare(b.title))
+            : videoInfo;
     }
 
     viewVideo(video: Lecture) {
