@@ -152,6 +152,9 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 }
             });
             this.videoPlayer.on('loadedmetadata', () => {
+                if (!this.currentVideo.duration) {
+                    this.currentVideo.duration = this.videoPlayer.duration();
+                }
                 // On video load, seek to last played position
                 if (this.currentVideo.history.end_time
                     && (!this.currentVideo.duration || (((this.currentVideo.history.end_time ?? 0) / this.currentVideo.duration) < 0.995))) {
