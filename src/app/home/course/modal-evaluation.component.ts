@@ -4,6 +4,7 @@ import {FormsModule} from '@angular/forms';
 import {IonButton, IonButtons, IonContent, IonHeader, IonItem, IonLabel, IonTitle, IonToolbar, ModalController} from '@ionic/angular/standalone';
 import {Lecture, ManService} from '../../man.service';
 import {Rating} from 'primeng/rating';
+import {ToastController} from '@ionic/angular';
 
 @Component({
     selector: 'app-modal-evaluation',
@@ -22,7 +23,7 @@ export class ModalEvaluationComponent {
         video: null,
     };
 
-    constructor(private manService: ManService, private modalCtrl: ModalController) {
+    constructor(private manService: ManService, private modalCtrl: ModalController, private toastController: ToastController) {
     }
 
     cancel() {
@@ -31,8 +32,22 @@ export class ModalEvaluationComponent {
 
     confirm() {
         if (this.video && (this.result.delivery || this.result.material || this.result.video)) {
-            this.manService.sendEvaluation('end_play', this.video.id, this.result).subscribe();
+            this.manService.sendEvaluation('end_play', this.video.id, this.result).subscribe(res => {
+                if (res.status === 'success') {
+                    void this.presentToast();
+                }
+            });
         }
         return this.modalCtrl.dismiss(this.result, 'confirm');
+    }
+
+    async presentToast() {
+        const toast = await this.toastController.create({
+            message: 'Evaluation saved, thank you!',
+            duration: 1500,
+            position: 'bottom',
+        });
+
+        await toast.present();
     }
 }
