@@ -135,6 +135,11 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                     backward: 10,
                 }
             },
+            html5: {
+                vhs: {
+                    cacheEncryptionKeys: true,
+                },
+            },
             techOrder: ['html5', 'youtube'],
         }, () => {
             // @ts-ignore
