@@ -91,6 +91,9 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     sessionUid: string; // Unique ID for session x video (new id for each video)
     stopPolling$ = new Subject<boolean>();
     isEvaluated = false;
+    // Tells if the video should seek to last played position when loadedmetadata event is fired
+    // This is to prevent seeking in case loadedmetadata event is fired not at the beginning of the session
+    expectVideoTimeJump = false;
 
     constructor(private route: ActivatedRoute, private router: Router,
         private manService: ManService, private alertController: AlertController,
@@ -162,9 +165,11 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 }
                 // On video load, seek to last played position
                 if (this.currentVideo.history.end_time
+                    && this.expectVideoTimeJump
                     && (!this.currentVideo.duration || (((this.currentVideo.history.end_time ?? 0) / this.currentVideo.duration) < 0.995))) {
                     this.videoPlayer.currentTime(this.currentVideo.history.end_time);
                 }
+                this.expectVideoTimeJump = false;
             });
 
             // Listen for video time updates
@@ -290,6 +295,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         this.videoPlayer.src(video.sources);
         this.currentVideo = video;
         this.videoPlayerElement.nativeElement.focus();
+        this.expectVideoTimeJump = true;
         this.isEvaluated = false;
         this.sessionUid = ulid();
         this.playLog = [];
