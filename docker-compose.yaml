@@ -1,0 +1,23 @@
+services:
+  angular:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    image: flick-player-app
+    pull_policy: build
+    restart: always
+    labels:
+      # Traefik configuration discovery
+      # https://doc.traefik.io/traefik/providers/docker/#routing-configuration-with-labels
+      - "traefik.enable=true"
+      - "traefik.http.routers.flick-player-http.rule=Host(`flick.docchula.com`)"
+      - "traefik.http.routers.flick-player-http.entrypoints=web"
+      - "traefik.http.routers.flick-player-https.rule=Host(`flick.docchula.com`)"
+      - "traefik.http.routers.flick-player-https.entrypoints=websecure"
+      - "traefik.http.routers.flick-player-https.tls.certresolver=leresolver"
+      - "traefik.http.services.flick-player.loadbalancer.server.port=80"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 300M
