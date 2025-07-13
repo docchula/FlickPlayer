@@ -14,7 +14,7 @@ describe('PlayTrackerService', () => {
     }));
 
     it('should be created', () => {
-        const service: PlayTrackerService = TestBed.get(PlayTrackerService);
+        const service: PlayTrackerService = TestBed.inject(PlayTrackerService);
         expect(service).toBeTruthy();
     });
 });
