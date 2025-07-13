@@ -17,7 +17,7 @@
   "dependencies": {
     "@angular/common": "^20.1.0",
     "@angular/core": "^20.1.0",
-    "@angular/fire": "^19.1.0",
+    "@angular/fire": "^20.0.1",
     "@angular/forms": "^20.1.0",
     "@angular/platform-browser": "^20.1.0",
     "@angular/platform-browser-dynamic": "^20.1.0",
