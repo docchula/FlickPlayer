@@ -15,6 +15,7 @@
   },
   "private": true,
   "dependencies": {
+    "@angular/animations": "20.1.0",
     "@angular/common": "^20.1.0",
     "@angular/core": "^20.1.0",
     "@angular/fire": "^20.0.1",
