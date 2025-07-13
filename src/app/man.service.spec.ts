@@ -19,7 +19,7 @@ describe('ManService', () => {
 }));
 
     it('should be created', () => {
-        const service: ManService = TestBed.get(ManService);
+        const service: ManService = TestBed.inject(ManService);
         expect(service).toBeTruthy();
     });
 });

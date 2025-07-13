@@ -1,25 +1,25 @@
-import { ErrorHandler, NgModule, inject, provideAppInitializer } from '@angular/core';
-import { BrowserModule } from '@angular/platform-browser';
+import {ErrorHandler, inject, NgModule, provideAppInitializer} from '@angular/core';
+import {BrowserModule} from '@angular/platform-browser';
 import {Router, RouteReuseStrategy} from '@angular/router';
 import * as Sentry from "@sentry/angular";
 
-import { IonicRouteStrategy, provideIonicAngular, IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
+import {IonApp, IonicRouteStrategy, IonRouterOutlet, provideIonicAngular} from '@ionic/angular/standalone';
 
-import { AppComponent } from './app.component';
-import { AppRoutingModule } from './app-routing.module';
-import { environment } from '../environments/environment';
-import { WelcomePageModule } from './welcome/welcome.module';
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
-import { ServiceWorkerModule } from '@angular/service-worker';
-import { DEBUG_MODE, UserTrackingService } from '@angular/fire/compat/analytics';
-import { INSTRUMENTATION_ENABLED } from '@angular/fire/compat/performance';
-import { DEFAULTS } from '@angular/fire/compat/remote-config';
-import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
-import { getAuth, provideAuth } from '@angular/fire/auth';
-import { getAnalytics, provideAnalytics, ScreenTrackingService, UserTrackingService as UserTrackingService_alias } from '@angular/fire/analytics';
-import { getPerformance, providePerformance } from '@angular/fire/performance';
-import { getRemoteConfig, provideRemoteConfig } from '@angular/fire/remote-config';
-import { getFirestore, provideFirestore } from '@angular/fire/firestore';
+import {AppComponent} from './app.component';
+import {AppRoutingModule} from './app-routing.module';
+import {environment} from '../environments/environment';
+import {WelcomePageModule} from './welcome/welcome.module';
+import {provideHttpClient, withFetch, withInterceptorsFromDi} from '@angular/common/http';
+import {ServiceWorkerModule} from '@angular/service-worker';
+import {DEBUG_MODE, UserTrackingService} from '@angular/fire/compat/analytics';
+import {INSTRUMENTATION_ENABLED} from '@angular/fire/compat/performance';
+import {DEFAULTS} from '@angular/fire/compat/remote-config';
+import {initializeApp, provideFirebaseApp} from '@angular/fire/app';
+import {getAuth, provideAuth} from '@angular/fire/auth';
+import {getAnalytics, provideAnalytics, ScreenTrackingService, UserTrackingService as UserTrackingService_alias} from '@angular/fire/analytics';
+import {getPerformance, providePerformance} from '@angular/fire/performance';
+import {getRemoteConfig, provideRemoteConfig} from '@angular/fire/remote-config';
+import {getFirestore, provideFirestore} from '@angular/fire/firestore';
 import {providePrimeNG} from 'primeng/config';
 import {provideAnimationsAsync} from '@angular/platform-browser/animations/async';
 import Aura from '@primeng/themes/aura';
@@ -47,7 +47,7 @@ import Aura from '@primeng/themes/aura';
         provideAnalytics(() => getAnalytics()),
         providePerformance(() => getPerformance()),
         provideRemoteConfig(() => getRemoteConfig()),
-        provideHttpClient(withInterceptorsFromDi()),
+        provideHttpClient(withFetch(), withInterceptorsFromDi()),
         ScreenTrackingService,
         UserTrackingService_alias,
         {

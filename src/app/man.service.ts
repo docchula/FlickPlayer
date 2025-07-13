@@ -101,7 +101,6 @@ export class ManService {
         evaluations: { [key: number]: EvaluationRecord },
     }> {
         const params = courseId ? new HttpParams().set("course_id", courseId ?? '') : new HttpParams().set("year", year).set("course", course);
-        this.playTracker.retrieve().subscribe(console.log);
         return timer(1, 60000).pipe(
             switchMap(() => this.get<JSend<{
                 records: PlayHistory,
