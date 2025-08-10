@@ -21,6 +21,11 @@ ion-card-title {
   text-align: center;
 }
 
+.center-spinner {
+  display: block;
+  margin: 1rem auto;
+}
+
 .small-text {
   color: #aaaaaa;
   a {
@@ -33,6 +38,14 @@ ion-card-title {
       color: #666666;
     }
   }
+}
+
+.hover-card {
+  transition: transform 0.2s ease;
+}
+
+.hover-card:hover {
+  transform: translateY(-0.5rem) scale(1.02);
 }
 
 p {

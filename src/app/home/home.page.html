@@ -3,8 +3,8 @@
     <ion-title>
       MDCU Recorded Lecture
     </ion-title>
-    <ion-buttons slot="secondary">
-      <ion-button fill="solid" color="secondary" (click)="logout()">
+    <ion-buttons slot="end">
+      <ion-button fill="outline" color="secondary" (click)="logout()">
         Sign out
         <ion-icon slot="end" name="log-out-outline"></ion-icon>
       </ion-button>
@@ -12,46 +12,62 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
+<ion-content [fullscreen]="true" class="ion-padding">
   @if (response$ | async; as response) {
-    <div>
-      <ion-grid>
-        <ion-row>
-          @for (folder of Object.keys(response.years); track folder) {
-            <ion-col size-xs="12" size-sm="6" size-md="4" size-lg="3" size-xl="2">
-              <ion-card [routerLink]="folder" [ngStyle]="{'background-color': colorByFolderName(folder)}">
-                <ion-card-header>
-                  <ion-card-title>{{ folder }}</ion-card-title>
-                </ion-card-header>
-              </ion-card>
-            </ion-col>
-          }
-        </ion-row>
-      </ion-grid>
-      @if (response.last_played) {
-        <div>
-          <p>
-            Last played:
-            <a (click)="goToLastVideo(response.last_played.video)" (keyup)="goToLastVideo(response.last_played.video)" tabindex="0">
-              <span class="course-name">{{ response.last_played.video.course.name }}</span>
-              <ion-icon name="play"></ion-icon>
-            </a>
-          </p>
-        </div>
+  @if (response.last_played) {
+  <ion-card color="tertiary" class="ion-margin-top">
+    <ion-card-header>
+      <ion-card-title>Last Played</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item button detail (click)="goToLastVideo(response.last_played.video)">
+        <ion-label>
+          <h2>{{ response.last_played.video.course.name }}</h2>
+        </ion-label>
+        <ion-icon name="play-circle" slot="end" size="large" color="secondary"></ion-icon>
+      </ion-item>
+    </ion-card-content>
+  </ion-card>
+  }
+
+  <ion-grid>
+    <ion-row>
+      @for (folder of Object.keys(response.years); track folder) {
+      <ion-col size-xs="12" size-sm="6" size-md="4" size-lg="3" size-xl="2">
+        <ion-card [routerLink]="folder" [ngStyle]="{'background-color': colorByFolderName(folder)}"
+          class="ion-text-center hover-card">
+          <ion-card-header>
+            <ion-card-title class="ion-text-uppercase">{{ folder }}</ion-card-title>
+          </ion-card-header>
+        </ion-card>
+      </ion-col>
       }
-      <p class="small-text">
-        @if (response.last_fetched_at) {
-          <span>
-            Last fetched from MDCU E-Learning at {{ response.last_fetched_at }}<br/>
-          </span>
-        }
-        Your feedback and suggestions are welcome. Please email them to <a href="mailto:siwat.techa@docchula.com" target="_blank">siwat.techa&#64;docchula.com</a>.<br/>
-        Contents are provided for MDCU students only. You may not copy, reproduce, distribute, publish, display, create derivative works,
-        transmit, or
-        in any way exploit any such content.
-      </p>
-    </div>
+    </ion-row>
+  </ion-grid>
+
   } @else {
-    <h4 class="center-text">Loading...</h4>
+  <ion-spinner name="crescent" class="ion-margin-top center-spinner"></ion-spinner>
+  <h4 class="ion-text-center ion-margin-top">Loading lectures...</h4>
   }
 </ion-content>
+
+<ion-footer class="ion-no-border">
+  <ion-toolbar>
+    <ion-text class="ion-padding small-text">
+      @if (response$ | async; as response) {
+      @if (response.last_fetched_at) {
+      <p>Last fetched from MDCU E-Learning at {{ response.last_fetched_at }}</p>
+      }
+      }
+      <p>
+        Your feedback is welcome. Email:
+        <a href="mailto:siwat.techa@docchula.com">siwat.techa&#64;docchula.com</a> or
+        <a href="mailto:it@docchula.com">it&#64;docchula.com</a>
+      </p>
+      <p>
+        Contents are provided for MDCU students only. You may not copy, reproduce, distribute, publish, display, create
+        derivative works, transmit, or in any way exploit any such content.
+      </p>
+    </ion-text>
+  </ion-toolbar>
+</ion-footer>
