@@ -78,24 +78,8 @@ export class WelcomePage implements OnInit, OnDestroy {
     this.authStateSubscription.unsubscribe();
   }
 
-  async login() {
-    const loading = await this.loadingCtrl.create({
-      message: "Signing in...",
-      spinner: "crescent",
-    });
-    await loading.present();
-
-    try {
-      await this.authService.signInWithPopup();
-    } catch (e) {
-      console.error("Login failed", e);
-      await this.alertError(
-        "Login Failed",
-        "Unable to sign in. Please try again."
-      );
-    } finally {
-      loading.dismiss();
-    }
+  login() {
+    this.authService.signInWithPopup();
   }
 
   logout() {
