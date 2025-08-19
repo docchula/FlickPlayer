@@ -1,6 +1,12 @@
+main {
+  min-height: 60vh;
+  @media screen and (min-width: 768px) {
+    min-height: 70vh;
+  }
+}
+
 ion-card {
   min-height: 4rem;
-  cursor: pointer;
 }
 
 ion-card-title {
@@ -21,6 +27,11 @@ ion-card-title {
   text-align: center;
 }
 
+.center-spinner {
+  display: block;
+  margin: 1rem auto;
+}
+
 .small-text {
   color: #aaaaaa;
   a {
@@ -33,6 +44,15 @@ ion-card-title {
       color: #666666;
     }
   }
+}
+
+.hover-card {
+  transition: transform 0.2s ease;
+  cursor: pointer;
+}
+
+.hover-card:hover {
+  transform: translateY(-0.5rem) scale(1.02);
 }
 
 p {
