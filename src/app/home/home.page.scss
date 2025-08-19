@@ -7,7 +7,6 @@ main {
 
 ion-card {
   min-height: 4rem;
-  cursor: pointer;
 }
 
 ion-card-title {
@@ -49,6 +48,7 @@ ion-card-title {
 
 .hover-card {
   transition: transform 0.2s ease;
+  cursor: pointer;
 }
 
 .hover-card:hover {

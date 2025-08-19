@@ -21,7 +21,7 @@
                         <ion-card-title>Last Played</ion-card-title>
                     </ion-card-header>
                     <ion-card-content>
-                        <ion-item button detail (click)="goToLastVideo(response.last_played.video)">
+                        <ion-item button="true" detail="true" (click)="goToLastVideo(response.last_played.video)">
                             <ion-label>
                                 <h2>{{ response.last_played.video.course.name }}</h2>
                             </ion-label>
