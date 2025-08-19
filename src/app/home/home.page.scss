@@ -1,3 +1,10 @@
+main {
+  min-height: 60vh;
+  @media screen and (min-width: 768px) {
+    min-height: 70vh;
+  }
+}
+
 ion-card {
   min-height: 4rem;
   cursor: pointer;
