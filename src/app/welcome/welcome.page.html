@@ -1,42 +1,46 @@
 <ion-content class="ion-text-center ion-padding" color="light">
-  <ion-card id="mainCard">
+  <ion-card id="mainCard" class="ion-margin ion-padding">
     <ion-card-header>
-      <ion-card-title>MDCU Recorded Lecture</ion-card-title>
+      <ion-card-title class="ion-text-center" color="primary">
+        MDCU Recorded Lecture
+      </ion-card-title>
     </ion-card-header>
-    <ion-card-content>
 
+    <ion-card-content>
       @if (user) {
-        <div>
-          <h2>Hello, {{ user.displayName }}!</h2><br/>
-          <ion-button expand="block" color="tertiary" (click)="goToHome()">
+          <h2>Hello, {{ user.displayName }}!</h2><br />
+          <ion-button expand="block" color="tertiary" shape="round" (click)="goToHome()">
             View Courses
           </ion-button>
-          <ion-button expand="block" color="secondary" (click)="logout()">
-            Sign out
+          <ion-button expand="block" color="secondary" shape="round" (click)="logout()">
+            Sign Out
           </ion-button>
-        </div>
       } @else {
-        <p>Sign in with your Docchula account</p><br/>
-        <ion-button shape="round" slot="start" expand="full" color="tertiary" (click)="login()">
+        <p class="ion-margin">Sign in with your Docchula account</p>
+        <ion-button expand="full" shape="round" color="tertiary" class="ion-margin-top" (click)="login()">
           Sign in with Docchula
         </ion-button>
       }
-
     </ion-card-content>
   </ion-card>
+
   @if (isIAB) {
-    <ion-card color="danger" class="browserCard">
+    <ion-card color="danger" class="browserCard ion-margin">
       <ion-card-content>
         In-app browser is not supported. Please open this website in Safari/Chrome.
       </ion-card-content>
     </ion-card>
   }
   @if (isSafari) {
-    <ion-card color="warning" class="browserCard">
+    <ion-card color="warning" class="browserCard ion-margin">
       <ion-card-content>
         Your browser may not be able to play some video. Please try again using Google Chrome or Mozilla Firefox on Windows/Linux/macOS/Android.
       </ion-card-content>
     </ion-card>
   }
-  <ion-text class="small-text" color="medium">The Student Union of the Faculty of Medicine, Chulalongkorn University</ion-text>
+
+  <ion-text class="ion-margin-top ion-text-center small-text" color="medium">
+    The Student Union of the Faculty of Medicine, Chulalongkorn University
+  </ion-text>
 </ion-content>
+
