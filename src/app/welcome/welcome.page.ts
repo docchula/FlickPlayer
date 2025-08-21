@@ -1,21 +1,21 @@
-import { Component, OnDestroy, OnInit } from "@angular/core";
+import {Component, OnDestroy, OnInit} from "@angular/core";
 import {
-  AlertController,
-  LoadingController,
-  IonContent,
-  IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardContent,
-  IonButton,
-  IonText,
+    AlertController,
+    IonButton,
+    IonCard,
+    IonCardContent,
+    IonCardHeader,
+    IonCardTitle,
+    IonContent,
+    IonText,
+    LoadingController,
 } from "@ionic/angular/standalone";
-import { Router } from "@angular/router";
-import { ManService } from "../man.service";
-import { HttpErrorResponse } from "@angular/common/http";
-import { Subscription } from "rxjs";
-import { User } from "@angular/fire/auth";
-import { AuthService } from "../auth.service";
+import {Router} from "@angular/router";
+import {ManService} from "../man.service";
+import {HttpErrorResponse} from "@angular/common/http";
+import {Subscription} from "rxjs";
+import {User} from "@angular/fire/auth";
+import {AuthService} from "../auth.service";
 
 @Component({
   selector: "app-welcome",
@@ -85,17 +85,12 @@ export class WelcomePage implements OnInit, OnDestroy {
     });
     await loading.present();
 
-    try {
-      await this.authService.signInWithPopup();
-    } catch (e) {
-      console.error("Login failed", e);
-      await this.alertError(
-        "Login Failed",
-        "Unable to sign in. Please try again."
-      );
-    } finally {
-      loading.dismiss();
-    }
+      this.authService.signInWithPopup().catch(async (error) => {
+          await this.alertError(
+              "Login Failed",
+              `Unable to sign in. Please try again. (${error.code}: ${error.message})`,
+          );
+      }).finally(() => loading.dismiss());
   }
 
   logout() {
