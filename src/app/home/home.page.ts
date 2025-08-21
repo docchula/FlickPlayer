@@ -1,13 +1,32 @@
-import { Component, OnInit } from '@angular/core';
-import { Observable } from 'rxjs';
+import {Component, OnInit} from '@angular/core';
+import {Observable} from 'rxjs';
 import {CourseListResponse, Lecture, ManService} from '../man.service';
-import { Router, RouterLink } from '@angular/router';
-import { AuthService } from '../auth.service';
-import { colorByFolderName } from '../../helpers';
-import { addIcons } from "ionicons";
-import { logOutOutline, play } from "ionicons/icons";
-import { IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon, IonContent, IonGrid, IonRow, IonCol, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItem, IonLabel, IonText, IonSpinner } from '@ionic/angular/standalone';
-import { NgStyle, AsyncPipe } from '@angular/common';
+import {Router, RouterLink} from '@angular/router';
+import {AuthService} from '../auth.service';
+import {colorByFolderName} from '../../helpers';
+import {addIcons} from "ionicons";
+import {logOutOutline} from "ionicons/icons";
+import {
+    IonButton,
+    IonButtons,
+    IonCard,
+    IonCardContent,
+    IonCardHeader,
+    IonCardTitle,
+    IonCol,
+    IonContent,
+    IonGrid,
+    IonHeader,
+    IonIcon,
+    IonItem,
+    IonLabel,
+    IonRow,
+    IonSpinner,
+    IonText,
+    IonTitle,
+    IonToolbar,
+} from '@ionic/angular/standalone';
+import {AsyncPipe, NgStyle} from '@angular/common';
 
 @Component({
     selector: 'app-home',
@@ -19,7 +38,7 @@ export class HomePage implements OnInit {
     response$: Observable<CourseListResponse>;
 
     constructor(private manService: ManService, private router: Router, private authService: AuthService) {
-        addIcons({ logOutOutline, play });
+        addIcons({logOutOutline});
     }
 
     logout() {
