@@ -250,15 +250,15 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             duration: 0
         };
         this.lastPlayedVideoKey = Object.values(history).map(h => h.video_id).sort((a, b) => {
-            // force history[b].updated_at to be a string
+            // force history[b].played_at to be a string
             // @ts-ignore
-            return ('' + history[b].updated_at).localeCompare(history[a].updated_at);
+            return ('' + history[b].played_at).localeCompare(history[a].played_at);
         }).slice(0, 1)[0] ?? null;
         const videoInfo = Object.values(videos).map(lecture => {
             lecture.history = history[lecture.id] ?? ((lecture.id in evaluations && lecture.duration) ? { // If evaluation exists, treat as watched
                 end_time: lecture.duration,
-                updated_at: null,
-            } : {end_time: null, updated_at: null});
+                played_at: null,
+            } : {end_time: null, played_at: null});
             if (lecture.duration) {
                 progress.duration -= -lecture.duration;
                 if (lecture.history.end_time) {
