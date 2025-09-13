@@ -211,7 +211,7 @@ export interface CourseListResponse {
         }[];
     };
     last_fetched_at: string;
-    last_played: { video: Lecture, updated_at: string, end_time: number } | null;
+    last_played: { video: Lecture, played_at: string, end_time: number } | null;
 }
 
 export interface EvaluationRecord {
