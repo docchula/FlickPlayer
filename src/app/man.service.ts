@@ -112,7 +112,7 @@ export class ManService {
                 const records = data?.records ?? {};
                 if (update) {
                     if (!records[update.video_id] ||
-                        (records[update.video_id].updated_at < update.updated_at)) {
+                        (records[update.video_id].played_at < update.played_at)) {
                         records[update.video_id] = update;
                     }
                 }

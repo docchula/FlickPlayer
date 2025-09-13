@@ -1,5 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {first, map, mergeMap, switchMap, tap} from 'rxjs/operators';
+import {first, map, switchMap, tap} from 'rxjs/operators';
 import {fromEventPattern, Observable} from 'rxjs';
 import {FieldValue, Timestamp} from '@angular/fire/firestore';
 import Pusher from 'pusher-js';
@@ -61,7 +61,7 @@ export interface PlayHistory {
 export interface PlayHistoryValue {
     duration?: number | null;
     end_time: number;
-    updated_at: Timestamp | FieldValue;
+    played_at: Timestamp | FieldValue;
     video_id?: number;
     year?: string;
     course?: string;
