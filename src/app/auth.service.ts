@@ -1,5 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {Auth, GoogleAuthProvider, idToken, user, signInWithPopup, signOut, User} from '@angular/fire/auth';
+import {Auth, getRedirectResult, GoogleAuthProvider, idToken, signInWithPopup, signInWithRedirect, signOut, user, User} from '@angular/fire/auth';
 import {BehaviorSubject, Subscription} from 'rxjs';
 
 @Injectable({
@@ -25,12 +25,19 @@ export class AuthService {
         this.userSubscription = this.user$.subscribe((aUser: User | null) => {
             this.userSubject.next(aUser);
         });
+        getRedirectResult(this.auth); // ignore result
     }
 
     signInWithPopup() {
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({hd: 'docchula.com'});
         return signInWithPopup(this.auth, provider);
+    }
+
+    signInWithRedirect() {
+        const provider = new GoogleAuthProvider();
+        provider.setCustomParameters({hd: 'docchula.com'});
+        return signInWithRedirect(this.auth, provider);
     }
 
     signOut() {

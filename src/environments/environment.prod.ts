@@ -2,7 +2,7 @@ export const environment = {
   production: true,
   firebase: {
     apiKey: 'AIzaSyChVnSa_0Lk0U4SvPi_yTmpzCC5W2CZqaI',
-    authDomain: 'keendev-flick-a.firebaseapp.com',
+      authDomain: 'flick.docchula.com',
     databaseURL: 'https://keendev-flick-a.firebaseio.com',
     projectId: 'keendev-flick-a',
     storageBucket: 'keendev-flick-a.appspot.com',
