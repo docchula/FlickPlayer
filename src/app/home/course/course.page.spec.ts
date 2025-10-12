@@ -4,7 +4,7 @@ import { AngularFireAuth } from '@angular/fire/compat/auth';
 import { ActivatedRouteStub, FireAnalyticsStub, FireAuthStub } from '../../stubs';
 import { ManService, ManServiceStub } from '../../man.service';
 import { AngularFireAnalytics } from '@angular/fire/compat/analytics';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 
 describe('CoursePage', () => {
@@ -13,7 +13,7 @@ describe('CoursePage', () => {
 
     beforeEach(waitForAsync(() => {
         TestBed.configureTestingModule({
-    imports: [IonicModule.forRoot(), provideRouter, CoursePage],
+    imports: [IonicModule.forRoot(), CoursePage],
     providers: [
         { provide: ActivatedRoute, useValue: ActivatedRouteStub },
         { provide: AngularFireAnalytics, useValue: FireAnalyticsStub },

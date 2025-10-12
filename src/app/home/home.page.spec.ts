@@ -4,7 +4,6 @@ import { AngularFireAuth } from '@angular/fire/compat/auth';
 import { FireAuthStub } from '../stubs';
 import { ManService, ManServiceStub } from '../man.service';
 import { IonicModule } from '@ionic/angular';
-import { provideRouter } from '@angular/router';
 
 describe('HomePage', () => {
     let component: HomePage;
@@ -12,7 +11,7 @@ describe('HomePage', () => {
 
     beforeEach(waitForAsync(() => {
         TestBed.configureTestingModule({
-    imports: [IonicModule.forRoot(), provideRouter, HomePage],
+    imports: [IonicModule.forRoot(), HomePage],
     providers: [
         { provide: AngularFireAuth, useValue: FireAuthStub },
         { provide: ManService, useValue: ManServiceStub }

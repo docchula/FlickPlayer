@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 import { ListPage } from './list.page';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { ActivatedRouteStub } from '../../stubs';
 import { ManService, ManServiceStub } from '../../man.service';
 import { IonicModule } from '@ionic/angular';
@@ -11,7 +11,7 @@ describe('ListPage', () => {
 
     beforeEach(waitForAsync(() => {
         TestBed.configureTestingModule({
-    imports: [IonicModule.forRoot(), provideRouter, ListPage],
+    imports: [IonicModule.forRoot(), ListPage],
     providers: [
         { provide: ActivatedRoute, useValue: ActivatedRouteStub },
         { provide: ManService, useValue: ManServiceStub }
