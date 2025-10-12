@@ -3,8 +3,8 @@ import { HomePage } from './home.page';
 import { AngularFireAuth } from '@angular/fire/compat/auth';
 import { FireAuthStub } from '../stubs';
 import { ManService, ManServiceStub } from '../man.service';
-import { RouterTestingModule } from '@angular/router/testing';
-import { IonicModule } from '@ionic/angular/ionic-module';
+import { IonicModule } from '@ionic/angular';
+import { provideRouter } from '@angular/router';
 
 describe('HomePage', () => {
     let component: HomePage;
@@ -12,7 +12,7 @@ describe('HomePage', () => {
 
     beforeEach(waitForAsync(() => {
         TestBed.configureTestingModule({
-    imports: [IonicModule.forRoot(), RouterTestingModule, HomePage],
+    imports: [IonicModule.forRoot(), provideRouter, HomePage],
     providers: [
         { provide: AngularFireAuth, useValue: FireAuthStub },
         { provide: ManService, useValue: ManServiceStub }
