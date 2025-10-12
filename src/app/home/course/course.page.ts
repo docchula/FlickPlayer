@@ -25,6 +25,7 @@ import {
     IonListHeader,
     IonProgressBar,
     IonRow,
+    IonSearchbar,
     IonText,
     IonTitle,
     IonToolbar,
@@ -63,6 +64,7 @@ import {ModalEvaluationComponent} from './modal-evaluation.component';
         IonLabel,
         IonItem,
         IonIcon,
+        IonSearchbar,
         NgClass,
         IonProgressBar,
         AsyncPipe,
@@ -78,10 +80,13 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     course: string;
     courseId?: string;
     list$: Observable<Lecture[]>;
+    filteredList$: Observable<Lecture[]>;
     courseProgress = {
         viewed: 0,
         duration: 0
     };
+    searchQuery = '';
+    searchQuery$ = new Subject<string>();
     isAndroid = /Android/i.test(navigator.userAgent);
     isIos = /iPad/i.test(navigator.userAgent) || /iPhone/i.test(navigator.userAgent);
     lastPlayedVideoKey: number = null;
@@ -127,6 +132,10 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 }
                 return EMPTY;
             })
+        );
+
+        this.filteredList$ = combineLatest([this.list$, this.searchQuery$.pipe(startWith(''))]).pipe(
+            map(([videos, query]) => this.filterVideos(videos, query))
         );
     }
 
@@ -274,6 +283,23 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         return videoInfo.find(v => v.sources.find(s => s.path?.includes('.m3u8')))
             ? videoInfo.sort((a, b) => a.title.localeCompare(b.title))
             : videoInfo;
+    }
+
+    filterVideos(videos: Lecture[], query: string): Lecture[] {
+        if (!query.trim()) {
+            return videos;
+        }
+
+        const lowerQuery = query.toLowerCase();
+        return videos.filter(video =>
+            video.title.toLowerCase().includes(lowerQuery) ||
+            (video.lecturer && video.lecturer.toLowerCase().includes(lowerQuery))
+        );
+    }
+
+    onSearchChange(event: any) {
+        this.searchQuery = event.detail.value ?? '';
+        this.searchQuery$.next(this.searchQuery);
     }
 
     viewVideo(video: Lecture) {
