@@ -101,7 +101,19 @@
                 }
             </ion-col>
             <ion-col size="12" size-lg [ngClass]="currentVideo ? 'scroll-area' : ''">
-                @if (list$ | async; as list) {
+               <ion-searchbar
+                    (ionInput)="onSearchChange($event)"
+                    placeholder="Search videos by title or lecturer..."
+                    debounce="300">
+                </ion-searchbar>
+                @if (filteredList$ | async; as list) {
+                    @if (list.length === 0 && searchQuery) {
+                        <ion-card>
+                            <ion-card-content>
+                                No videos found matching "{{ searchQuery }}"
+                            </ion-card-content>
+                        </ion-card>
+                    }
                     <ion-list>
                         @for (lecture of list; track lecture.id) {
                             <ion-item button (click)="viewVideo(lecture)"
