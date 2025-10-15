@@ -1,4 +1,4 @@
-import {AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild} from '@angular/core';
+import {AfterViewInit, Component, ElementRef, inject, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {combineLatest, EMPTY, fromEvent, mergeAll, Observable, of, pairwise, startWith, Subject, takeUntil, throttleTime} from 'rxjs';
 import {ActivatedRoute, Router} from '@angular/router';
 import {CourseMembers, EvaluationRecord, Lecture, ManService} from '../../man.service';
@@ -73,6 +73,13 @@ import {ModalEvaluationComponent} from './modal-evaluation.component';
     ]
 })
 export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
+    private route = inject(ActivatedRoute);
+    private router = inject(Router);
+    private manService = inject(ManService);
+    private alertController = inject(AlertController);
+    private sanitizer = inject(DomSanitizer);
+    private modalCtrl = inject(ModalController);
+
     @ViewChild('videoPlayer') videoPlayerElement: ElementRef;
     videoPlayer: Player;
     currentVideo: Lecture;
@@ -100,9 +107,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     // This is to prevent seeking in case loadedmetadata event is fired not at the beginning of the session
     expectVideoTimeJump = false;
 
-    constructor(private route: ActivatedRoute, private router: Router,
-        private manService: ManService, private alertController: AlertController,
-                private sanitizer: DomSanitizer, private modalCtrl: ModalController) {
+    constructor() {
         addIcons({ download, documentAttachOutline, checkmarkOutline, closeOutline, pauseCircleOutline });
     }
 
@@ -297,8 +302,9 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         );
     }
 
-    onSearchChange(event: any) {
-        this.searchQuery = event.detail.value ?? '';
+    onSearchChange(event: Event) {
+        const target = event.target as HTMLIonSearchbarElement;
+        this.searchQuery = target.value ?? '';
         this.searchQuery$.next(this.searchQuery);
     }
 

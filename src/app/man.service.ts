@@ -1,4 +1,4 @@
-import {Injectable} from '@angular/core';
+import {inject, Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {combineLatestWith, Observable, of, startWith, takeUntil, timer} from 'rxjs';
 import {map, switchMap, timeout} from 'rxjs/operators';
@@ -10,6 +10,9 @@ import {AuthService} from './auth.service';
     providedIn: 'root'
 })
 export class ManService {
+    private http = inject(HttpClient);
+    private playTracker = inject(PlayTrackerService);
+
     private videoList: Observable<CourseListResponse>;
     private endpoint = ['https://flick-man-app.docchula.com/', 'https://flick-man-cdn.docchula.com/'];
     private originalEndpoint = ['https://flick-man-cdn.docchula.com/'];
@@ -19,8 +22,9 @@ export class ManService {
         })
     };
 
-    constructor(private http: HttpClient, authService: AuthService,
-                private playTracker: PlayTrackerService) {
+    constructor() {
+        const authService = inject(AuthService);
+
         // remoteConfig: RemoteConfig
         /* if (environment.production) {
             // Get endpoint config

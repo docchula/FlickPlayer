@@ -1,11 +1,11 @@
-import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { EMPTY, Observable } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
-import { ManService } from '../../man.service';
-import { colorByFolderName } from '../../../helpers';
-import { IonHeader, IonToolbar, IonBackButton, IonTitle, IonContent, IonList, IonItem, IonLabel } from '@ionic/angular/standalone';
-import { NgStyle, AsyncPipe } from '@angular/common';
+import {Component, inject, OnInit} from '@angular/core';
+import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {EMPTY, Observable} from 'rxjs';
+import {map, switchMap} from 'rxjs/operators';
+import {ManService} from '../../man.service';
+import {colorByFolderName} from '../../../helpers';
+import {IonBackButton, IonContent, IonHeader, IonItem, IonLabel, IonList, IonTitle, IonToolbar} from '@ionic/angular/standalone';
+import {AsyncPipe, NgStyle} from '@angular/common';
 
 @Component({
     selector: 'app-list',
@@ -14,11 +14,12 @@ import { NgStyle, AsyncPipe } from '@angular/common';
     imports: [IonHeader, IonToolbar, RouterLink, IonBackButton, IonTitle, NgStyle, IonContent, IonList, IonItem, IonLabel, AsyncPipe]
 })
 export class ListPage implements OnInit {
+    private route = inject(ActivatedRoute);
+    private router = inject(Router);
+    private manService = inject(ManService);
+
     year: string;
     list$: Observable<{ name: string, is_remote: boolean, id: number, link: string[] }[]>;
-
-    constructor(private route: ActivatedRoute, private router: Router, private manService: ManService) {
-    }
 
     ngOnInit() {
         this.list$ = this.route.paramMap.pipe(

@@ -1,4 +1,4 @@
-import {Component, Input} from '@angular/core';
+import {Component, inject, Input} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 
 import {IonButton, IonButtons, IonContent, IonHeader, IonItem, IonLabel, IonTitle, IonToolbar, ModalController} from '@ionic/angular/standalone';
@@ -12,6 +12,10 @@ import {ToastController} from '@ionic/angular';
     imports: [FormsModule, IonButton, IonButtons, IonContent, IonHeader, IonItem, IonTitle, IonToolbar, Rating, IonLabel],
 })
 export class ModalEvaluationComponent {
+    private manService = inject(ManService);
+    private modalCtrl = inject(ModalController);
+    private toastController = inject(ToastController);
+
     @Input() video: Lecture;
     result: {
         delivery: number | null;
@@ -22,9 +26,6 @@ export class ModalEvaluationComponent {
         material: null,
         video: null,
     };
-
-    constructor(private manService: ManService, private modalCtrl: ModalController, private toastController: ToastController) {
-    }
 
     cancel() {
         return this.modalCtrl.dismiss(null, 'cancel');

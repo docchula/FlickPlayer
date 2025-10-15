@@ -1,4 +1,4 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, inject, OnInit} from '@angular/core';
 import {Observable} from 'rxjs';
 import {CourseListResponse, Lecture, ManService} from '../man.service';
 import {Router, RouterLink} from '@angular/router';
@@ -35,9 +35,13 @@ import {AsyncPipe, NgStyle} from '@angular/common';
     imports: [IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon, IonContent, IonGrid, IonRow, IonCol, IonCard, RouterLink, NgStyle, IonCardHeader, IonCardTitle, AsyncPipe, IonCardContent, IonItem, IonLabel, IonText, IonSpinner]
 })
 export class HomePage implements OnInit {
+    private manService = inject(ManService);
+    private router = inject(Router);
+    private authService = inject(AuthService);
+
     response$: Observable<CourseListResponse>;
 
-    constructor(private manService: ManService, private router: Router, private authService: AuthService) {
+    constructor() {
         addIcons({logOutOutline});
     }
 

@@ -108,11 +108,7 @@
                 </ion-searchbar>
                 @if (filteredList$ | async; as list) {
                     @if (list.length === 0 && searchQuery) {
-                        <ion-card>
-                            <ion-card-content>
-                                No videos found matching "{{ searchQuery }}"
-                            </ion-card-content>
-                        </ion-card>
+                        <p>No videos found matching "{{ searchQuery }}"</p>
                     }
                     <ion-list>
                         @for (lecture of list; track lecture.id) {

@@ -1,4 +1,4 @@
-import {Component, OnDestroy, OnInit} from "@angular/core";
+import {Component, inject, OnDestroy, OnInit} from "@angular/core";
 import {
     AlertController,
     IonButton,
@@ -32,6 +32,12 @@ import {AuthService} from "../auth.service";
   ],
 })
 export class WelcomePage implements OnInit, OnDestroy {
+    private router = inject(Router);
+    private authService = inject(AuthService);
+    private manService = inject(ManService);
+    private loadingCtrl = inject(LoadingController);
+    alertCtrl = inject(AlertController);
+
   authStateSubscription: Subscription;
   isAuthChecked: boolean;
   user: User;
@@ -41,14 +47,6 @@ export class WelcomePage implements OnInit, OnDestroy {
     /FBAN/.test(navigator.userAgent) ||
     /FBAV/.test(navigator.userAgent) ||
     /Line\//.test(navigator.userAgent);
-
-  constructor(
-    private router: Router,
-    private authService: AuthService,
-    private manService: ManService,
-    private loadingCtrl: LoadingController,
-    public alertCtrl: AlertController
-  ) {}
 
   ngOnInit() {
     this.loadingCtrl

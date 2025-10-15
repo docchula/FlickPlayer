@@ -1,13 +1,13 @@
-import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { TestBed, waitForAsync } from '@angular/core/testing';
+import {CUSTOM_ELEMENTS_SCHEMA} from '@angular/core';
+import {TestBed, waitForAsync} from '@angular/core/testing';
 
-import { Platform } from '@ionic/angular/standalone';
-import { SplashScreen } from '@ionic-native/splash-screen/ngx';
-import { StatusBar } from '@ionic-native/status-bar/ngx';
+import {Platform} from '@ionic/angular/standalone';
+import {SplashScreen} from '@ionic-native/splash-screen/ngx';
+import {StatusBar} from '@ionic-native/status-bar/ngx';
 
-import { AppComponent } from './app.component';
-import { AngularFireRemoteConfig } from '@angular/fire/compat/remote-config';
-import { FireRemoteConfigStub } from './stubs';
+import {AppComponent} from './app.component';
+import {AngularFireRemoteConfig} from '@angular/fire/compat/remote-config';
+import {FireRemoteConfigStub} from './stubs';
 
 describe('AppComponent', () => {
 
@@ -20,7 +20,7 @@ describe('AppComponent', () => {
         platformSpy = jasmine.createSpyObj('Platform', { ready: platformReadySpy });
 
         TestBed.configureTestingModule({
-    declarations: [AppComponent],
+            imports: [AppComponent],
     schemas: [CUSTOM_ELEMENTS_SCHEMA],
     providers: [
         { provide: StatusBar, useValue: statusBarSpy },
