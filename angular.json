@@ -90,7 +90,10 @@
                 "serve": {
                     "builder": "@angular-devkit/build-angular:dev-server",
                     "options": {
-                        "buildTarget": "app:build:development"
+                        "buildTarget": "app:build:development",
+                        "headers": {
+                            "Cross-Origin-Opener-Policy": "same-origin-allow-popups"
+                        }
                     },
                     "configurations": {
                         "production": {
