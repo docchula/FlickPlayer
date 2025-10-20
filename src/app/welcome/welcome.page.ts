@@ -78,7 +78,7 @@ export class WelcomePage implements OnInit, OnDestroy {
 
   async login() {
     const loading = await this.loadingCtrl.create({
-      message: "Signing in...",
+        message: "Signing in... Make sure to allow pop-ups.",
       spinner: "crescent",
     });
     await loading.present();
