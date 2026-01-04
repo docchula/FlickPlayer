@@ -1,4 +1,4 @@
-import {enableProdMode, importProvidersFrom} from '@angular/core';
+import {enableProdMode, importProvidersFrom, provideZoneChangeDetection} from '@angular/core';
 
 import {environment} from './environments/environment';
 import {RouteReuseStrategy} from '@angular/router';
@@ -28,7 +28,7 @@ if (environment.production) {
 
 bootstrapApplication(AppComponent, {
     providers: [
-        importProvidersFrom(BrowserModule, AppRoutingModule, WelcomePageModule, ServiceWorkerModule.register('ngsw-worker.js', {enabled: environment.production})),
+        provideZoneChangeDetection(),importProvidersFrom(BrowserModule, AppRoutingModule, WelcomePageModule, ServiceWorkerModule.register('ngsw-worker.js', {enabled: environment.production})),
         {provide: RouteReuseStrategy, useClass: IonicRouteStrategy},
         UserTrackingService,
         {provide: INSTRUMENTATION_ENABLED, useValue: environment.production},
