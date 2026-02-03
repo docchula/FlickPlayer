@@ -37,8 +37,7 @@
     "ulid": "^2.4.0",
     "video.js": "^8.23.4",
     "videojs-hotkeys": "^0.2.30",
-    "videojs-youtube": "^3.0.1",
-    "zone.js": "^0.15.1"
+    "videojs-youtube": "^3.0.1"
   },
   "devDependencies": {
     "@angular-devkit/architect": "^0.2100.4",
