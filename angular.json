@@ -26,7 +26,8 @@
                                 "input": "src/assets",
                                 "output": "assets"
                             },
-                            "src/manifest.webmanifest"
+                            "src/manifest.webmanifest",
+                            "src/robots.txt"
                         ],
                         "styles": [
                             {
