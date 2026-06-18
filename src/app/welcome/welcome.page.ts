@@ -82,18 +82,14 @@ export class WelcomePage implements OnInit, OnDestroy {
       spinner: "crescent",
     });
     await loading.present();
+    await this.authService.signInWithRedirect().catch(async (error) => {
+        await this.alertError(
+          "Login Failed",
+          `Unable to sign in. Please try again. (${error.code}: ${error.message})`
+        );
+      })
+      .finally(() => loading.dismiss());
 
-      this.authService.signInWithPopup().catch(async (error) => {
-          if (error.code === "auth/popup-closed-by-user") {
-              // User closed the popup without completing the sign-in. May cause by popup blocker.
-              await this.authService.signInWithRedirect();
-          } else {
-              await this.alertError(
-                  "Login Failed",
-                  `Unable to sign in. Please try again. (${error.code}: ${error.message})`,
-              );
-          }
-      }).finally(() => loading.dismiss());
   }
 
   logout() {
