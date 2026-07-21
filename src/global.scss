@@ -49,3 +49,22 @@
     color: #15803D;
   }
 }
+
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.pink-theme .e-learning-tag {
+  border: #E91E90 solid 1px;
+  background-color: #FCE4EC;
+  color: #E91E90;
+}
+
+@media (prefers-color-scheme: dark) {
+  body.pink-theme .e-learning-tag {
+    border: #F48FB1 solid 1px;
+    background-color: #3A0420;
+    color: #F48FB1;
+  }
+}
+

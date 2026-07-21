@@ -7,3 +7,28 @@ ion-label {
   text-overflow: initial !important;
   white-space: normal !important;
 }
+
+/* Pink Theme overrides */
+
+:host-context(body.pink-theme) {
+  ion-title > span {
+    text-shadow: 0 1px 3px rgba(136, 14, 79, 0.4);
+  }
+
+  ion-item {
+    --ion-item-border-color: #F48FB1;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :host-context(body.pink-theme) {
+    ion-title > span {
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    ion-item {
+      --ion-item-border-color: #5C1038;
+    }
+  }
+}
+

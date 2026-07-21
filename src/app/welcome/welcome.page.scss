@@ -17,3 +17,26 @@ ion-content {
     font-size: 0.75rem;
   }
 }
+
+:host-context(body.pink-theme) {
+  ion-content {
+    #mainCard {
+      box-shadow: 0 4px 24px rgba(233, 30, 144, 0.18),
+                  0 1.5px 8px rgba(244, 143, 177, 0.12);
+      border: 1px solid rgba(244, 143, 177, 0.3);
+    }
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :host-context(body.pink-theme) {
+    ion-content {
+      #mainCard {
+        box-shadow: 0 4px 24px rgba(244, 143, 177, 0.15),
+                    0 1.5px 8px rgba(233, 30, 144, 0.1);
+        border: 1px solid rgba(244, 143, 177, 0.15);
+      }
+    }
+  }
+}
+

@@ -3,9 +3,10 @@ import {Observable} from 'rxjs';
 import {CourseListResponse, Lecture, ManService} from '../man.service';
 import {Router, RouterLink} from '@angular/router';
 import {AuthService} from '../auth.service';
-import {colorByFolderName} from '../../helpers';
+import {ThemeService} from '../theme.service';
+import {colorByFolderName, colorByFolderNamePink} from '../../helpers';
 import {addIcons} from "ionicons";
-import {logOutOutline} from "ionicons/icons";
+import {heartOutline, heart, logOutOutline} from "ionicons/icons";
 import {
     IonButton,
     IonButtons,
@@ -38,11 +39,12 @@ export class HomePage implements OnInit {
     private manService = inject(ManService);
     private router = inject(Router);
     private authService = inject(AuthService);
+    themeService = inject(ThemeService);
 
     response$: Observable<CourseListResponse>;
 
     constructor() {
-        addIcons({logOutOutline});
+        addIcons({logOutOutline, heartOutline, heart});
     }
 
     logout() {
@@ -56,6 +58,15 @@ export class HomePage implements OnInit {
     }
 
     protected readonly colorByFolderName = colorByFolderName;
+    protected readonly colorByFolderNamePink = colorByFolderNamePink;
+
+    getCardColor(folder: string): string {
+        return this.themeService.isPinkMode ? colorByFolderNamePink(folder) : colorByFolderName(folder);
+    }
+
+    togglePink() {
+        this.themeService.toggle();
+    }
 
     goToLastVideo(lastVideo: Lecture) {
         return this.router.navigate(['home', 'course', lastVideo.course.id]);
