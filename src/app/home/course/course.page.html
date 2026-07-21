@@ -8,6 +8,11 @@
                 <small>{{ (courseProgress.duration - courseProgress.viewed) / 3600 | number:'1.0-1' }} hours left</small>
             }
         </ion-title>
+        <ion-buttons slot="end">
+            <ion-button (click)="togglePink()" [attr.aria-label]="(themeService.isPinkMode$ | async) ? 'Disable pink theme' : 'Enable pink theme'">
+                <ion-icon [name]="(themeService.isPinkMode$ | async) ? 'heart' : 'heart-outline'" [color]="(themeService.isPinkMode$ | async) ? 'danger' : 'medium'"></ion-icon>
+            </ion-button>
+        </ion-buttons>
     </ion-toolbar>
 </ion-header>
 

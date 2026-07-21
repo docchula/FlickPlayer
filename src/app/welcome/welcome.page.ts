@@ -7,6 +7,7 @@ import {
     IonCardHeader,
     IonCardTitle,
     IonContent,
+    IonIcon,
     IonText,
     LoadingController,
 } from "@ionic/angular/standalone";
@@ -16,6 +17,10 @@ import {HttpErrorResponse} from "@angular/common/http";
 import {Subscription} from "rxjs";
 import {User} from "@angular/fire/auth";
 import {AuthService} from "../auth.service";
+import {ThemeService} from "../theme.service";
+import {addIcons} from "ionicons";
+import {heart, heartOutline} from "ionicons/icons";
+import {AsyncPipe} from "@angular/common";
 
 @Component({
   selector: "app-welcome",
@@ -28,7 +33,9 @@ import {AuthService} from "../auth.service";
     IonCardTitle,
     IonCardContent,
     IonButton,
+    IonIcon,
     IonText,
+    AsyncPipe,
   ],
 })
 export class WelcomePage implements OnInit, OnDestroy {
@@ -37,6 +44,15 @@ export class WelcomePage implements OnInit, OnDestroy {
     private manService = inject(ManService);
     private loadingCtrl = inject(LoadingController);
     alertCtrl = inject(AlertController);
+    themeService = inject(ThemeService);
+
+    constructor() {
+        addIcons({heart, heartOutline});
+    }
+
+    togglePink() {
+        this.themeService.toggle();
+    }
 
   authStateSubscription: Subscription;
   isAuthChecked: boolean;

@@ -2,8 +2,13 @@
   <ion-toolbar>
     <ion-back-button slot="start" defaultHref="/home"></ion-back-button>
     <ion-title>
-      <span [ngStyle]="{'background-color': colorByFolderName(year)}">{{ year || 'Loading'}}</span>
+      <span [ngStyle]="{'background-color': getYearColor()}">{{ year || 'Loading'}}</span>
     </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="togglePink()" [attr.aria-label]="(themeService.isPinkMode$ | async) ? 'Disable pink theme' : 'Enable pink theme'">
+        <ion-icon [name]="(themeService.isPinkMode$ | async) ? 'heart' : 'heart-outline'" [color]="(themeService.isPinkMode$ | async) ? 'danger' : 'medium'"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 

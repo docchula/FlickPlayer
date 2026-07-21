@@ -18,6 +18,13 @@ ion-content {
   }
 }
 
+.theme-toggle-fab {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+}
+
 :host-context(body.pink-theme) {
   ion-content {
     #mainCard {

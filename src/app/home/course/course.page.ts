@@ -10,6 +10,7 @@ import {
     AlertController,
     IonBackButton,
     IonButton,
+    IonButtons,
     IonCard,
     IonCardContent,
     IonCardHeader,
@@ -34,11 +35,12 @@ import {
 import {DomSanitizer} from '@angular/platform-browser';
 import {PlayHistory} from '../../play-tracker.service';
 import {addIcons} from "ionicons";
-import {checkmarkOutline, closeOutline, documentAttachOutline, download, pauseCircleOutline} from "ionicons/icons";
+import {checkmarkOutline, closeOutline, documentAttachOutline, download, heart, heartOutline, pauseCircleOutline} from "ionicons/icons";
 import type Player from 'video.js/dist/types/player';
 import {ulid} from 'ulid';
 import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
 import {ModalEvaluationComponent} from './modal-evaluation.component';
+import {ThemeService} from '../../theme.service';
 
 @Component({
     selector: 'app-course',
@@ -70,6 +72,7 @@ import {ModalEvaluationComponent} from './modal-evaluation.component';
         AsyncPipe,
         DecimalPipe,
         DatePipe,
+        IonButtons,
     ]
 })
 export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
@@ -79,6 +82,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     private alertController = inject(AlertController);
     private sanitizer = inject(DomSanitizer);
     private modalCtrl = inject(ModalController);
+    themeService = inject(ThemeService);
 
     @ViewChild('videoPlayer') videoPlayerElement: ElementRef;
     videoPlayer: Player;
@@ -108,7 +112,11 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     expectVideoTimeJump = false;
 
     constructor() {
-        addIcons({ download, documentAttachOutline, checkmarkOutline, closeOutline, pauseCircleOutline });
+        addIcons({ download, documentAttachOutline, checkmarkOutline, closeOutline, pauseCircleOutline, heart, heartOutline });
+    }
+
+    togglePink() {
+        this.themeService.toggle();
     }
 
     ngOnInit() {
