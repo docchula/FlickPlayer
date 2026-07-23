@@ -20,15 +20,5 @@ ion-label {
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :host-context(body.pink-theme) {
-    ion-title > span {
-      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-    }
 
-    ion-item {
-      --ion-item-border-color: #5C1038;
-    }
-  }
-}
 

@@ -4,12 +4,10 @@
             MDCU Recorded Lecture
         </ion-title>
         <ion-buttons slot="end">
-            <ion-button (click)="togglePink()" [attr.aria-label]="(themeService.isPinkMode$ | async) ? 'Disable pink theme' : 'Enable pink theme'">
-                <ion-icon [name]="(themeService.isPinkMode$ | async) ? 'heart' : 'heart-outline'" [color]="(themeService.isPinkMode$ | async) ? 'danger' : 'medium'"></ion-icon>
-            </ion-button>
+            <app-theme-dropdown></app-theme-dropdown>
             <ion-button fill="outline" color="secondary" (click)="logout()">
                 <span class="ion-hide-sm-down text-sign-out">Sign out</span>
-                <ion-icon name="log-out-outline"></ion-icon>
+                <ion-icon slot="end" name="log-out-outline"></ion-icon>
             </ion-button>
         </ion-buttons>
     </ion-toolbar>

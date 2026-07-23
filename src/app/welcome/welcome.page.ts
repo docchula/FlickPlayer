@@ -7,7 +7,6 @@ import {
     IonCardHeader,
     IonCardTitle,
     IonContent,
-    IonIcon,
     IonText,
     LoadingController,
 } from "@ionic/angular/standalone";
@@ -18,9 +17,7 @@ import {Subscription} from "rxjs";
 import {User} from "@angular/fire/auth";
 import {AuthService} from "../auth.service";
 import {ThemeService} from "../theme.service";
-import {addIcons} from "ionicons";
-import {heart, heartOutline} from "ionicons/icons";
-import {AsyncPipe} from "@angular/common";
+import {ThemeDropdownComponent} from "../shared/theme-dropdown.component";
 
 @Component({
   selector: "app-welcome",
@@ -33,9 +30,8 @@ import {AsyncPipe} from "@angular/common";
     IonCardTitle,
     IonCardContent,
     IonButton,
-    IonIcon,
     IonText,
-    AsyncPipe,
+    ThemeDropdownComponent,
   ],
 })
 export class WelcomePage implements OnInit, OnDestroy {
@@ -45,14 +41,6 @@ export class WelcomePage implements OnInit, OnDestroy {
     private loadingCtrl = inject(LoadingController);
     alertCtrl = inject(AlertController);
     themeService = inject(ThemeService);
-
-    constructor() {
-        addIcons({heart, heartOutline});
-    }
-
-    togglePink() {
-        this.themeService.toggle();
-    }
 
   authStateSubscription: Subscription;
   isAuthChecked: boolean;
@@ -75,6 +63,7 @@ export class WelcomePage implements OnInit, OnDestroy {
         this.authStateSubscription = this.authService.user.subscribe((user) => {
           this.user = user;
           if (user) {
+            this.themeService.loadForUser(user.uid);
             // User is signed in.
             this.goToHome().then(() => {
               loading.dismiss();
@@ -113,6 +102,7 @@ export class WelcomePage implements OnInit, OnDestroy {
   }
 
   logout() {
+    this.themeService.clearForUser();
     this.authService
       .signOut()
       .then()

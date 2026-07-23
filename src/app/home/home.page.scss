@@ -14,13 +14,7 @@ ion-card-title {
 }
 
 .course-name {
-  color: #222222;
-}
-
-@media (prefers-color-scheme: dark) {
-  .course-name {
-    color: #cccccc;
-  }
+  color: var(--flick-card-title-color, #222222);
 }
 
 .center-text {
@@ -33,21 +27,14 @@ ion-card-title {
 }
 
 .small-text {
-  color: #aaaaaa;
+  color: var(--flick-subtext-color, #aaaaaa);
   a {
-    color: #bbbbbb;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    color: #555555;
-    a {
-      color: #666666;
-    }
+    color: var(--flick-subtext-link-color, #bbbbbb);
   }
 }
 
 .hover-card {
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
 }
 
@@ -57,12 +44,12 @@ ion-card-title {
 
 p {
   padding: 0 1.5rem 0 1.5rem;
-  color: gray;
+  color: var(--flick-subtext-color, gray);
   text-align: center;
 
   ion-icon {
     margin: 0 0.6em;
-    color: gray;
+    color: var(--flick-subtext-color, gray);
   }
 
   a {
@@ -74,67 +61,20 @@ p {
   margin-right: 0.5rem;
 }
 
-/* Pink Theme overrides */
-
 :host-context(body.pink-theme) {
   ion-card-title {
-    color: white;
     text-shadow: 0 1px 3px rgba(136, 14, 79, 0.3);
   }
 
   .hover-card {
     box-shadow: 0 2px 12px rgba(233, 30, 144, 0.2);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
 
     &:hover {
-      transform: translateY(-0.5rem) scale(1.02);
       box-shadow: 0 6px 20px rgba(233, 30, 144, 0.35);
     }
   }
 
   .center-spinner {
-    color: #E91E90;
-  }
-
-  p {
-    color: #B07090;
-
-    ion-icon {
-      color: #B07090;
-    }
-  }
-
-  .small-text {
-    color: #C48BA0;
-    a {
-      color: #D4A0B5;
-    }
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :host-context(body.pink-theme) {
-    .small-text {
-      color: #7B4560;
-      a {
-        color: #8E5170;
-      }
-    }
-
-    p {
-      color: #8E5170;
-
-      ion-icon {
-        color: #8E5170;
-      }
-    }
-
-    .hover-card {
-      box-shadow: 0 2px 12px rgba(244, 143, 177, 0.15);
-
-      &:hover {
-        box-shadow: 0 6px 20px rgba(244, 143, 177, 0.25);
-      }
-    }
+    color: var(--ion-color-primary);
   }
 }

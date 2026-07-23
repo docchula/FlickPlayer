@@ -1,7 +1,7 @@
 <ion-content class="ion-text-center ion-padding" color="light">
-  <ion-button class="theme-toggle-fab" fill="clear" (click)="togglePink()" [attr.aria-label]="(themeService.isPinkMode$ | async) ? 'Disable pink theme' : 'Enable pink theme'">
-    <ion-icon [name]="(themeService.isPinkMode$ | async) ? 'heart' : 'heart-outline'" [color]="(themeService.isPinkMode$ | async) ? 'danger' : 'medium'" size="large"></ion-icon>
-  </ion-button>
+  <div class="theme-toggle-container">
+    <app-theme-dropdown></app-theme-dropdown>
+  </div>
   <ion-card id="mainCard" class="ion-margin ion-padding">
     <ion-card-header>
       <ion-card-title class="ion-text-center" color="primary">

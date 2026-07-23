@@ -7,6 +7,8 @@ ion-content {
   #mainCard {
     margin: 20vh auto 0.4rem auto;
     border-radius: 1rem;
+    box-shadow: var(--flick-welcome-card-shadow, 0 4px 24px rgba(0, 0, 0, 0.08));
+    border: var(--flick-welcome-card-border, none);
   }
 
   .browserCard {
@@ -15,35 +17,16 @@ ion-content {
 
   .small-text {
     font-size: 0.75rem;
+    color: var(--flick-subtext-color, #aaaaaa);
   }
 }
 
-.theme-toggle-fab {
+.theme-toggle-container {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
-
-:host-context(body.pink-theme) {
-  ion-content {
-    #mainCard {
-      box-shadow: 0 4px 24px rgba(233, 30, 144, 0.18),
-                  0 1.5px 8px rgba(244, 143, 177, 0.12);
-      border: 1px solid rgba(244, 143, 177, 0.3);
-    }
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :host-context(body.pink-theme) {
-    ion-content {
-      #mainCard {
-        box-shadow: 0 4px 24px rgba(244, 143, 177, 0.15),
-                    0 1.5px 8px rgba(233, 30, 144, 0.1);
-        border: 1px solid rgba(244, 143, 177, 0.15);
-      }
-    }
-  }
-}
-

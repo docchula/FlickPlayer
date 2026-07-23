@@ -3,7 +3,7 @@ span a {
 }
 
 ion-title small {
-  color: gray;
+  color: var(--flick-subtext-color, gray);
 }
 
 .e-learning-tag {
@@ -12,26 +12,17 @@ ion-title small {
 
 span.date {
   font-family: monospace, monospace;
-  color: darkblue;
-  @media (prefers-color-scheme: dark) {
-    color: lightblue;
-  }
+  color: var(--flick-date-color, darkblue);
 }
 
 span.date-divider {
   margin: 0 0.2rem 0 0.2rem;
   opacity: 0.5;
-  color: darkblue;
-  @media (prefers-color-scheme: dark) {
-    color: lightblue;
-  }
+  color: var(--flick-date-divider-color, darkblue);
 }
 
 .time-info {
-  color: darkgoldenrod;
-  @media (prefers-color-scheme: dark) {
-    color: yellow;
-  }
+  color: var(--flick-time-info-color, darkgoldenrod);
 }
 
 .ion-color .check-icon {
@@ -50,48 +41,3 @@ span.date-divider {
     }
   }
 }
-
-/* Pink Theme overrides */
-
-:host-context(body.pink-theme) {
-  span.date {
-    color: #AD1457;
-  }
-
-  span.date-divider {
-    color: #AD1457;
-  }
-
-  .time-info {
-    color: #E91E90;
-  }
-
-  ion-title small {
-    color: #B07090;
-  }
-
-  .set-playback-speed-button {
-    --ion-color-primary: #E91E90;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :host-context(body.pink-theme) {
-    span.date {
-      color: #F48FB1;
-    }
-
-    span.date-divider {
-      color: #F48FB1;
-    }
-
-    .time-info {
-      color: #F06292;
-    }
-
-    ion-title small {
-      color: #C48BA0;
-    }
-  }
-}
-

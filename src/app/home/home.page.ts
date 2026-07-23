@@ -6,7 +6,8 @@ import {AuthService} from '../auth.service';
 import {ThemeService} from '../theme.service';
 import {colorByFolderName, colorByFolderNamePink} from '../../helpers';
 import {addIcons} from "ionicons";
-import {heartOutline, heart, logOutOutline} from "ionicons/icons";
+import {logOutOutline} from "ionicons/icons";
+import {ThemeDropdownComponent} from '../shared/theme-dropdown.component';
 import {
     IonButton,
     IonButtons,
@@ -33,7 +34,7 @@ import {AsyncPipe, NgStyle} from '@angular/common';
     selector: 'app-home',
     templateUrl: 'home.page.html',
     styleUrls: ['home.page.scss'],
-    imports: [IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon, IonContent, IonGrid, IonRow, IonCol, IonCard, RouterLink, NgStyle, IonCardHeader, IonCardTitle, AsyncPipe, IonCardContent, IonItem, IonLabel, IonText, IonSpinner]
+    imports: [IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon, IonContent, IonGrid, IonRow, IonCol, IonCard, RouterLink, NgStyle, IonCardHeader, IonCardTitle, AsyncPipe, IonCardContent, IonItem, IonLabel, IonText, IonSpinner, ThemeDropdownComponent]
 })
 export class HomePage implements OnInit {
     private manService = inject(ManService);
@@ -44,7 +45,7 @@ export class HomePage implements OnInit {
     response$: Observable<CourseListResponse>;
 
     constructor() {
-        addIcons({logOutOutline, heartOutline, heart});
+        addIcons({logOutOutline});
     }
 
     logout() {
@@ -64,9 +65,7 @@ export class HomePage implements OnInit {
         return this.themeService.isPinkMode ? colorByFolderNamePink(folder) : colorByFolderName(folder);
     }
 
-    togglePink() {
-        this.themeService.toggle();
-    }
+
 
     goToLastVideo(lastVideo: Lecture) {
         return this.router.navigate(['home', 'course', lastVideo.course.id]);
