@@ -16,6 +16,8 @@ import {HttpErrorResponse} from "@angular/common/http";
 import {Subscription} from "rxjs";
 import {User} from "@angular/fire/auth";
 import {AuthService} from "../auth.service";
+import {ThemeService} from "../theme.service";
+import {ThemeDropdownComponent} from "../shared/theme-dropdown.component";
 
 @Component({
   selector: "app-welcome",
@@ -29,6 +31,7 @@ import {AuthService} from "../auth.service";
     IonCardContent,
     IonButton,
     IonText,
+    ThemeDropdownComponent,
   ],
 })
 export class WelcomePage implements OnInit, OnDestroy {
@@ -37,6 +40,7 @@ export class WelcomePage implements OnInit, OnDestroy {
     private manService = inject(ManService);
     private loadingCtrl = inject(LoadingController);
     alertCtrl = inject(AlertController);
+    themeService = inject(ThemeService);
 
   authStateSubscription: Subscription;
   isAuthChecked: boolean;
@@ -59,6 +63,7 @@ export class WelcomePage implements OnInit, OnDestroy {
         this.authStateSubscription = this.authService.user.subscribe((user) => {
           this.user = user;
           if (user) {
+            this.themeService.loadForUser(user.uid);
             // User is signed in.
             this.goToHome().then(() => {
               loading.dismiss();
@@ -97,6 +102,7 @@ export class WelcomePage implements OnInit, OnDestroy {
   }
 
   logout() {
+    this.themeService.clearForUser();
     this.authService
       .signOut()
       .then()

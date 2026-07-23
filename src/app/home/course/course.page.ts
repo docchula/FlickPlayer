@@ -10,6 +10,7 @@ import {
     AlertController,
     IonBackButton,
     IonButton,
+    IonButtons,
     IonCard,
     IonCardContent,
     IonCardHeader,
@@ -39,6 +40,8 @@ import type Player from 'video.js/dist/types/player';
 import {ulid} from 'ulid';
 import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
 import {ModalEvaluationComponent} from './modal-evaluation.component';
+import {ThemeService} from '../../theme.service';
+import {ThemeDropdownComponent} from '../../shared/theme-dropdown.component';
 
 @Component({
     selector: 'app-course',
@@ -70,6 +73,8 @@ import {ModalEvaluationComponent} from './modal-evaluation.component';
         AsyncPipe,
         DecimalPipe,
         DatePipe,
+        IonButtons,
+        ThemeDropdownComponent,
     ]
 })
 export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
@@ -79,6 +84,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     private alertController = inject(AlertController);
     private sanitizer = inject(DomSanitizer);
     private modalCtrl = inject(ModalController);
+    themeService = inject(ThemeService);
 
     @ViewChild('videoPlayer') videoPlayerElement: ElementRef;
     videoPlayer: Player;

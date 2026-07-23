@@ -4,9 +4,10 @@
             MDCU Recorded Lecture
         </ion-title>
         <ion-buttons slot="end">
+            <app-theme-dropdown></app-theme-dropdown>
             <ion-button fill="outline" color="secondary" (click)="logout()">
                 <span class="ion-hide-sm-down text-sign-out">Sign out</span>
-                <ion-icon name="log-out-outline"></ion-icon>
+                <ion-icon slot="end" name="log-out-outline"></ion-icon>
             </ion-button>
         </ion-buttons>
     </ion-toolbar>
@@ -34,7 +35,7 @@
                 <ion-row>
                     @for (folder of Object.keys(response.years); track folder) {
                         <ion-col size-xs="12" size-sm="6" size-md="4" size-lg="3" size-xl="2">
-                            <ion-card [routerLink]="folder" [ngStyle]="{'background-color': colorByFolderName(folder)}"
+                            <ion-card [routerLink]="folder" [ngStyle]="{'background-color': getCardColor(folder)}"
                                       class="ion-text-center hover-card">
                                 <ion-card-header>
                                     <ion-card-title>{{ folder }}</ion-card-title>

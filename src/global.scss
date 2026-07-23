@@ -42,10 +42,40 @@
   display: inline-block;
 }
 
-@media (prefers-color-scheme: dark) {
-  .e-learning-tag {
-    border: #15803D solid 1px;
-    background-color: #052E16;
-    color: #15803D;
-  }
+body.dark-theme .e-learning-tag {
+  border: #15803D solid 1px;
+  background-color: #052E16;
+  color: #15803D;
 }
+
+$theme-transition-duration: 0.3s !default;
+$theme-transition-timing: ease !default;
+
+@mixin theme-transition {
+  transition: background-color $theme-transition-duration $theme-transition-timing,
+              color $theme-transition-duration $theme-transition-timing,
+              border-color $theme-transition-duration $theme-transition-timing,
+              box-shadow $theme-transition-duration $theme-transition-timing,
+              fill $theme-transition-duration $theme-transition-timing;
+}
+
+body,
+ion-content,
+ion-toolbar,
+ion-card,
+ion-item,
+ion-header,
+ion-footer,
+ion-title,
+ion-button,
+ion-list,
+.e-learning-tag {
+  @include theme-transition;
+}
+
+body.pink-theme .e-learning-tag {
+  border: #E91E90 solid 1px;
+  background-color: #FCE4EC;
+  color: #E91E90;
+}
+
