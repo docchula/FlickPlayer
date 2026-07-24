@@ -14,7 +14,7 @@
 <ion-content>
     <ion-grid>
         <ion-row>
-            <ion-col size="12" size-lg [hidden]="!currentVideo">
+            <ion-col size="12" size-lg [hidden]="!currentVideo" [ngClass]="currentVideo ? 'scroll-area' : ''">
                 <video #videoPlayer class="video-js vjs-default-skin fullwidth" controls preload="metadata"
                        data-setup='{"aspectRatio":"1280:640", "playbackRates": [0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3]}'
                        [hidden]="currentVideo && currentVideo.sources.length === 0"
@@ -99,6 +99,8 @@
                         </ion-list>
                     }
                 }
+                <!-- Pomodoro Timer Widget -->
+                <app-pomodoro-timer></app-pomodoro-timer>
             </ion-col>
             <ion-col size="12" size-lg [ngClass]="currentVideo ? 'scroll-area' : ''">
                <ion-searchbar

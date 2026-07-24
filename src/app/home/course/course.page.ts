@@ -39,6 +39,7 @@ import type Player from 'video.js/dist/types/player';
 import {ulid} from 'ulid';
 import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
 import {ModalEvaluationComponent} from './modal-evaluation.component';
+import {PomodoroTimerComponent} from '../../shared/pomodoro-timer.component';
 
 @Component({
     selector: 'app-course',
@@ -70,6 +71,7 @@ import {ModalEvaluationComponent} from './modal-evaluation.component';
         AsyncPipe,
         DecimalPipe,
         DatePipe,
+        PomodoroTimerComponent,
     ]
 })
 export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
