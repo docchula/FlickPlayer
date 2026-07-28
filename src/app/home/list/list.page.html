@@ -8,22 +8,49 @@
 </ion-header>
 
 <ion-content>
-    @if (list$ | async; as list) {
-        @if (list) {
+    <ion-searchbar
+        (ionInput)="onSearchChange($event)"
+        placeholder="Search courses or videos..."
+        debounce="300">
+    </ion-searchbar>
+    @if (filteredResults$ | async; as results) {
+        @if (results && results.length > 0) {
             <ion-list>
-                @for (course of list; track course.id) {
-                    <ion-item button [routerLink]="course.link">
-                        <ion-label>
-                            @if (course.is_remote) {
-                                <span class="e-learning-tag">MDCU <small>E-Learning</small></span>
-                            }
-                            {{ course.name }}
-                        </ion-label>
-                    </ion-item>
+                @for (res of results; track res.course.id) {
+                    @if (res.isCourseMatch) {
+                        <ion-item button [routerLink]="res.course.link">
+                            <ion-icon name="book-outline" slot="start" color="primary"></ion-icon>
+                            <ion-label>
+                                @if (res.course.is_remote) {
+                                    <span class="e-learning-tag">MDCU <small>E-Learning</small></span>
+                                }
+                                {{ res.course.name }}
+                            </ion-label>
+                        </ion-item>
+                    } @else if (res.matchingVideos.length > 0) {
+                        <ion-item-divider color="light">
+                            <ion-label>Course: {{ res.course.name }}</ion-label>
+                        </ion-item-divider>
+                    }
+
+                    @for (video of res.matchingVideos; track video.id || video.title) {
+                        <ion-item button [routerLink]="res.course.link" [queryParams]="{ video: video.id || video.title }">
+                            <ion-icon name="videocam-outline" slot="start" color="secondary"></ion-icon>
+                            <ion-label class="ion-text-wrap">
+                                <h3>{{ video.title }}</h3>
+                                @if (video.lecturer) {
+                                    <p>{{ video.lecturer }}</p>
+                                }
+                            </ion-label>
+                            <ion-note slot="end" color="medium">{{ res.course.name }}</ion-note>
+                        </ion-item>
+                    }
                 }
             </ion-list>
+        } @else if (searchQuery) {
+            <p class="ion-padding">No courses or videos found matching "{{ searchQuery }}"</p>
         } @else {
-            <p>Empty.</p>
+            <p class="ion-padding">Empty.</p>
         }
     }
 </ion-content>

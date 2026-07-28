@@ -5,7 +5,7 @@
         <ion-title>
             {{ course ?? 'Course' }}
             @if (courseProgress.duration > 0) {
-                <small>{{ (courseProgress.duration - courseProgress.viewed) / 3600 | number:'1.0-1' }} hours left</small>
+                <small>{{ (courseProgress.duration - courseProgress.viewed) / 3600 | number:'1.0-1' }} hours left ({{ (courseProgress.viewed / courseProgress.duration) * 100 | number:'1.0-1' }}%)</small>
             }
         </ion-title>
     </ion-toolbar>

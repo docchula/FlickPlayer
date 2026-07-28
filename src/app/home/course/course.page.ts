@@ -107,11 +107,16 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     // This is to prevent seeking in case loadedmetadata event is fired not at the beginning of the session
     expectVideoTimeJump = false;
 
+    pendingVideoToPlay: Lecture | null = null;
+    isPlayerReady = false;
+
     constructor() {
         addIcons({ download, documentAttachOutline, checkmarkOutline, closeOutline, pauseCircleOutline });
     }
 
     ngOnInit() {
+        const targetVideoId = this.route.snapshot.queryParamMap.get('video') || this.route.snapshot.queryParamMap.get('v');
+
         this.list$ = this.route.paramMap.pipe(
             first(),
             switchMap(s => {
@@ -128,7 +133,18 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                         }
                         this.year = courseData.category;
                         this.course = courseData.name;
-                        return this.mergeVideoInfo(courseData.lectures, history?.records ?? {}, history?.evaluations ?? {});
+                        const videos = this.mergeVideoInfo(courseData.lectures, history?.records ?? {}, history?.evaluations ?? {});
+                        if (targetVideoId) {
+                            const target = videos.find(v => String(v.id) === targetVideoId || v.title === targetVideoId);
+                            if (target) {
+                                if (this.isPlayerReady && this.videoPlayer) {
+                                    setTimeout(() => this.viewVideo(target), 0);
+                                } else {
+                                    this.pendingVideoToPlay = target;
+                                }
+                            }
+                        }
+                        return videos;
                     }));
                 } else if (this.year) {
                     this.router.navigate(['home/' + this.year]);
@@ -159,6 +175,11 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             },
             techOrder: ['html5', 'youtube'],
         }, () => {
+            this.isPlayerReady = true;
+            if (this.pendingVideoToPlay) {
+                this.viewVideo(this.pendingVideoToPlay);
+                this.pendingVideoToPlay = null;
+            }
             // @ts-ignore
             this.videoPlayer.hotkeys({
                 volumeStep: 0.1,
