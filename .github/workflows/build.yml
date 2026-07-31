@@ -15,14 +15,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # Make sure the actual branch is checked out when running on pull requests
-          ref: ${{ github.head_ref }}
-          # This is important to fetch the changes to the previous commit
           fetch-depth: 0
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24.x
+          node-version: 20.x
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
