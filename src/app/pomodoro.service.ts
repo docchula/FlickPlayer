@@ -81,6 +81,7 @@ export const DURATION_FIELDS: DurationField[] = [
 })
 export class PomodoroService {
     private readonly STORAGE_KEY_PREFIX = 'pomodoroPrefs_';
+    private readonly TIMER_KEY_PREFIX = 'pomodoroTimer_';
     private currentUserId = 'guest';
 
     /** Configurable settings */
@@ -115,7 +116,7 @@ export class PomodoroService {
 
     constructor() {
         this.loadPreferences(this.currentUserId);
-        this.resetToPhase(this.getStudyPhase());
+        this.restoreTimerState(this.currentUserId);
     }
 
     /** Request browser system notification permissions */
@@ -131,12 +132,15 @@ export class PomodoroService {
     loadForUser(uid: string): void {
         this.currentUserId = uid || 'guest';
         this.loadPreferences(this.currentUserId);
+        this.restoreTimerState(this.currentUserId);
     }
 
     /** Clear preferences from active state (call on logout) */
     clearForUser(): void {
         this.currentUserId = 'guest';
+        this.clearTimerState('guest');
         this.loadPreferences('guest');
+        this.resetToPhase(this.getStudyPhase());
     }
 
     /** Get current durations */
@@ -170,6 +174,7 @@ export class PomodoroService {
 
         this.timerState.next('running');
         this.startTicking();
+        this.saveTimerState();
     }
 
     /** Pause the timer */
@@ -179,6 +184,7 @@ export class PomodoroService {
         }
         this.timerState.next('paused');
         this.stopTicking();
+        this.saveTimerState();
     }
 
     /** Resume the timer */
@@ -197,6 +203,7 @@ export class PomodoroService {
         this.studySessionsInCycle = 0;
         this.completedSessions.next(0);
         this.resetToPhase(this.getStudyPhase());
+        this.clearTimerState(this.currentUserId);
     }
 
     /** Skip to the next phase */
@@ -250,6 +257,10 @@ export class PomodoroService {
                 this.startTicking();
             } else {
                 this.timeRemaining.next(remaining);
+                // Persist every 5 seconds to avoid excessive localStorage writes
+                if (remaining % 5 === 0) {
+                    this.saveTimerState();
+                }
             }
         });
     }
@@ -280,6 +291,7 @@ export class PomodoroService {
 
         const newPhase = this.currentPhase.value;
         this.notifyPhase(newPhase, true);
+        this.saveTimerState();
     }
 
     /** Send system notification and emit in-app toast event */
@@ -378,5 +390,97 @@ export class PomodoroService {
                 sessionsBeforeLongBreak: this.sessionsBeforeLongBreak,
             }),
         );
+    }
+
+    /** Persist running timer state to localStorage — no server calls */
+    private saveTimerState(): void {
+        try {
+            localStorage.setItem(
+                this.TIMER_KEY_PREFIX + this.currentUserId,
+                JSON.stringify({
+                    timerState: this.timerState.value,
+                    timeRemaining: this.timeRemaining.value,
+                    currentPhaseKey: this.currentPhase.value.key,
+                    completedSessions: this.completedSessions.value,
+                    studySessionsInCycle: this.studySessionsInCycle,
+                    savedAt: Date.now(),
+                }),
+            );
+        } catch {
+            // Ignore storage errors
+        }
+    }
+
+    /** Restore timer state from localStorage on page load */
+    private restoreTimerState(uid: string): void {
+        try {
+            const raw = localStorage.getItem(this.TIMER_KEY_PREFIX + uid);
+            if (!raw) {
+                this.resetToPhase(this.getStudyPhase());
+                return;
+            }
+
+            const saved = JSON.parse(raw);
+            const savedState: TimerState = saved.timerState;
+            const phase = POMODORO_PHASES.find(p => p.key === saved.currentPhaseKey) ?? POMODORO_PHASES[0];
+
+            this.completedSessions.next(saved.completedSessions ?? 0);
+            this.studySessionsInCycle = saved.studySessionsInCycle ?? 0;
+            this.currentPhase.next(phase);
+
+            if (savedState === 'idle') {
+                this.timeRemaining.next((this.durations[phase.durationKey] ?? DEFAULT_DURATIONS.studyMinutes) * 60);
+                this.timerState.next('idle');
+                return;
+            }
+
+            // Calculate how many seconds elapsed while page was closed
+            const elapsedSeconds = savedState === 'running'
+                ? Math.floor((Date.now() - (saved.savedAt ?? Date.now())) / 1000)
+                : 0;
+
+            let timeRemaining: number = (saved.timeRemaining ?? 0) - elapsedSeconds;
+
+            // Handle case where one or more phases completed while page was away
+            while (timeRemaining <= 0 && savedState === 'running') {
+                // Advance phase silently (no notification for missed phases)
+                if (phase.key === 'study') {
+                    this.studySessionsInCycle++;
+                    this.completedSessions.next(this.completedSessions.value + 1);
+                    if (this.studySessionsInCycle >= this.sessionsBeforeLongBreak) {
+                        this.studySessionsInCycle = 0;
+                        this.currentPhase.next(this.getLongBreakPhase());
+                    } else {
+                        this.currentPhase.next(this.getBreakPhase());
+                    }
+                } else {
+                    this.currentPhase.next(this.getStudyPhase());
+                }
+                const nextPhaseDuration = (this.durations[this.currentPhase.value.durationKey] ?? DEFAULT_DURATIONS.studyMinutes) * 60;
+                timeRemaining += nextPhaseDuration;
+            }
+
+            this.timeRemaining.next(Math.max(0, timeRemaining));
+
+            if (savedState === 'running') {
+                this.timerState.next('running');
+                this.startTicking();
+            } else {
+                // Restore paused state
+                this.timerState.next('paused');
+            }
+        } catch {
+            // Fallback to fresh state on any error
+            this.resetToPhase(this.getStudyPhase());
+        }
+    }
+
+    /** Remove saved timer state (on reset or logout) */
+    private clearTimerState(uid: string): void {
+        try {
+            localStorage.removeItem(this.TIMER_KEY_PREFIX + uid);
+        } catch {
+            // Ignore
+        }
     }
 }

@@ -36,8 +36,8 @@ import {Subscription} from 'rxjs';
             <h3>{{ title }}</h3>
             <p>{{ description }}</p>
             <ol>
-                @for (step of steps; track step) {
-                    <li>{{ step }}</li>
+                @for (step of steps; track step.text) {
+                    <li>{{ step.text }}<br><span class="step-detail">{{ step.detail }}</span></li>
                 }
             </ol>
         </div>
@@ -65,6 +65,10 @@ import {Subscription} from 'rxjs';
             padding-left: 1.25rem;
             margin: 0.5rem 0 0 0;
         }
+
+        .step-detail {
+            color: var(--ion-color-medium-tint);
+        }
     `],
     imports: [],
 })
@@ -72,9 +76,9 @@ export class PomodoroInfoPopoverComponent {
     title = 'Pomodoro Technique';
     description = 'A time management method that uses a timer to break work into intervals:';
     steps = [
-        'Study for the set duration (default 25 min)',
-        'Take a short break (default 5 min)',
-        'Repeat — after 4 study sessions, take a long break (default 20 min)',
+        { text: 'Study for the set duration', detail: '(default 25 min)' },
+        { text: 'Take a short break', detail: '(default 5 min)' },
+        { text: 'Repeat \u2014 after 4 study sessions, take a long break', detail: '(default 20 min)' },
     ];
 }
 
