@@ -1,8 +1,8 @@
-import {AfterViewInit, Component, ElementRef, inject, OnDestroy, OnInit, ViewChild} from '@angular/core';
-import {combineLatest, EMPTY, fromEvent, mergeAll, Observable, of, pairwise, startWith, Subject, takeUntil, throttleTime} from 'rxjs';
-import {ActivatedRoute, Router} from '@angular/router';
-import {CourseMembers, EvaluationRecord, Lecture, ManService} from '../../man.service';
-import {first, map, switchMap} from 'rxjs/operators';
+import { AfterViewInit, Component, ElementRef, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { combineLatest, EMPTY, fromEvent, mergeAll, Observable, of, pairwise, startWith, Subject, takeUntil, throttleTime } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { CourseMembers, EvaluationRecord, Lecture, ManService } from '../../man.service';
+import { first, map, switchMap } from 'rxjs/operators';
 import videojs from 'video.js';
 import 'videojs-hotkeys';
 import 'videojs-youtube';
@@ -31,15 +31,15 @@ import {
     IonToolbar,
     ModalController,
 } from '@ionic/angular/standalone';
-import {DomSanitizer} from '@angular/platform-browser';
-import {PlayHistory} from '../../play-tracker.service';
-import {addIcons} from "ionicons";
-import {checkmarkOutline, closeOutline, documentAttachOutline, download, pauseCircleOutline} from "ionicons/icons";
+import { DomSanitizer } from '@angular/platform-browser';
+import { PlayHistory } from '../../play-tracker.service';
+import { addIcons } from "ionicons";
+import { checkmarkOutline, closeOutline, documentAttachOutline, download, pauseCircleOutline } from "ionicons/icons";
 import type Player from 'video.js/dist/types/player';
-import {ulid} from 'ulid';
-import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
-import {ModalEvaluationComponent} from './modal-evaluation.component';
-import {PomodoroTimerComponent} from '../../shared/pomodoro-timer.component';
+import { ulid } from 'ulid';
+import { AsyncPipe, DatePipe, DecimalPipe, NgClass } from '@angular/common';
+import { ModalEvaluationComponent } from './modal-evaluation.component';
+import { PomodoroTimerComponent } from '../../shared/pomodoro-timer.component';
 
 @Component({
     selector: 'app-course',
@@ -182,7 +182,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 // On video load, seek to last played position
                 if (this.currentVideo.history.end_time
                     && this.expectVideoTimeJump
-                    && (!this.currentVideo.duration || (((this.currentVideo.history.end_time ?? 0) / this.currentVideo.duration) < 0.95))) {
+                    && (!this.currentVideo.duration || (((this.currentVideo.history.end_time ?? 0) / this.currentVideo.duration) < 0.995))) {
                     this.videoPlayer.currentTime(this.currentVideo.history.end_time);
                 }
                 this.expectVideoTimeJump = false;
@@ -274,7 +274,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             lecture.history = history[lecture.id] ?? ((lecture.id in evaluations && lecture.duration) ? { // If evaluation exists, treat as watched
                 end_time: lecture.duration,
                 played_at: null,
-            } : {end_time: null, played_at: null});
+            } : { end_time: null, played_at: null });
             if (lecture.duration) {
                 progress.duration -= -lecture.duration;
                 if (lecture.history.end_time) {
@@ -370,7 +370,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     async openEvaluationModal() {
         const modal = await this.modalCtrl.create({
             component: ModalEvaluationComponent,
-            componentProps: {video: this.currentVideo},
+            componentProps: { video: this.currentVideo },
         });
         await modal.present();
     }
