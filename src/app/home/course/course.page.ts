@@ -182,7 +182,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 // On video load, seek to last played position
                 if (this.currentVideo.history.end_time
                     && this.expectVideoTimeJump
-                    && (!this.currentVideo.duration || (((this.currentVideo.history.end_time ?? 0) / this.currentVideo.duration) < 0.995))) {
+                    && (!this.currentVideo.duration || (((this.currentVideo.history.end_time ?? 0) / this.currentVideo.duration) < 0.95))) {
                     this.videoPlayer.currentTime(this.currentVideo.history.end_time);
                 }
                 this.expectVideoTimeJump = false;

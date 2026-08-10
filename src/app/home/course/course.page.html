@@ -152,13 +152,13 @@
                             </small>
                             @if (lecture.history.end_time && lecture.duration && lecture.history.end_time > 3 &&
                             (lecture.history.end_time / lecture.duration
-                            < 0.995)) { <ion-progress-bar
+                            < 0.95)) { <ion-progress-bar
                                 [color]="(currentVideo && currentVideo.id && currentVideo.id === lecture.id) || (lastPlayedVideoKey === lecture.id && !currentVideo) ? 'light' : 'primary'"
                                 [value]="lecture.history.end_time/lecture.duration" />
                             }
                         </ion-label>
                         @if (lecture.history.end_time && lecture.duration && (lecture.history.end_time /
-                        lecture.duration >= 0.995)) {
+                        lecture.duration >= 0.95)) {
                         <ion-icon class="check-icon" name="checkmark-outline" slot="end" color="success"></ion-icon>
                         }
                         @if (lecture.sources.length === 0) {
