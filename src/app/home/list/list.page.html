@@ -5,50 +5,78 @@
       <span [ngStyle]="{'background-color': colorByFolderName(year)}">{{ year || 'Loading'}}</span>
     </ion-title>
   </ion-toolbar>
+  <ion-toolbar>
+    <ion-searchbar
+      placeholder="Search videos in {{ year }}..."
+      debounce="0"
+      (ionInput)="onSearchChange($event)"
+      class="global-search"
+    ></ion-searchbar>
+  </ion-toolbar>
 </ion-header>
 
 <ion-content>
-    <ion-searchbar
-        (ionInput)="onSearchChange($event)"
-        placeholder="Search courses or videos..."
-        debounce="300">
-    </ion-searchbar>
-    @if (filteredResults$ | async; as results) {
-        @if (results && results.length > 0) {
-            <ion-list>
-                @for (res of results; track res.course.id) {
-                    @if (res.isCourseMatch) {
-                        <ion-item button [routerLink]="res.course.link">
-                            <ion-icon name="book-outline" slot="start" color="primary"></ion-icon>
+    @if (searchQuery.trim()) {
+        <!-- Global Search Results -->
+        <div class="search-results-container">
+            @if (isSearching) {
+                <div class="search-status">
+                    <ion-spinner name="crescent"></ion-spinner>
+                    <span>Searching...</span>
+                </div>
+            } @else if (searchResults$ | async; as results) {
+                @if (results.length === 0) {
+                    <div class="search-status">
+                        <p>No videos found for &ldquo;{{ searchQuery }}&rdquo;</p>
+                    </div>
+                } @else {
+                    <p class="result-count">{{ results.length }} result{{ results.length !== 1 ? 's' : '' }} for &ldquo;{{ searchQuery }}&rdquo;</p>
+                    <ion-list lines="full" class="search-list">
+                        @for (result of results; track result.id) {
+                            <ion-item button (click)="goToVideo(result)" detail="true">
+                                <ion-label class="ion-text-wrap">
+                                    <h2 class="video-title">{{ result.title }}</h2>
+                                    <p class="video-meta">
+                                        @if (result.lecturer) {
+                                            <span class="lecturer">{{ result.lecturer }}</span>
+                                        }
+                                        @if (result.courseName) {
+                                            <span class="course-name-label">{{ result.courseName }}</span>
+                                        }
+                                        @if (result.duration) {
+                                            <span class="duration-badge">{{ formatDuration(result.duration) }}</span>
+                                        }
+                                        @if (result.courseYear) {
+                                            <span class="course-year-badge" [ngStyle]="{'background-color': colorByFolderName(result.courseYear)}">{{ result.courseYear }}</span>
+                                        }
+                                    </p>
+                                </ion-label>
+                            </ion-item>
+                        }
+                    </ion-list>
+                }
+            }
+        </div>
+    } @else if (groupedList$ | async; as groups) {
+        @if (groups.length) {
+            @for (group of groups; track group.year) {
+                <ion-list-header>
+                    <ion-label class="group-header">{{ group.year }}</ion-label>
+                </ion-list-header>
+                <ion-list>
+                    @for (course of group.courses; track course.id) {
+                        <ion-item button [routerLink]="course.link">
                             <ion-label>
-                                @if (res.course.is_remote) {
+                                @if (course.is_remote) {
                                     <span class="e-learning-tag">MDCU <small>E-Learning</small></span>
                                 }
-                                {{ res.course.name }}
+                                {{ course.name }}
                             </ion-label>
                         </ion-item>
-                    } @else if (res.matchingVideos.length > 0) {
-                        <ion-item-divider color="light">
-                            <ion-label>Course: {{ res.course.name }}</ion-label>
-                        </ion-item-divider>
                     }
+                </ion-list>
+            }
 
-                    @for (video of res.matchingVideos; track video.id || video.title) {
-                        <ion-item button [routerLink]="res.course.link" [queryParams]="{ video: video.id || video.title }">
-                            <ion-icon name="videocam-outline" slot="start" color="secondary"></ion-icon>
-                            <ion-label class="ion-text-wrap">
-                                <h3>{{ video.title }}</h3>
-                                @if (video.lecturer) {
-                                    <p>{{ video.lecturer }}</p>
-                                }
-                            </ion-label>
-                            <ion-note slot="end" color="medium">{{ res.course.name }}</ion-note>
-                        </ion-item>
-                    }
-                }
-            </ion-list>
-        } @else if (searchQuery) {
-            <p class="ion-padding">No courses or videos found matching "{{ searchQuery }}"</p>
         } @else {
             <p class="ion-padding">Empty.</p>
         }

@@ -1,8 +1,8 @@
-import {AfterViewInit, Component, ElementRef, inject, OnDestroy, OnInit, ViewChild} from '@angular/core';
-import {combineLatest, EMPTY, fromEvent, mergeAll, Observable, of, pairwise, startWith, Subject, takeUntil, throttleTime} from 'rxjs';
-import {ActivatedRoute, Router} from '@angular/router';
-import {CourseMembers, EvaluationRecord, Lecture, ManService} from '../../man.service';
-import {first, map, switchMap} from 'rxjs/operators';
+import { AfterViewInit, Component, ElementRef, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { combineLatest, EMPTY, fromEvent, mergeAll, Observable, of, pairwise, startWith, Subject, takeUntil, throttleTime } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { CourseMembers, EvaluationRecord, Lecture, ManService } from '../../man.service';
+import { first, map, switchMap, take } from 'rxjs/operators';
 import videojs from 'video.js';
 import 'videojs-hotkeys';
 import 'videojs-youtube';
@@ -31,14 +31,15 @@ import {
     IonToolbar,
     ModalController,
 } from '@ionic/angular/standalone';
-import {DomSanitizer} from '@angular/platform-browser';
-import {PlayHistory} from '../../play-tracker.service';
-import {addIcons} from "ionicons";
-import {checkmarkOutline, closeOutline, documentAttachOutline, download, pauseCircleOutline} from "ionicons/icons";
+import { DomSanitizer } from '@angular/platform-browser';
+import { PlayHistory } from '../../play-tracker.service';
+import { addIcons } from "ionicons";
+import { checkmarkOutline, closeOutline, documentAttachOutline, download, pauseCircleOutline } from "ionicons/icons";
 import type Player from 'video.js/dist/types/player';
-import {ulid} from 'ulid';
-import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
-import {ModalEvaluationComponent} from './modal-evaluation.component';
+import { ulid } from 'ulid';
+import { AsyncPipe, DatePipe, DecimalPipe, NgClass } from '@angular/common';
+import { ModalEvaluationComponent } from './modal-evaluation.component';
+import { PomodoroTimerComponent } from '../../shared/pomodoro-timer.component';
 
 @Component({
     selector: 'app-course',
@@ -70,6 +71,7 @@ import {ModalEvaluationComponent} from './modal-evaluation.component';
         AsyncPipe,
         DecimalPipe,
         DatePipe,
+        PomodoroTimerComponent,
     ]
 })
 export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
@@ -86,6 +88,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     year: string;
     course: string;
     courseId?: string;
+    videoIdFromSearch: string | null = null;
     list$: Observable<Lecture[]>;
     filteredList$: Observable<Lecture[]>;
     courseProgress = {
@@ -115,7 +118,9 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     ngOnInit() {
+        // Read optional `video`/`v` query param set by global search or direct link
         const targetVideoId = this.route.snapshot.queryParamMap.get('video') || this.route.snapshot.queryParamMap.get('v');
+        this.videoIdFromSearch = targetVideoId;
 
         this.list$ = this.route.paramMap.pipe(
             first(),
@@ -134,14 +139,16 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                         this.year = courseData.category;
                         this.course = courseData.name;
                         const videos = this.mergeVideoInfo(courseData.lectures, history?.records ?? {}, history?.evaluations ?? {});
-                        if (targetVideoId) {
-                            const target = videos.find(v => String(v.id) === targetVideoId || v.title === targetVideoId);
+                        // Auto-select video from global search / direct link
+                        if (this.videoIdFromSearch) {
+                            const target = videos.find(v => String(v.id) === this.videoIdFromSearch || v.title === this.videoIdFromSearch);
                             if (target) {
                                 if (this.isPlayerReady && this.videoPlayer) {
                                     setTimeout(() => this.viewVideo(target), 0);
                                 } else {
                                     this.pendingVideoToPlay = target;
                                 }
+                                this.videoIdFromSearch = null;
                             }
                         }
                         return videos;
@@ -293,7 +300,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             lecture.history = history[lecture.id] ?? ((lecture.id in evaluations && lecture.duration) ? { // If evaluation exists, treat as watched
                 end_time: lecture.duration,
                 played_at: null,
-            } : {end_time: null, played_at: null});
+            } : { end_time: null, played_at: null });
             if (lecture.duration) {
                 progress.duration -= -lecture.duration;
                 if (lecture.history.end_time) {
@@ -389,7 +396,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     async openEvaluationModal() {
         const modal = await this.modalCtrl.create({
             component: ModalEvaluationComponent,
-            componentProps: {video: this.currentVideo},
+            componentProps: { video: this.currentVideo },
         });
         await modal.present();
     }

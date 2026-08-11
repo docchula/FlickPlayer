@@ -46,7 +46,8 @@ span.date-divider {
   ion-content {
     .scroll-area {
       height: calc(100vh - 70px);
-      overflow: auto;
+      overflow-y: auto;
+      padding-right: 0.5rem;
     }
   }
 }

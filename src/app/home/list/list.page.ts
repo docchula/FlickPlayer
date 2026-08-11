@@ -1,39 +1,27 @@
-import {Component, inject, OnInit} from '@angular/core';
-import {ActivatedRoute, Router, RouterLink} from '@angular/router';
-import {BehaviorSubject, combineLatest, concat, EMPTY, forkJoin, Observable, of} from 'rxjs';
-import {catchError, map, switchMap} from 'rxjs/operators';
-import {Lecture, ManService} from '../../man.service';
-import {colorByFolderName} from '../../../helpers';
+import { Component, inject, OnInit } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { EMPTY, Observable, Subject, of } from 'rxjs';
+import { debounceTime, distinctUntilChanged, map, switchMap, tap } from 'rxjs/operators';
+import { ManService, SearchVideoResult } from '../../man.service';
+import { colorByFolderName } from '../../../helpers';
 import {
     IonBackButton,
     IonContent,
     IonHeader,
-    IonIcon,
     IonItem,
-    IonItemDivider,
     IonLabel,
     IonList,
-    IonNote,
+    IonListHeader,
     IonSearchbar,
+    IonSpinner,
     IonTitle,
     IonToolbar
 } from '@ionic/angular/standalone';
-import {AsyncPipe, NgStyle} from '@angular/common';
-import {addIcons} from 'ionicons';
-import {bookOutline, videocamOutline} from 'ionicons/icons';
+import { AsyncPipe, NgStyle } from '@angular/common';
 
-export interface CourseWithVideos {
-    id: number;
-    name: string;
-    is_remote: boolean;
-    link: string[];
-    videos: Lecture[];
-}
-
-export interface FilteredCourseResult {
-    course: CourseWithVideos;
-    isCourseMatch: boolean;
-    matchingVideos: Lecture[];
+export interface EnrichedSearchResult extends SearchVideoResult {
+    courseName?: string;
+    courseYear?: string;
 }
 
 @Component({
@@ -42,7 +30,8 @@ export interface FilteredCourseResult {
     styleUrls: ['./list.page.scss'],
     imports: [
         IonHeader, IonToolbar, RouterLink, IonBackButton, IonTitle, NgStyle,
-        IonContent, IonList, IonItem, IonItemDivider, IonLabel, IonNote, IonIcon, IonSearchbar, AsyncPipe
+        IonContent, IonList, IonListHeader, IonItem, IonLabel, AsyncPipe,
+        IonSearchbar, IonSpinner,
     ]
 })
 export class ListPage implements OnInit {
@@ -51,17 +40,19 @@ export class ListPage implements OnInit {
     private manService = inject(ManService);
 
     year: string;
-    coursesWithVideos$: Observable<CourseWithVideos[]>;
-    filteredResults$: Observable<FilteredCourseResult[]>;
-    searchQuery$ = new BehaviorSubject<string>('');
-    searchQuery = '';
+    groupedList$: Observable<{ year: string, courses: { name: string, is_remote: boolean, id: number, link: string[] }[] }[]>;
 
-    constructor() {
-        addIcons({ bookOutline, videocamOutline });
-    }
+    searchQuery = '';
+    searchResults$: Observable<EnrichedSearchResult[]> = of([]);
+    isSearching = false;
+
+    /** Map of course_id (string) → { name, year } built from video list */
+    private courseLookup = new Map<string, { name: string; year: string }>();
+
+    private searchInput$ = new Subject<string>();
 
     ngOnInit() {
-        this.coursesWithVideos$ = this.route.paramMap.pipe(
+        this.groupedList$ = this.route.paramMap.pipe(
             switchMap(s => {
                 const year = s.get('year');
                 this.year = year;
@@ -69,82 +60,85 @@ export class ListPage implements OnInit {
                     this.router.navigate(['home']);
                     return EMPTY;
                 }
-                return this.manService.getVideoList().pipe(
-                    switchMap(list => {
-                        const courses: CourseWithVideos[] = list?.years[year]?.map(course => ({
-                            ...course,
-                            link: ['/', 'home', 'course', String(course.id)],
-                            videos: []
-                        })) ?? [];
-
-                        if (courses.length === 0) {
-                            return of([]);
+                return this.manService.getVideoList().pipe(map(list => {
+                    // Build course lookup while we have the data
+                    if (list?.years) {
+                        this.courseLookup.clear();
+                        for (const y of Object.keys(list.years)) {
+                            for (const course of list.years[y]) {
+                                this.courseLookup.set(String(course.id), { name: course.name, year: y });
+                            }
                         }
-
-                        const requests = courses.map(course =>
-                            this.manService.getVideosInCourse(year, course.name, String(course.id)).pipe(
-                                map(res => {
-                                    const videos: Lecture[] = res?.lectures ? Object.values(res.lectures) : [];
-                                    return {
-                                        ...course,
-                                        videos
-                                    };
-                                }),
-                                catchError(() => of({
-                                    ...course,
-                                    videos: []
-                                }))
-                            )
-                        );
-
-                        // Emit instant course list first (0ms lag), then emit videos when background fetch completes
-                        return concat(
-                            of(courses),
-                            forkJoin(requests)
-                        );
-                    })
-                );
+                    }
+                    const courses = list?.years[year]?.map(course => ({
+                        ...course,
+                        link: ['/', 'home', 'course', String(course.id)]
+                    })) ?? [];
+                    return this.groupByAcademicYear(courses);
+                }));
             })
         );
 
-        this.filteredResults$ = combineLatest([this.coursesWithVideos$, this.searchQuery$]).pipe(
-            map(([courses, query]) => {
-                if (!query || !query.trim()) {
-                    return courses.map(course => ({
-                        course,
-                        isCourseMatch: true,
-                        matchingVideos: []
-                    }));
+        this.searchResults$ = this.searchInput$.pipe(
+            debounceTime(300),
+            distinctUntilChanged(),
+            tap(() => this.isSearching = true),
+            switchMap(query => {
+                if (!query.trim()) {
+                    this.isSearching = false;
+                    return of([]);
                 }
-
-                const q = query.toLowerCase().trim();
-                const results: FilteredCourseResult[] = [];
-
-                for (const course of courses) {
-                    const isCourseMatch = course.name.toLowerCase().includes(q);
-                    const matchingVideos = course.videos.filter(v =>
-                        v.title.toLowerCase().includes(q) ||
-                        (v.lecturer && v.lecturer.toLowerCase().includes(q))
-                    );
-
-                    if (isCourseMatch || matchingVideos.length > 0) {
-                        results.push({
-                            course,
-                            isCourseMatch,
-                            matchingVideos
-                        });
-                    }
-                }
-
-                return results;
-            })
+                return this.manService.searchVideos(query).pipe(
+                    map(results => results.map(r => ({
+                        ...r,
+                        courseName: this.courseLookup.get(r.course_id)?.name,
+                        courseYear: this.courseLookup.get(r.course_id)?.year,
+                    })).filter(r => r.courseYear === this.year))
+                );
+            }),
+            tap(() => this.isSearching = false),
         );
     }
 
-    onSearchChange(event: any) {
-        this.searchQuery = event.detail.value || '';
-        this.searchQuery$.next(this.searchQuery);
+    onSearchChange(event: Event) {
+        const target = event.target as HTMLIonSearchbarElement;
+        this.searchQuery = target.value ?? '';
+        this.searchInput$.next(this.searchQuery);
+    }
+
+    goToVideo(result: SearchVideoResult) {
+        this.router.navigate(['home', 'course', result.course_id], {
+            queryParams: { video: result.id }
+        });
+    }
+
+    formatDuration(seconds: number): string {
+        if (!seconds) return '';
+        const m = Math.floor(seconds / 60);
+        if (m < 60) return `${m} min`;
+        const h = Math.floor(m / 60);
+        const rem = m % 60;
+        return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
     }
 
     protected readonly colorByFolderName = colorByFolderName;
+
+    private groupByAcademicYear(courses: { name: string, is_remote: boolean, id: number, link: string[] }[]) {
+        const groups = new Map<string, typeof courses>();
+        for (const course of courses) {
+            const match = course.name.match(/\((25\d{2})\)/);
+            const yearKey = match ? match[1] : 'Miscellaneous';
+            if (!groups.has(yearKey)) {
+                groups.set(yearKey, []);
+            }
+            groups.get(yearKey).push(course);
+        }
+        // Sort year keys descending (numeric years first, 'Miscellaneous' last)
+        const sortedKeys = Array.from(groups.keys()).sort((a, b) => {
+            if (a === 'Miscellaneous') return 1;
+            if (b === 'Miscellaneous') return -1;
+            return Number(b) - Number(a);
+        });
+        return sortedKeys.map(year => ({ year, courses: groups.get(year) }));
+    }
 }

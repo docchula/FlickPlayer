@@ -173,6 +173,30 @@ export class ManService {
         return of(null);
     }
 
+    searchVideos(query: string): Observable<SearchVideoResult[]> {
+        if (!query.trim()) {
+            return of([]);
+        }
+        const keyword = '%' + query.trim() + '%';
+        const body = {
+            query: `query SearchVideos($title: String!) {
+                videos(title: $title, first: 100) {
+                    data { id title lecturer duration course_id }
+                }
+            }`,
+            variables: { title: keyword }
+        };
+        if (this.httpOptions.headers.get('Authorization').length < 30) {
+            console.error('ManService ID token is not set.');
+            return of([]);
+        }
+        return this.http.post<{ data: { videos: { data: SearchVideoResult[] } } }>(
+            this.getEndpointLocation() + 'graphql',
+            body,
+            this.httpOptions
+        ).pipe(map(response => response?.data?.videos?.data ?? []));
+    }
+
     /*updateCurrentStudent(requestBody) {
         if (!this.email) {
             console.error('ManService user email is not set.');
@@ -258,4 +282,12 @@ export interface JSend<A> {
     status: string;
     message?: string;
     data?: A;
+}
+
+export interface SearchVideoResult {
+    id: string;
+    title: string;
+    lecturer: string;
+    duration: number;
+    course_id: string;
 }
