@@ -127,16 +127,16 @@ export class ListPage implements OnInit {
         const groups = new Map<string, typeof courses>();
         for (const course of courses) {
             const match = course.name.match(/\((25\d{2})\)/);
-            const yearKey = match ? match[1] : 'Miscellaneous';
+            const yearKey = match ? match[1] : 'Others';
             if (!groups.has(yearKey)) {
                 groups.set(yearKey, []);
             }
             groups.get(yearKey).push(course);
         }
-        // Sort year keys descending (numeric years first, 'Miscellaneous' last)
+        // Sort year keys descending (numeric years first, 'Others' last)
         const sortedKeys = Array.from(groups.keys()).sort((a, b) => {
-            if (a === 'Miscellaneous') return 1;
-            if (b === 'Miscellaneous') return -1;
+            if (a === 'Others') return 1;
+            if (b === 'Others') return -1;
             return Number(b) - Number(a);
         });
         return sortedKeys.map(year => ({ year, courses: groups.get(year) }));

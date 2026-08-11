@@ -60,9 +60,11 @@
     } @else if (groupedList$ | async; as groups) {
         @if (groups.length) {
             @for (group of groups; track group.year) {
+                @if (groups.length > 1) {
                 <ion-list-header>
                     <ion-label class="group-header">{{ group.year }}</ion-label>
                 </ion-list-header>
+                }
                 <ion-list>
                     @for (course of group.courses; track course.id) {
                         <ion-item button [routerLink]="course.link">
