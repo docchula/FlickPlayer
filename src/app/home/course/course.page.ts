@@ -2,7 +2,7 @@ import { AfterViewInit, Component, ElementRef, inject, OnDestroy, OnInit, ViewCh
 import { combineLatest, EMPTY, fromEvent, mergeAll, Observable, of, pairwise, startWith, Subject, takeUntil, throttleTime } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CourseMembers, EvaluationRecord, Lecture, ManService } from '../../man.service';
-import { first, map, switchMap } from 'rxjs/operators';
+import { first, map, switchMap, take } from 'rxjs/operators';
 import videojs from 'video.js';
 import 'videojs-hotkeys';
 import 'videojs-youtube';
@@ -88,6 +88,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     year: string;
     course: string;
     courseId?: string;
+    videoIdFromSearch: string | null = null;
     list$: Observable<Lecture[]>;
     filteredList$: Observable<Lecture[]>;
     courseProgress = {
@@ -114,6 +115,11 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     ngOnInit() {
+        // Read optional `video` query param set by global search navigation
+        this.route.queryParamMap.pipe(take(1)).subscribe(qp => {
+            this.videoIdFromSearch = qp.get('video');
+        });
+
         this.list$ = this.route.paramMap.pipe(
             first(),
             switchMap(s => {
@@ -130,7 +136,17 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                         }
                         this.year = courseData.category;
                         this.course = courseData.name;
-                        return this.mergeVideoInfo(courseData.lectures, history?.records ?? {}, history?.evaluations ?? {});
+                        const lectures = this.mergeVideoInfo(courseData.lectures, history?.records ?? {}, history?.evaluations ?? {});
+                        // Auto-select video from global search navigation
+                        if (this.videoIdFromSearch) {
+                            const target = lectures.find(l => String(l.id) === this.videoIdFromSearch);
+                            if (target) {
+                                // Defer to allow AfterViewInit to complete first
+                                setTimeout(() => this.viewVideo(target), 100);
+                                this.videoIdFromSearch = null;
+                            }
+                        }
+                        return lectures;
                     }));
                 } else if (this.year) {
                     this.router.navigate(['home/' + this.year]);

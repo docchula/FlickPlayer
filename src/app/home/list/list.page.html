@@ -5,23 +5,77 @@
       <span [ngStyle]="{'background-color': colorByFolderName(year)}">{{ year || 'Loading'}}</span>
     </ion-title>
   </ion-toolbar>
+  <ion-toolbar>
+    <ion-searchbar
+      placeholder="Search videos in {{ year }}..."
+      debounce="0"
+      (ionInput)="onSearchChange($event)"
+      class="global-search"
+    ></ion-searchbar>
+  </ion-toolbar>
 </ion-header>
 
 <ion-content>
-    @if (list$ | async; as list) {
-        @if (list) {
-            <ion-list>
-                @for (course of list; track course.id) {
-                    <ion-item button [routerLink]="course.link">
-                        <ion-label>
-                            @if (course.is_remote) {
-                                <span class="e-learning-tag">MDCU <small>E-Learning</small></span>
-                            }
-                            {{ course.name }}
-                        </ion-label>
-                    </ion-item>
+    @if (searchQuery.trim()) {
+        <!-- Global Search Results -->
+        <div class="search-results-container">
+            @if (isSearching) {
+                <div class="search-status">
+                    <ion-spinner name="crescent"></ion-spinner>
+                    <span>Searching...</span>
+                </div>
+            } @else if (searchResults$ | async; as results) {
+                @if (results.length === 0) {
+                    <div class="search-status">
+                        <p>No videos found for &ldquo;{{ searchQuery }}&rdquo;</p>
+                    </div>
+                } @else {
+                    <p class="result-count">{{ results.length }} result{{ results.length !== 1 ? 's' : '' }} for &ldquo;{{ searchQuery }}&rdquo;</p>
+                    <ion-list lines="full" class="search-list">
+                        @for (result of results; track result.id) {
+                            <ion-item button (click)="goToVideo(result)" detail="true">
+                                <ion-label class="ion-text-wrap">
+                                    <h2 class="video-title">{{ result.title }}</h2>
+                                    <p class="video-meta">
+                                        @if (result.lecturer) {
+                                            <span class="lecturer">{{ result.lecturer }}</span>
+                                        }
+                                        @if (result.courseName) {
+                                            <span class="course-name-label">{{ result.courseName }}</span>
+                                        }
+                                        @if (result.duration) {
+                                            <span class="duration-badge">{{ formatDuration(result.duration) }}</span>
+                                        }
+                                        @if (result.courseYear) {
+                                            <span class="course-year-badge" [ngStyle]="{'background-color': colorByFolderName(result.courseYear)}">{{ result.courseYear }}</span>
+                                        }
+                                    </p>
+                                </ion-label>
+                            </ion-item>
+                        }
+                    </ion-list>
                 }
-            </ion-list>
+            }
+        </div>
+    } @else if (groupedList$ | async; as groups) {
+        @if (groups.length) {
+            @for (group of groups; track group.year) {
+                <ion-list-header>
+                    <ion-label class="group-header">{{ group.year }}</ion-label>
+                </ion-list-header>
+                <ion-list>
+                    @for (course of group.courses; track course.id) {
+                        <ion-item button [routerLink]="course.link">
+                            <ion-label>
+                                @if (course.is_remote) {
+                                    <span class="e-learning-tag">MDCU <small>E-Learning</small></span>
+                                }
+                                {{ course.name }}
+                            </ion-label>
+                        </ion-item>
+                    }
+                </ion-list>
+            }
         } @else {
             <p>Empty.</p>
         }
