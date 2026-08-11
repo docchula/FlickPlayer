@@ -15,12 +15,9 @@ ion-label {
 .group-header {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--ion-color-dark);
+  /* Uses Ionic's semantic token — automatically adapts to any light/dark/custom theme */
+  color: var(--ion-text-color);
   margin-top: 0.5rem;
-
-  @media (prefers-color-scheme: dark) {
-    color: var(--ion-color-light);
-  }
 }
 
 /* ── Global Search Results ── */
