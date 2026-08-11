@@ -1,4 +1,4 @@
-ion-title > span {
+ion-title>span {
   padding: 0.2em 0.5em;
   color: white;
 }
@@ -6,4 +6,128 @@ ion-title > span {
 ion-label {
   text-overflow: initial !important;
   white-space: normal !important;
+}
+
+.e-learning-tag {
+  margin: 0 1rem;
+}
+
+.group-header {
+  font-size: 1.1rem;
+  font-weight: 700;
+  /* Uses Ionic's semantic token — automatically adapts to any light/dark/custom theme */
+  color: var(--ion-text-color);
+  margin-top: 0.5rem;
+}
+
+/* ── Global Search Results ── */
+.search-results-container {
+  padding-top: 0.5rem;
+}
+
+.search-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1rem;
+  gap: 0.75rem;
+  color: var(--ion-color-medium);
+
+  ion-spinner {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  p {
+    margin: 0;
+    text-align: center;
+  }
+}
+
+.result-count {
+  padding: 0.5rem 1rem 0.25rem;
+  font-size: 0.8rem;
+  color: var(--ion-color-medium);
+}
+
+.search-list {
+  border-radius: 8px;
+  overflow: hidden;
+
+  ion-item::part(detail-icon) {
+    align-self: bottom;
+  }
+}
+
+.video-title {
+  font-weight: 500;
+  white-space: normal !important;
+  line-height: 1.4;
+}
+
+.video-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  white-space: normal !important;
+}
+
+.lecturer {
+  color: var(--ion-color-medium);
+  font-size: 0.85rem;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duration-badge {
+  flex-shrink: 0;
+  background: var(--ion-color-light);
+  color: var(--ion-color-medium);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+
+  @media (prefers-color-scheme: dark) {
+    background: var(--ion-color-dark-tint);
+  }
+}
+
+.course-info {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+  white-space: normal !important;
+}
+
+.course-name-label {
+  font-size: 0.8rem;
+  color: var(--ion-color-primary);
+  font-weight: 500;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @media (prefers-color-scheme: dark) {
+    color: var(--ion-color-primary-tint);
+  }
+}
+
+.course-year-badge {
+  flex-shrink: 0;
+  color: #fff;
+  border-radius: 4px;
+  padding: 0.05rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
