@@ -66,7 +66,8 @@ ion-label {
 }
 
 .video-meta {
-  display: flex;
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 0.5rem;
   margin-top: 0.25rem;
@@ -74,10 +75,10 @@ ion-label {
 }
 
 .lecturer {
+  grid-column: 1;
   color: var(--ion-color-medium);
   font-size: 0.85rem;
   text-align: left;
-  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -85,6 +86,7 @@ ion-label {
 }
 
 .duration-badge {
+  grid-column: 3;
   flex-shrink: 0;
   background: var(--ion-color-light);
   color: var(--ion-color-medium);
@@ -107,11 +109,11 @@ ion-label {
 }
 
 .course-name-label {
+  grid-column: 2;
   font-size: 0.8rem;
   color: var(--ion-color-primary);
   font-weight: 500;
   text-align: left;
-  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -123,6 +125,7 @@ ion-label {
 }
 
 .course-year-badge {
+  grid-column: 4;
   flex-shrink: 0;
   color: #fff;
   border-radius: 4px;
