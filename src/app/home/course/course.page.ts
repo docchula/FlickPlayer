@@ -110,15 +110,17 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     // This is to prevent seeking in case loadedmetadata event is fired not at the beginning of the session
     expectVideoTimeJump = false;
 
+    pendingVideoToPlay: Lecture | null = null;
+    isPlayerReady = false;
+
     constructor() {
         addIcons({ download, documentAttachOutline, checkmarkOutline, closeOutline, pauseCircleOutline });
     }
 
     ngOnInit() {
-        // Read optional `video` query param set by global search navigation
-        this.route.queryParamMap.pipe(take(1)).subscribe(qp => {
-            this.videoIdFromSearch = qp.get('video');
-        });
+        // Read optional `video`/`v` query param set by global search or direct link
+        const targetVideoId = this.route.snapshot.queryParamMap.get('video') || this.route.snapshot.queryParamMap.get('v');
+        this.videoIdFromSearch = targetVideoId;
 
         this.list$ = this.route.paramMap.pipe(
             first(),
@@ -136,17 +138,20 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                         }
                         this.year = courseData.category;
                         this.course = courseData.name;
-                        const lectures = this.mergeVideoInfo(courseData.lectures, history?.records ?? {}, history?.evaluations ?? {});
-                        // Auto-select video from global search navigation
+                        const videos = this.mergeVideoInfo(courseData.lectures, history?.records ?? {}, history?.evaluations ?? {});
+                        // Auto-select video from global search / direct link
                         if (this.videoIdFromSearch) {
-                            const target = lectures.find(l => String(l.id) === this.videoIdFromSearch);
+                            const target = videos.find(v => String(v.id) === this.videoIdFromSearch || v.title === this.videoIdFromSearch);
                             if (target) {
-                                // Defer to allow AfterViewInit to complete first
-                                setTimeout(() => this.viewVideo(target), 100);
+                                if (this.isPlayerReady && this.videoPlayer) {
+                                    setTimeout(() => this.viewVideo(target), 0);
+                                } else {
+                                    this.pendingVideoToPlay = target;
+                                }
                                 this.videoIdFromSearch = null;
                             }
                         }
-                        return lectures;
+                        return videos;
                     }));
                 } else if (this.year) {
                     this.router.navigate(['home/' + this.year]);
@@ -177,6 +182,11 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             },
             techOrder: ['html5', 'youtube'],
         }, () => {
+            this.isPlayerReady = true;
+            if (this.pendingVideoToPlay) {
+                this.viewVideo(this.pendingVideoToPlay);
+                this.pendingVideoToPlay = null;
+            }
             // @ts-ignore
             this.videoPlayer.hotkeys({
                 volumeStep: 0.1,

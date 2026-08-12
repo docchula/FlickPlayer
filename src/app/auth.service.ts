@@ -25,18 +25,18 @@ export class AuthService {
         this.userSubscription = this.user$.subscribe((aUser: User | null) => {
             this.userSubject.next(aUser);
         });
-        getRedirectResult(this.auth); // ignore result
+        getRedirectResult(this.auth).catch((error) => console.error('getRedirectResult failed', error));
     }
 
-    signInWithPopup() {
+    signIn() {
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({hd: 'docchula.com'});
-        return signInWithPopup(this.auth, provider);
-    }
-
-    signInWithRedirect() {
-        const provider = new GoogleAuthProvider();
-        provider.setCustomParameters({hd: 'docchula.com'});
+        // Redirect relies on the Firebase Hosting reserved /__/auth/** paths on
+        // the authDomain, which localhost dev servers don't serve. Popup works
+        // there since it doesn't need those paths, so use it only for localhost.
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            return signInWithPopup(this.auth, provider);
+        }
         return signInWithRedirect(this.auth, provider);
     }
 
