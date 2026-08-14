@@ -47,6 +47,7 @@ span.date-divider {
     .scroll-area {
       height: calc(100vh - 70px);
       overflow-y: auto;
+      scrollbar-gutter: stable;
       padding-right: 0.5rem;
     }
   }
