@@ -95,8 +95,8 @@
                     @for (attachment of currentVideo.attachments; track attachment.src) {
                     <ion-item>
                         <ion-label>{{ attachment.name }}</ion-label>
-                        <a [href]="attachment.src" download target="_blank">
-                            <ion-icon name="download" size="small" slot="end"></ion-icon>
+                        <a [href]="attachment.src" download target="_blank" slot="end">
+                            <ion-icon name="download" size="small"></ion-icon>
                         </a>
                     </ion-item>
                     }

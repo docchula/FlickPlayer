@@ -174,17 +174,25 @@ export class ManService {
     }
 
     searchVideos(query: string): Observable<SearchVideoResult[]> {
-        if (!query.trim()) {
+        const trimmed = query.trim();
+        if (trimmed.length < 2) {
             return of([]);
         }
-        const keyword = '%' + query.trim() + '%';
+        const keyword = '%' + trimmed + '%';
+        const or: { column: string, operator: string, value: string }[] = [
+            {column: 'TITLE', operator: 'LIKE', value: keyword},
+            {column: 'LECTURER', operator: 'LIKE', value: keyword},
+        ];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+            or.push({column: 'RECORD_DATE', operator: 'EQ', value: trimmed});
+        }
         const body = {
-            query: `query SearchVideos($title: String!) {
-                videos(title: $title, first: 100) {
+            query: `query SearchVideos($where: QueryVideosWhereWhereConditions) {
+                videos(where: $where, first: 100) {
                     data { id title lecturer duration course_id }
                 }
             }`,
-            variables: { title: keyword }
+            variables: {where: {OR: or}},
         };
         if (this.httpOptions.headers.get('Authorization').length < 30) {
             console.error('ManService ID token is not set.');
