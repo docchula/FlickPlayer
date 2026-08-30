@@ -103,6 +103,7 @@ export class PomodoroService {
     private audioContext: AudioContext | null = null;
     /** Wall-clock epoch (ms) when the current running phase should end. Null while not running. */
     private phaseEndsAt: number | null = null;
+    private lastSavedAt = 0;
 
     /** Public observables */
     timerState$: Observable<TimerState> = this.timerState.asObservable();
@@ -119,6 +120,7 @@ export class PomodoroService {
     constructor() {
         this.loadPreferences(this.currentUserId);
         this.restoreTimerState(this.currentUserId);
+        this.saveOnPageHide();
     }
 
     /** Request browser system notification permissions */
@@ -272,6 +274,9 @@ export class PomodoroService {
                 this.startTicking();
             } else {
                 this.timeRemaining.next(remaining);
+                if (Date.now() - this.lastSavedAt >= 5000) {
+                    this.saveTimerState();
+                }
             }
         });
     }
@@ -463,12 +468,33 @@ export class PomodoroService {
                     currentPhaseKey: this.currentPhase.value.key,
                     completedSessions: this.completedSessions.value,
                     studySessionsInCycle: this.studySessionsInCycle,
-                    savedAt: Date.now(),
                 }),
             );
+            this.lastSavedAt = Date.now();
         } catch {
             // Ignore storage errors
         }
+    }
+
+    /**
+     * Flush the timer whenever the page is hidden or torn down, so a tab closed mid-phase resumes
+     * from where it stopped rather than from the last phase change.
+     */
+    private saveOnPageHide(): void {
+        if (typeof document === 'undefined') {
+            return;
+        }
+        const flush = () => {
+            if (this.timerState.value !== 'idle') {
+                this.saveTimerState();
+            }
+        };
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                flush();
+            }
+        });
+        window.addEventListener('pagehide', flush);
     }
 
     /** Restore timer state from localStorage on page load */
@@ -494,56 +520,10 @@ export class PomodoroService {
                 return;
             }
 
-            // Calculate how many seconds elapsed while page was closed
-            const elapsedSeconds = savedState === 'running'
-                ? Math.floor((Date.now() - (saved.savedAt ?? Date.now())) / 1000)
-                : 0;
-
-            // If the page was away for an implausibly long time (device asleep for days, clock change,
-            // etc.), don't walk the phase-by-phase catch-up below — just drop back to idle and let the
-            // user decide whether to resume. Session counters already restored above are kept as-is.
-            const MAX_CATCH_UP_SECONDS = 12 * 60 * 60;
-            if (elapsedSeconds > MAX_CATCH_UP_SECONDS) {
-                this.timeRemaining.next((this.durations[phase.durationKey] ?? DEFAULT_DURATIONS.studyMinutes) * 60);
-                this.timerState.next('idle');
-                return;
-            }
-
-            let timeRemaining: number = (saved.timeRemaining ?? 0) - elapsedSeconds;
-
-            // Handle case where one or more phases completed while page was away.
-            // Bounded defensively — durations are always >= 1 minute, so this loop can't realistically
-            // exceed MAX_CATCH_UP_SECONDS / 60 iterations, but a hard cap guards against bad stored data.
-            let catchUpIterations = 0;
-            while (timeRemaining <= 0 && savedState === 'running' && catchUpIterations < 2000) {
-                catchUpIterations++;
-                // Advance phase silently (no notification for missed phases).
-                // Read the *current* phase (not the originally-saved one) since it changes each iteration.
-                if (this.currentPhase.value.key === 'study') {
-                    this.studySessionsInCycle++;
-                    this.completedSessions.next(this.completedSessions.value + 1);
-                    if (this.studySessionsInCycle >= this.sessionsBeforeLongBreak) {
-                        this.studySessionsInCycle = 0;
-                        this.currentPhase.next(this.getLongBreakPhase());
-                    } else {
-                        this.currentPhase.next(this.getBreakPhase());
-                    }
-                } else {
-                    this.currentPhase.next(this.getStudyPhase());
-                }
-                const nextPhaseDuration = (this.durations[this.currentPhase.value.durationKey] ?? DEFAULT_DURATIONS.studyMinutes) * 60;
-                timeRemaining += nextPhaseDuration;
-            }
-
-            this.timeRemaining.next(Math.max(0, timeRemaining));
-
-            if (savedState === 'running') {
-                this.timerState.next('running');
-                this.startTicking();
-            } else {
-                // Restore paused state
-                this.timerState.next('paused');
-            }
+            // The timer only advances while the page is open, so time spent closed is not
+            // counted. Come back paused where the page left off and let the user resume.
+            this.timeRemaining.next(Math.max(0, saved.timeRemaining ?? 0));
+            this.timerState.next('paused');
         } catch {
             // Fallback to fresh state on any error
             this.resetToPhase(this.getStudyPhase());
