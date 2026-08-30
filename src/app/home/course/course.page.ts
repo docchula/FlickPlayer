@@ -41,6 +41,13 @@ import { AsyncPipe, DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { ModalEvaluationComponent } from './modal-evaluation.component';
 import { PomodoroTimerComponent } from '../../shared/pomodoro-timer.component';
 
+// The video.js SeekBar handlers wrapped by CoursePage.requireDragToSeekOnTouch()
+interface SeekBarPointerHandlers {
+    handleMouseDown(event: Event): void;
+    handleMouseMove(event: Event, mouseDown?: boolean): void;
+    handleMouseUp(event: Event): void;
+}
+
 @Component({
     selector: 'app-course',
     templateUrl: './course.page.html',
@@ -194,6 +201,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 enableModifiersForNumbers: false,
                 enableVolumeScroll: false,
             });
+            this.requireDragToSeekOnTouch();
             this.videoPlayer.on('ended', () => {
                 this.updatePlayRecord();
                 if (!this.currentVideo.is_evaluated && !this.isEvaluated) {
@@ -284,6 +292,74 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
 
     ngOnDestroy() {
         this.stopPolling$.next(true);
+    }
+
+    // video.js seeks as soon as a touch lands on the progress control, so a fingertip brushing
+    // the bar jumps the video and that position is saved as the play record (issue #64).
+    // Require the touch to move first. Mouse and keyboard handling is unchanged.
+    private requireDragToSeekOnTouch() {
+        const seekBar = this.videoPlayer.getChild('controlBar')
+            ?.getChild('progressControl')
+            ?.getChild('seekBar') as unknown as SeekBarPointerHandlers | undefined;
+        if (!seekBar) {
+            return;
+        }
+
+        const dragThresholdPx = 8;
+        const originalMouseDown = seekBar.handleMouseDown.bind(seekBar);
+        const originalMouseMove = seekBar.handleMouseMove.bind(seekBar);
+        const originalMouseUp = seekBar.handleMouseUp.bind(seekBar);
+        const isTouch = (event: Event) => !!event && event.type.startsWith('touch');
+        const touchPoint = (event: Event) => {
+            const touchEvent = event as TouchEvent;
+            return touchEvent.changedTouches?.[0] ?? touchEvent.touches?.[0] ?? null;
+        };
+
+        let touchOrigin: { x: number, y: number } | null = null;
+        let isDragging = false;
+
+        seekBar.handleMouseDown = (event: Event) => {
+            if (!isTouch(event)) {
+                originalMouseDown(event);
+                return;
+            }
+            // Record the landing point only; the original handler pauses and seeks immediately.
+            // Do not stop propagation: ProgressControl attaches the document-level touchmove and
+            // touchend listeners that drive the handlers below.
+            const point = touchPoint(event);
+            touchOrigin = point ? { x: point.clientX, y: point.clientY } : null;
+            isDragging = false;
+        };
+
+        seekBar.handleMouseMove = (event: Event, mouseDown = false) => {
+            if (!isTouch(event) || isDragging) {
+                originalMouseMove(event, mouseDown);
+                return;
+            }
+            const origin = touchOrigin;
+            const point = touchPoint(event);
+            if (!origin || !point) {
+                return;
+            }
+            if (Math.abs(point.clientX - origin.x) < dragThresholdPx
+                && Math.abs(point.clientY - origin.y) < dragThresholdPx) {
+                return; // Within the slop of a stationary touch
+            }
+            // Hand over to video.js as if the drag started here. Set the flag first,
+            // since originalMouseDown calls back into handleMouseMove.
+            isDragging = true;
+            originalMouseDown(event);
+        };
+
+        seekBar.handleMouseUp = (event: Event) => {
+            const wasStrayTouch = isTouch(event) && !isDragging;
+            touchOrigin = null;
+            isDragging = false;
+            if (wasStrayTouch) {
+                return; // Nothing was started, so there is no scrub state to tear down
+            }
+            originalMouseUp(event);
+        };
     }
 
     mergeVideoInfo(videos: CourseMembers, history: PlayHistory, evaluations: { [key: number]: EvaluationRecord }) {
