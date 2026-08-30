@@ -101,6 +101,8 @@ export class PomodoroService {
 
     private tickSubscription: Subscription | null = null;
     private audioContext: AudioContext | null = null;
+    /** Wall-clock epoch (ms) when the current running phase should end. Null while not running. */
+    private phaseEndsAt: number | null = null;
 
     /** Public observables */
     timerState$: Observable<TimerState> = this.timerState.asObservable();
@@ -137,10 +139,13 @@ export class PomodoroService {
 
     /** Clear preferences from active state (call on logout) */
     clearForUser(): void {
+        this.stopTicking();
+        this.timerState.next('idle');
         this.currentUserId = 'guest';
         this.clearTimerState('guest');
         this.loadPreferences('guest');
         this.resetToPhase(this.getStudyPhase());
+        this.closeAudioContext();
     }
 
     /** Get current durations */
@@ -166,6 +171,9 @@ export class PomodoroService {
         }
 
         this.requestNotificationPermission();
+        // Create (or re-arm) the audio context while we're inside a user gesture, so the
+        // later automatic phase-change chime is allowed to play under iOS's autoplay policy.
+        this.ensureAudioContext();
 
         if (this.timerState.value === 'idle') {
             this.timeRemaining.next(this.getCurrentPhaseDuration());
@@ -192,8 +200,10 @@ export class PomodoroService {
         if (this.timerState.value !== 'paused') {
             return;
         }
+        this.ensureAudioContext();
         this.timerState.next('running');
         this.startTicking();
+        this.saveTimerState();
     }
 
     /** Reset the timer to idle state */
@@ -204,6 +214,7 @@ export class PomodoroService {
         this.completedSessions.next(0);
         this.resetToPhase(this.getStudyPhase());
         this.clearTimerState(this.currentUserId);
+        this.closeAudioContext();
     }
 
     /** Skip to the next phase */
@@ -246,8 +257,12 @@ export class PomodoroService {
 
     private startTicking(): void {
         this.stopTicking();
+        // Anchor to wall-clock time rather than counting ticks: a plain "decrement once per interval"
+        // counter drifts whenever the interval is throttled (e.g. iOS suspending timers for a
+        // backgrounded tab), so the displayed time and the actual phase-end notification lag behind.
+        this.phaseEndsAt = Date.now() + this.timeRemaining.value * 1000;
         this.tickSubscription = interval(1000).subscribe(() => {
-            const remaining = this.timeRemaining.value - 1;
+            const remaining = Math.round((this.phaseEndsAt! - Date.now()) / 1000);
 
             if (remaining <= 0) {
                 this.timeRemaining.next(0);
@@ -257,10 +272,6 @@ export class PomodoroService {
                 this.startTicking();
             } else {
                 this.timeRemaining.next(remaining);
-                // Persist every 5 seconds to avoid excessive localStorage writes
-                if (remaining % 5 === 0) {
-                    this.saveTimerState();
-                }
             }
         });
     }
@@ -315,38 +326,87 @@ export class PomodoroService {
         }
     }
 
-    /** Play a notification tone using Web Audio API */
-    private playNotificationSound(): void {
+    /**
+     * Create the shared audio context if needed, then immediately suspend it. Call this from inside a
+     * user-gesture handler (start/resume) so iOS treats the context as unlocked — playNotificationSound()
+     * can then resume() it later from a timer callback, which iOS otherwise blocks.
+     *
+     * The context is kept suspended (not closed) between chimes so it doesn't hold an active iOS audio
+     * session for the lifetime of the page — that active session was observed to interrupt/reload the
+     * concurrently playing lecture video.
+     */
+    private ensureAudioContext(): void {
         try {
             if (!this.audioContext) {
                 this.audioContext = new AudioContext();
             }
+            if (this.audioContext.state === 'running') {
+                void this.audioContext.suspend();
+            }
+        } catch {
+            // Web Audio unsupported in this environment
+        }
+    }
 
-            const now = this.audioContext.currentTime;
+    private closeAudioContext(): void {
+        if (this.audioContext) {
+            try {
+                void this.audioContext.close();
+            } catch {
+                // Ignore
+            }
+            this.audioContext = null;
+        }
+    }
 
-            // Two-tone chime (high-low sequence)
-            const osc1 = this.audioContext.createOscillator();
-            const osc2 = this.audioContext.createOscillator();
-            const gain = this.audioContext.createGain();
+    /** Play a notification tone using Web Audio API */
+    private playNotificationSound(): void {
+        // Create on demand if we never got a user gesture (e.g. a running timer restored on page
+        // refresh). Browsers that require a gesture will simply refuse to resume() below, which is
+        // handled — but where it's allowed, the chime still plays.
+        if (!this.audioContext) {
+            this.ensureAudioContext();
+        }
+        const ctx = this.audioContext;
+        if (!ctx) {
+            return;
+        }
+        try {
+            void ctx.resume().then(() => {
+                const now = ctx.currentTime;
 
-            osc1.type = 'sine';
-            osc2.type = 'sine';
+                // Two-tone chime (high-low sequence)
+                const osc1 = ctx.createOscillator();
+                const osc2 = ctx.createOscillator();
+                const gain = ctx.createGain();
 
-            osc1.frequency.setValueAtTime(587.33, now); // D5
-            osc2.frequency.setValueAtTime(880.00, now + 0.15); // A5
+                osc1.type = 'sine';
+                osc2.type = 'sine';
 
-            gain.gain.setValueAtTime(0.2, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+                osc1.frequency.setValueAtTime(587.33, now); // D5
+                osc2.frequency.setValueAtTime(880.00, now + 0.15); // A5
 
-            osc1.connect(gain);
-            osc2.connect(gain);
-            gain.connect(this.audioContext.destination);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
 
-            osc1.start(now);
-            osc1.stop(now + 0.15);
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(ctx.destination);
 
-            osc2.start(now + 0.15);
-            osc2.stop(now + 0.6);
+                osc1.start(now);
+                osc1.stop(now + 0.15);
+
+                osc2.start(now + 0.15);
+                osc2.stop(now + 0.6);
+
+                osc2.onended = () => {
+                    if (ctx.state === 'running') {
+                        void ctx.suspend();
+                    }
+                };
+            }).catch(() => {
+                // Autoplay policy refused to resume the context (no user gesture yet) — skip the chime.
+            });
         } catch {
             // Silently fail if Web Audio is unsupported
         }
@@ -439,12 +499,27 @@ export class PomodoroService {
                 ? Math.floor((Date.now() - (saved.savedAt ?? Date.now())) / 1000)
                 : 0;
 
+            // If the page was away for an implausibly long time (device asleep for days, clock change,
+            // etc.), don't walk the phase-by-phase catch-up below — just drop back to idle and let the
+            // user decide whether to resume. Session counters already restored above are kept as-is.
+            const MAX_CATCH_UP_SECONDS = 12 * 60 * 60;
+            if (elapsedSeconds > MAX_CATCH_UP_SECONDS) {
+                this.timeRemaining.next((this.durations[phase.durationKey] ?? DEFAULT_DURATIONS.studyMinutes) * 60);
+                this.timerState.next('idle');
+                return;
+            }
+
             let timeRemaining: number = (saved.timeRemaining ?? 0) - elapsedSeconds;
 
-            // Handle case where one or more phases completed while page was away
-            while (timeRemaining <= 0 && savedState === 'running') {
-                // Advance phase silently (no notification for missed phases)
-                if (phase.key === 'study') {
+            // Handle case where one or more phases completed while page was away.
+            // Bounded defensively — durations are always >= 1 minute, so this loop can't realistically
+            // exceed MAX_CATCH_UP_SECONDS / 60 iterations, but a hard cap guards against bad stored data.
+            let catchUpIterations = 0;
+            while (timeRemaining <= 0 && savedState === 'running' && catchUpIterations < 2000) {
+                catchUpIterations++;
+                // Advance phase silently (no notification for missed phases).
+                // Read the *current* phase (not the originally-saved one) since it changes each iteration.
+                if (this.currentPhase.value.key === 'study') {
                     this.studySessionsInCycle++;
                     this.completedSessions.next(this.completedSessions.value + 1);
                     if (this.studySessionsInCycle >= this.sessionsBeforeLongBreak) {
