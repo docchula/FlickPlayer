@@ -50,27 +50,72 @@
   }
 }
 
-/* Fullscreen Pomodoro Notification Toast (Appended inside video fullscreen element) */
-.pomodoro-fullscreen-toast {
-  position: absolute;
-  top: 3rem;
+/**
+ * Pomodoro phase notification.
+ *
+ * Attached to document.body, or to the fullscreen element while one is active, by PomodoroToast —
+ * never inside the page, because .ion-page sets "contain: layout" and so becomes the containing
+ * block for position:fixed children, which positions the toast against the page box rather than the
+ * viewport. Styles are global because the element sits outside the component's view encapsulation.
+ */
+.pomodoro-toast {
+  position: fixed;
+  /* Clears the app header (ion-toolbar is 56px) so the toast never straddles it; the safe-area
+     term keeps it clear of the notch/status bar when the viewport is served edge to edge. */
+  top: calc(env(safe-area-inset-top, 0px) + 4.5rem);
   left: 50%;
-  transform: translateX(-50%);
   z-index: 2147483647;
-  background: rgba(34, 36, 40, 0.95);
-  color: #ffffff;
-  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-sizing: border-box;
+  max-width: min(90vw, 26rem);
+  padding: 0.75rem 1.25rem;
   border-radius: 2rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+  background: rgba(34, 36, 40, 0.96);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55);
   pointer-events: none;
   opacity: 0;
+  /* Both states set translate so the transition interpolates rather than snapping. */
+  transform: translate(-50%, -1rem);
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.pomodoro-fullscreen-toast.show {
+.pomodoro-toast.show {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+.pomodoro-toast-icon {
+  flex: 0 0 auto;
+  display: flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: #ffc409;
+}
+
+.pomodoro-toast-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.pomodoro-toast-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.pomodoro-toast-text strong {
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pomodoro-toast {
+    transition: opacity 0.3s ease;
+    transform: translate(-50%, 0);
+  }
 }
