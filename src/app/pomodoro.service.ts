@@ -82,6 +82,8 @@ export const DURATION_FIELDS: DurationField[] = [
 export class PomodoroService {
     private readonly STORAGE_KEY_PREFIX = 'pomodoroPrefs_';
     private readonly TIMER_KEY_PREFIX = 'pomodoroTimer_';
+    /** Hour of the local day at which session progress rolls over to a new study day. */
+    private readonly DAY_ROLLOVER_HOUR = 4;
     private currentUserId = 'guest';
 
     /** Configurable settings */
@@ -104,6 +106,13 @@ export class PomodoroService {
     /** Wall-clock epoch (ms) when the current running phase should end. Null while not running. */
     private phaseEndsAt: number | null = null;
     private lastSavedAt = 0;
+    /** Study day the current session counts belong to; progress resets when this changes. */
+    private studyDayKey = this.getStudyDayKey();
+    /**
+     * True only while the timer is paused because the page was hidden. Distinguishes an automatic
+     * pause (resume on return) from one the user asked for (stays paused until they say otherwise).
+     */
+    private pausedByVisibility = false;
 
     /** Public observables */
     timerState$: Observable<TimerState> = this.timerState.asObservable();
@@ -120,7 +129,7 @@ export class PomodoroService {
     constructor() {
         this.loadPreferences(this.currentUserId);
         this.restoreTimerState(this.currentUserId);
-        this.saveOnPageHide();
+        this.registerVisibilityHandlers();
     }
 
     /** Request browser system notification permissions */
@@ -182,9 +191,8 @@ export class PomodoroService {
             this.notifyPhase(this.currentPhase.value, true);
         }
 
-        this.timerState.next('running');
-        this.startTicking();
-        this.saveTimerState();
+        this.pausedByVisibility = false;
+        this.startRunning();
     }
 
     /** Pause the timer */
@@ -192,8 +200,17 @@ export class PomodoroService {
         if (this.timerState.value !== 'running') {
             return;
         }
+        // A deliberate pause by default; the visibility handler re-flags it when it was the one
+        // pausing, so returning to the tab only resumes what the tab itself paused.
+        this.pausedByVisibility = false;
+        // Settle the countdown from the wall-clock anchor rather than trusting the last tick:
+        // the tick can be up to a second stale, and more when the tab was throttled.
+        if (this.phaseEndsAt !== null) {
+            this.timeRemaining.next(Math.max(0, Math.round((this.phaseEndsAt - Date.now()) / 1000)));
+        }
         this.timerState.next('paused');
         this.stopTicking();
+        this.phaseEndsAt = null;
         this.saveTimerState();
     }
 
@@ -202,7 +219,14 @@ export class PomodoroService {
         if (this.timerState.value !== 'paused') {
             return;
         }
+        // Only reachable from a user gesture, which is what lets iOS unlock the audio context.
         this.ensureAudioContext();
+        this.pausedByVisibility = false;
+        this.startRunning();
+    }
+
+    /** Enter the running state and re-anchor the countdown. Shared by every resume path. */
+    private startRunning(): void {
         this.timerState.next('running');
         this.startTicking();
         this.saveTimerState();
@@ -212,6 +236,7 @@ export class PomodoroService {
     reset(): void {
         this.stopTicking();
         this.timerState.next('idle');
+        this.pausedByVisibility = false;
         this.studySessionsInCycle = 0;
         this.completedSessions.next(0);
         this.resetToPhase(this.getStudyPhase());
@@ -264,6 +289,7 @@ export class PomodoroService {
         // backgrounded tab), so the displayed time and the actual phase-end notification lag behind.
         this.phaseEndsAt = Date.now() + this.timeRemaining.value * 1000;
         this.tickSubscription = interval(1000).subscribe(() => {
+            this.applyDayRolloverIfNeeded();
             const remaining = Math.round((this.phaseEndsAt! - Date.now()) / 1000);
 
             if (remaining <= 0) {
@@ -468,6 +494,7 @@ export class PomodoroService {
                     currentPhaseKey: this.currentPhase.value.key,
                     completedSessions: this.completedSessions.value,
                     studySessionsInCycle: this.studySessionsInCycle,
+                    studyDayKey: this.studyDayKey,
                 }),
             );
             this.lastSavedAt = Date.now();
@@ -477,24 +504,66 @@ export class PomodoroService {
     }
 
     /**
-     * Flush the timer whenever the page is hidden or torn down, so a tab closed mid-phase resumes
-     * from where it stopped rather than from the last phase change.
+     * Pause a running timer whenever the page is hidden, so time spent on another tab (or with the
+     * app backgrounded) is not counted as study time, and resume it as soon as the page comes back.
+     *
+     * Only a pause this handler caused is resumed automatically: if the user paused deliberately
+     * before switching away, the timer is still theirs to restart. A tab that was closed rather than
+     * hidden also stays paused, since pausedByVisibility does not survive the reload.
+     *
+     * This also covers the flush that a hidden/torn-down page needs, since pause() persists state —
+     * a tab closed mid-phase still resumes from where it stopped rather than the last phase change.
      */
-    private saveOnPageHide(): void {
+    private registerVisibilityHandlers(): void {
         if (typeof document === 'undefined') {
             return;
         }
-        const flush = () => {
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (this.timerState.value === 'running') {
+                    this.pause();
+                    this.pausedByVisibility = true;
+                } else if (this.timerState.value !== 'idle') {
+                    this.saveTimerState();
+                }
+            } else {
+                // A tab left open across 4am won't have been ticking if it was idle or paused,
+                // so re-check the rollover on the way back in.
+                this.applyDayRolloverIfNeeded();
+                if (this.pausedByVisibility && this.timerState.value === 'paused') {
+                    this.pausedByVisibility = false;
+                    // Deliberately not touching the audio context here: this is not a user gesture,
+                    // and creating one outside a gesture leaves it locked on iOS.
+                    this.startRunning();
+                }
+            }
+        });
+        window.addEventListener('pagehide', () => {
             if (this.timerState.value !== 'idle') {
                 this.saveTimerState();
             }
-        };
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                flush();
-            }
         });
-        window.addEventListener('pagehide', flush);
+    }
+
+    /**
+     * Local calendar day used for session progress, with the boundary at DAY_ROLLOVER_HOUR instead of
+     * midnight — a session running at 2am still counts toward the previous day's progress.
+     */
+    private getStudyDayKey(now: Date = new Date()): string {
+        const shifted = new Date(now.getTime() - this.DAY_ROLLOVER_HOUR * 60 * 60 * 1000);
+        return `${shifted.getFullYear()}-${shifted.getMonth() + 1}-${shifted.getDate()}`;
+    }
+
+    /** Clear the day's session counts once the rollover hour has passed. */
+    private applyDayRolloverIfNeeded(): void {
+        const currentKey = this.getStudyDayKey();
+        if (currentKey === this.studyDayKey) {
+            return;
+        }
+        this.studyDayKey = currentKey;
+        this.completedSessions.next(0);
+        this.studySessionsInCycle = 0;
+        this.saveTimerState();
     }
 
     /** Restore timer state from localStorage on page load */
@@ -510,8 +579,11 @@ export class PomodoroService {
             const savedState: TimerState = saved.timerState;
             const phase = POMODORO_PHASES.find(p => p.key === saved.currentPhaseKey) ?? POMODORO_PHASES[0];
 
-            this.completedSessions.next(saved.completedSessions ?? 0);
-            this.studySessionsInCycle = saved.studySessionsInCycle ?? 0;
+            // Session counts belong to the study day they were earned on — a saved state from
+            // before the last 4am rollover comes back with progress cleared.
+            const isSameStudyDay = saved.studyDayKey === this.studyDayKey;
+            this.completedSessions.next(isSameStudyDay ? (saved.completedSessions ?? 0) : 0);
+            this.studySessionsInCycle = isSameStudyDay ? (saved.studySessionsInCycle ?? 0) : 0;
             this.currentPhase.next(phase);
 
             if (savedState === 'idle') {
