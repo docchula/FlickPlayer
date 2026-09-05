@@ -43,6 +43,11 @@ function clampChannel(value: number): number {
     return Math.min(255, Math.max(0, Math.round(value)));
 }
 
+/** The colour as it will actually be written, so contrast is judged on what renders. */
+function round(color: Rgb): Rgb {
+    return {r: clampChannel(color.r), g: clampChannel(color.g), b: clampChannel(color.b)};
+}
+
 export function toHex(color: Rgb): string {
     return '#' + [color.r, color.g, color.b]
         .map(channel => clampChannel(channel).toString(16).padStart(2, '0'))
@@ -148,19 +153,26 @@ export function readableOn(background: Rgb): Rgb {
  * hue and saturation so a themed colour stays vivid rather than washing out to grey.
  */
 export function adjustLightnessToContrast(color: Rgb, background: Rgb, minRatio: number, step = 0.04): Rgb {
-    if (contrastRatio(color, background) >= minRatio) {
-        return color;
+    // Contrast is judged on the colours as they will be written, so one that clears the ratio
+    // only before rounding cannot be handed back having quietly fallen under it.
+    const onto = round(background);
+    const start = round(color);
+    if (contrastRatio(start, onto) >= minRatio) {
+        return start;
     }
     const hsl = rgbToHsl(color);
-    const lighten = relativeLuminance(background) < 0.5;
-    let best = color;
+    // Which way to move is decided by whichever of black or white actually reads on the
+    // background, not by whether it is past halfway: those part company between a relative
+    // luminance of about 0.18 and 0.5, which is where a page filled with a colour sits.
+    const lighten = readableOn(onto) === WHITE;
+    let best = start;
     for (let offset = step; offset <= 1; offset += step) {
         const lightness = lighten ? hsl.l + offset : hsl.l - offset;
         if (lightness <= 0 || lightness >= 1) {
             break;
         }
-        best = hslToRgb({...hsl, l: lightness});
-        if (contrastRatio(best, background) >= minRatio) {
+        best = round(hslToRgb({...hsl, l: lightness}));
+        if (contrastRatio(best, onto) >= minRatio) {
             return best;
         }
     }
@@ -172,17 +184,21 @@ export function adjustLightnessToContrast(color: Rgb, background: Rgb, minRatio:
  * so a colour picked without regard for contrast still renders legibly.
  */
 export function ensureContrast(color: Rgb, background: Rgb, minRatio: number): Rgb {
-    if (contrastRatio(color, background) >= minRatio) {
-        return color;
+    const onto = round(background);
+    if (contrastRatio(round(color), onto) >= minRatio) {
+        return round(color);
     }
-    const target = relativeLuminance(background) > 0.5 ? BLACK : WHITE;
+    const target = readableOn(onto);
     let low = 0;
     let high = 1;
-    let result = mix(target, color, high);
+    let result = round(mix(target, color, high));
+    // The palette is written as 8-bit hex, so the search is run on the rounded colour: one
+    // that only just clears the ratio in continuous terms can fall back under it once
+    // rounded, leaving a palette that misses the contrast it was built to keep.
     for (let i = 0; i < 12; i++) {
         const middle = (low + high) / 2;
-        const candidate = mix(target, color, middle);
-        if (contrastRatio(candidate, background) >= minRatio) {
+        const candidate = round(mix(target, color, middle));
+        if (contrastRatio(candidate, onto) >= minRatio) {
             result = candidate;
             high = middle;
         } else {

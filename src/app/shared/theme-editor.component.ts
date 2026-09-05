@@ -17,10 +17,19 @@ import {
     ModalController,
 } from '@ionic/angular/standalone';
 import {addIcons} from 'ionicons';
-import {close, colorPaletteOutline, imageOutline, moonOutline, phonePortraitOutline, sunnyOutline} from 'ionicons/icons';
+import {
+    add,
+    close,
+    colorFillOutline,
+    colorPaletteOutline,
+    imageOutline,
+    moonOutline,
+    phonePortraitOutline,
+    sunnyOutline,
+} from 'ionicons/icons';
 import {OWN_COLOR_TEMPLATE_ID, ThemeService} from '../theme.service';
 import {ACCENT_SWATCHES} from '../theme/theme-presets';
-import {BackgroundFit, ThemeMode, ThemeSettings, ThemeTemplate} from '../theme/theme.model';
+import {BackgroundFit, ThemeMode, ThemeSettings, ThemeShade, ThemeTemplate} from '../theme/theme.model';
 
 function detailValue<T>(event: Event): T | undefined {
     return (event as CustomEvent<{value?: T}>).detail?.value;
@@ -44,10 +53,14 @@ export class ThemeEditorComponent {
     protected readonly accentSwatches = ACCENT_SWATCHES;
     protected readonly settings$ = this.themeService.settings$;
     protected readonly backgroundImageUrl$ = this.themeService.backgroundImageUrl$;
+    protected readonly savedColors$ = this.themeService.savedColors$;
     protected imageError: string | null = null;
 
     constructor() {
-        addIcons({close, colorPaletteOutline, imageOutline, sunnyOutline, moonOutline, phonePortraitOutline});
+        addIcons({
+            add, close, colorFillOutline, colorPaletteOutline, imageOutline,
+            sunnyOutline, moonOutline, phonePortraitOutline,
+        });
     }
 
     close(): void {
@@ -62,9 +75,29 @@ export class ThemeEditorComponent {
         this.themeService.setAccent(accent);
     }
 
+    saveColour(settings: ThemeSettings): void {
+        this.themeService.saveColor(this.accentValue(settings));
+    }
+
+    removeColour(colour: string): void {
+        this.themeService.removeColor(colour);
+    }
+
+    isSaved(settings: ThemeSettings): boolean {
+        return this.themeService.isColorSaved(this.accentValue(settings));
+    }
+
+    onShadeChange(event: Event): void {
+        const value = detailValue<ThemeShade>(event);
+        if (value) {
+            this.themeService.setCustomShade(value);
+        }
+    }
+
     reset(): void {
         this.imageError = null;
-        this.themeService.resetCustom();
+        this.themeService.resetToDefault();
+        this.close();
     }
 
     /** A template reads as its page colour beside the colour everything else is drawn in. */
@@ -87,8 +120,7 @@ export class ThemeEditorComponent {
     }
 
     backgroundValue(settings: ThemeSettings): string {
-        return settings.custom.background.color
-            ?? this.themeService.preview(settings.custom.seed)['--ion-background-color'];
+        return this.themeService.customPageColor(settings.custom);
     }
 
     /** The plain modes replace the custom theme rather than recolouring it. */
@@ -96,7 +128,6 @@ export class ThemeEditorComponent {
         const value = detailValue<ThemeMode>(event);
         if (value) {
             this.themeService.setMode(value);
-            this.close();
         }
     }
 
@@ -127,10 +158,6 @@ export class ThemeEditorComponent {
 
     onBackgroundColorInput(event: Event): void {
         this.themeService.setBackgroundColor((event.target as HTMLInputElement).value);
-    }
-
-    clearBackgroundColor(): void {
-        this.themeService.setBackgroundColor(null);
     }
 
     pickImage(): void {

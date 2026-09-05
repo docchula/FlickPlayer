@@ -33,10 +33,41 @@
                             [attr.aria-label]="'Use colour ' + swatch"
                             (click)="selectAccent(swatch)"></button>
                 }
+            </div>
+        </section>
+
+        <section class="theme-section">
+            <h2 class="section-title">Saved colours</h2>
+            <p class="section-hint">Colours you keep, on this device.</p>
+            <div class="swatch-row">
+                @for (colour of savedColors$ | async; track colour) {
+                    <span class="saved-swatch">
+                        <button type="button" class="swatch"
+                                [class.selected]="isAccent(settings, colour)"
+                                [style.background-color]="colour"
+                                [attr.aria-label]="'Use saved colour ' + colour"
+                                [title]="colour"
+                                (click)="selectAccent(colour)"></button>
+                        <button type="button" class="swatch-remove"
+                                [attr.aria-label]="'Forget saved colour ' + colour"
+                                (click)="removeColour(colour)">
+                            <ion-icon name="close" aria-hidden="true"></ion-icon>
+                        </button>
+                    </span>
+                } @empty {
+                    <p class="hint saved-empty">Nothing saved yet.</p>
+                }
                 <label class="swatch swatch-picker" aria-label="Pick any colour">
                     <ion-icon name="color-palette-outline"></ion-icon>
                     <input type="color" [value]="accentValue(settings)" (input)="onAccentInput($event)"/>
                 </label>
+                <button type="button" class="swatch swatch-save"
+                        [disabled]="isSaved(settings)"
+                        [attr.aria-label]="'Save the colour ' + accentValue(settings)"
+                        [title]="isSaved(settings) ? 'Already saved' : 'Save ' + accentValue(settings)"
+                        (click)="saveColour(settings)">
+                    <ion-icon name="add" aria-hidden="true"></ion-icon>
+                </button>
             </div>
         </section>
 
@@ -49,11 +80,6 @@
                     <span class="colour-value">{{ backgroundValue(settings) }}</span>
                     <input type="color" [value]="backgroundValue(settings)" (input)="onBackgroundColorInput($event)"/>
                 </label>
-                @if (settings.custom.background.color) {
-                    <ion-button fill="clear" size="small" class="quiet-button" (click)="clearBackgroundColor()">
-                        Match secondary
-                    </ion-button>
-                }
             </div>
         </section>
 
@@ -70,9 +96,25 @@
         </section>
 
         <section class="theme-section">
-            <h2 class="section-title">Light or dark</h2>
+            <h2 class="section-title">Shade</h2>
+            <p class="section-hint">
+                Your colour is shown just as you picked it in the shade it belongs to. The other two
+                adapt it: a tinted light page, or a filled dark one.
+            </p>
+            <ion-segment [value]="settings.custom.shade" (ionChange)="onShadeChange($event)">
+                @for (option of themeService.shades; track option.value) {
+                    <ion-segment-button [value]="option.value">
+                        <ion-icon [name]="option.icon"></ion-icon>
+                        <ion-label>{{ option.label }}</ion-label>
+                    </ion-segment-button>
+                }
+            </ion-segment>
+        </section>
+
+        <section class="theme-section">
+            <h2 class="section-title">Plain theme</h2>
             <p class="section-hint">Leaves your colours behind and goes back to the plain theme.</p>
-            <ion-segment [value]="null" (ionChange)="onModeChange($event)">
+            <ion-segment [value]="settings.mode" (ionChange)="onModeChange($event)">
                 @for (option of themeService.standardModes; track option.value) {
                     <ion-segment-button [value]="option.value">
                         <ion-icon [name]="option.icon"></ion-icon>
@@ -126,6 +168,8 @@
             }
         </section>
 
-        <ion-button expand="block" fill="clear" class="quiet-button" (click)="reset()">Start over</ion-button>
+        <ion-button expand="block" fill="clear" class="quiet-button" (click)="reset()">
+            Reset theme preference
+        </ion-button>
     }
 </ion-content>

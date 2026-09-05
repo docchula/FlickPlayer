@@ -32,12 +32,18 @@ import {
     COLOR_STEPS,
     COMPANION_HUE_OFFSET,
     CONTRAST_LUMINANCE_THRESHOLD,
+    DARK_PAGE_LIGHTNESS,
+    DARK_PAGE_MAX_LUMINANCE,
+    LIGHT_PAGE_MIN_LUMINANCE,
+    DARK_PAGE_SATURATION,
+    FILLED_SURFACE_STEPS,
     HEATMAP_EMPTY_WEIGHT,
     HEATMAP_LEVEL_WEIGHTS,
     MIN_ACCENT_CONTRAST,
     MIN_ACCENT_ROLE_CONTRAST,
     MIN_HEATMAP_CONTRAST,
     MIN_MUTED_CONTRAST,
+    MIN_SERIES_CONTRAST,
     MUTED_TEXT_WEIGHT,
     MIN_TEXT_CONTRAST,
     ROLE_WEIGHTS,
@@ -46,7 +52,16 @@ import {
     TERTIARY_HUE_OFFSET,
     TINT_AMOUNT,
 } from './theme-presets';
-import {BaseScheme, ColorScheme, SEMANTIC_ROLES, SemanticRole, ThemeBackground, ThemeSeed} from './theme.model';
+import {
+    BaseScheme,
+    ColorScheme,
+    SEMANTIC_ROLES,
+    SemanticRole,
+    ThemeBackground,
+    ThemeSeed,
+    ThemeShade,
+    ThemeVariables,
+} from './theme.model';
 
 export type CssVariables = Record<string, string>;
 
@@ -57,6 +72,16 @@ function clamp01(value: number): number {
 /** Ionic picks black or white for text on a colour by how light that colour is. */
 function contrastFor(color: Rgb): Rgb {
     return relativeLuminance(color) > CONTRAST_LUMINANCE_THRESHOLD ? BLACK : WHITE;
+}
+
+/**
+ * The one of black or white that keeps the most contrast across every colour it has to
+ * label, so a row of related colours can share a single text colour.
+ */
+function uniformLabel(colors: Rgb[]): Rgb {
+    const worst = (label: Rgb) =>
+        colors.reduce((lowest, color) => Math.min(lowest, contrastRatio(color, label)), Infinity);
+    return worst(WHITE) >= worst(BLACK) ? WHITE : BLACK;
 }
 
 function assignRole(variables: CssVariables, role: SemanticRole, color: Rgb): void {
@@ -76,6 +101,46 @@ interface AccentRoles {
     surfaceTint: Rgb;
     /** True when the colours come from the theme seed rather than the untouched base palette. */
     derived: boolean;
+}
+
+/** The shade a colour belongs to, and so the one that draws it exactly as picked. */
+function shadeOf(color: Rgb): ThemeShade {
+    const luminance = relativeLuminance(color);
+    if (luminance >= LIGHT_PAGE_MIN_LUMINANCE) {
+        return 'light';
+    }
+    return luminance <= DARK_PAGE_MAX_LUMINANCE ? 'dark' : 'fill';
+}
+
+export function shadeForColor(color: string | null): ThemeShade {
+    const parsed = color ? parseColor(color) : null;
+    return parsed ? shadeOf(parsed) : 'light';
+}
+
+/**
+ * The page a theme is drawn on when it does not name one. In the shade the colour belongs to,
+ * and whenever the page is filled, the colour is used as picked, so choosing that shade shows
+ * the colour itself. The other shades adapt it into a page they can carry.
+ */
+function derivePage(
+    surfaceTint: Rgb,
+    baseBackground: Rgb,
+    shade: ThemeShade,
+    intensity: number,
+    derived: boolean,
+): Rgb {
+    if (derived && (shade === 'fill' || shade === shadeOf(surfaceTint))) {
+        return surfaceTint;
+    }
+    if (shade === 'dark' && derived) {
+        const {h, s} = rgbToHsl(surfaceTint);
+        return hslToRgb({
+            h,
+            s: Math.min(DARK_PAGE_SATURATION.max, Math.max(DARK_PAGE_SATURATION.min, s)),
+            l: DARK_PAGE_LIGHTNESS,
+        });
+    }
+    return mix(surfaceTint, baseBackground, ACCENT_WEIGHTS.background * intensity);
 }
 
 function seedColor(value: string | null): Rgb | null {
@@ -109,6 +174,8 @@ export function buildThemeVariables(
     seed: ThemeSeed,
     scheme: ColorScheme,
     background: ThemeBackground,
+    overrides?: ThemeVariables,
+    shade: ThemeShade = scheme,
 ): CssVariables {
     const base = BASE_SCHEMES[scheme];
     const baseBackground = parseColor(base.background) ?? WHITE;
@@ -117,10 +184,10 @@ export function buildThemeVariables(
     const {accent, companion, tertiary, surfaceTint, derived} = resolveAccents(seed, base);
 
     const chosenBackground = background.color ? parseColor(background.color) : null;
-    const pageBackground = chosenBackground ?? mix(surfaceTint, baseBackground, ACCENT_WEIGHTS.background * intensity);
-    // A hand-picked background may be far lighter or darker than the scheme's own, so the text
-    // starts from whichever of black or white reads on it rather than from the scheme's colour.
-    const textAnchor = chosenBackground ? readableOn(chosenBackground) : baseText;
+    const pageBackground = chosenBackground ?? derivePage(surfaceTint, baseBackground, shade, intensity, derived);
+    // A themed page may be far lighter or darker than the scheme's own, so the text starts
+    // from whichever of black or white reads on it rather than from the scheme's colour.
+    const textAnchor = chosenBackground || derived ? readableOn(pageBackground) : baseText;
     const tintedText = mix(surfaceTint, textAnchor, ACCENT_WEIGHTS.text * intensity);
     const pageText = ensureContrast(tintedText, pageBackground, MIN_TEXT_CONTRAST);
 
@@ -153,7 +220,10 @@ export function buildThemeVariables(
     const surfaceScheme: ColorScheme = relativeLuminance(pageBackground) > CONTRAST_LUMINANCE_THRESHOLD
         ? 'light'
         : 'dark';
-    const steps = SURFACE_STEPS[surfaceScheme];
+    // A filled page is its own accent, so blending surfaces towards that accent moves them
+    // nowhere; they are stepped towards the text colour instead.
+    const filled = derived && toHex(pageBackground) === toHex(surfaceTint);
+    const steps = filled ? FILLED_SURFACE_STEPS : SURFACE_STEPS[surfaceScheme];
     const surfaceOver = (step: number, weight: number) =>
         mix(surfaceTint, mix(pageText, pageBackground, step), weight * intensity);
 
@@ -208,21 +278,26 @@ export function buildThemeVariables(
     if (derived) {
         const {h, s: saturation} = rgbToHsl(roleColors.primary);
         const range = SERIES_LIGHTNESS_RANGE[scheme];
+        const band = SERIES_SATURATION[scheme];
         const seriesColor = (position: number) => hslToRgb({
             h: h + (position - 0.5) * 2 * SERIES_HUE_DRIFT,
-            s: Math.max(saturation, SERIES_SATURATION[scheme]),
+            s: Math.min(band.max, Math.max(band.min, saturation)),
             l: range.from + (range.to - range.from) * position,
         });
+        const groups = [...Array(SERIES_COUNT).keys()]
+            .map(index => seriesColor(index / Math.max(1, SERIES_COUNT - 1)))
+            .concat(mix(roleColors.medium, pageBackground, 0.85));
+        // The groups share one label colour, so the row reads as a set rather than as a mix
+        // of light and dark text. Each group is then taken as far as that label needs.
+        const label = uniformLabel(groups);
+        const readable = groups.map(color =>
+            adjustLightnessToContrast(color, label, MIN_SERIES_CONTRAST));
         for (let index = 0; index < SERIES_COUNT; index++) {
-            const color = seriesColor(index / Math.max(1, SERIES_COUNT - 1));
-            variables[`--flick-series-${index}`] = toHex(color);
-            // Whichever of black or white actually reads best: a mid-tone shade needs black,
-            // where Ionic's lightness rule would still hand it white.
-            variables[`--flick-series-${index}-contrast`] = toHex(readableOn(color));
+            variables[`--flick-series-${index}`] = toHex(readable[index]);
+            variables[`--flick-series-${index}-contrast`] = toHex(label);
         }
-        const fallback = mix(roleColors.medium, pageBackground, 0.85);
-        variables['--flick-series-fallback'] = toHex(fallback);
-        variables['--flick-series-fallback-contrast'] = toHex(readableOn(fallback));
+        variables['--flick-series-fallback'] = toHex(readable[SERIES_COUNT]);
+        variables['--flick-series-fallback-contrast'] = toHex(label);
     } else {
         DEFAULT_SERIES_COLORS.forEach((color, index) => {
             variables[`--flick-series-${index}`] = color;
@@ -241,10 +316,10 @@ export function buildThemeVariables(
     const opacity = clamp01(background.imageOpacity);
     variables['--flick-background-scrim'] = `rgba(${toRgbString(pageBackground)}, ${(1 - opacity).toFixed(3)})`;
     variables['--flick-background-blur'] = `${Math.max(0, background.imageBlur)}px`;
-    variables['--flick-background-size'] = background.imageFit === 'tile' ? 'auto' : background.imageFit;
-    variables['--flick-background-repeat'] = background.imageFit === 'tile' ? 'repeat' : 'no-repeat';
+    variables['--flick-background-size'] = background.imageFit;
+    variables['--flick-background-repeat'] = 'no-repeat';
 
-    return variables;
+    return overrides ? {...variables, ...overrides} : variables;
 }
 
 /** Contrast of body text against the page background, used to verify a generated palette. */

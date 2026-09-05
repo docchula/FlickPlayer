@@ -2,7 +2,15 @@
 export type ThemeMode = 'light' | 'dark' | 'system' | 'custom';
 export type ColorScheme = 'light' | 'dark';
 export type SchemePreference = ColorScheme | 'system';
-export type BackgroundFit = 'cover' | 'contain' | 'tile';
+export type BackgroundFit = 'cover' | 'contain';
+
+/**
+ * How a chosen colour is drawn. Every colour belongs to one of these by how light it is, and
+ * in the shade it belongs to it is drawn exactly as picked. The other two adapt it: 'light'
+ * tints a light page with it, 'dark' fills a dark page with it, and 'fill' always gives the
+ * page over to the colour itself.
+ */
+export type ThemeShade = 'light' | 'dark' | 'fill';
 
 export const SEMANTIC_ROLES = [
     'primary', 'secondary', 'tertiary', 'success', 'warning', 'danger', 'dark', 'medium', 'light',
@@ -36,13 +44,14 @@ export interface ThemeBackground {
 }
 
 /**
- * Everything the custom mode remembers. The standard modes deliberately carry none of it,
- * and a custom theme is always drawn light so a chosen colour shows as itself.
+ * Everything the custom mode remembers. The standard modes deliberately carry none of it.
  */
 export interface CustomTheme {
     templateId: string;
     seed: ThemeSeed;
     background: ThemeBackground;
+    /** How the chosen colours are drawn: light, dark, or the colour exactly as picked. */
+    shade: ThemeShade;
 }
 
 export interface ThemeSettings {
@@ -51,6 +60,12 @@ export interface ThemeSettings {
     updatedAt: number;
 }
 
+/**
+ * Exact custom properties a theme states for itself. Anything left out stays derived, so a
+ * theme can pin as much or as little of the palette as it needs.
+ */
+export type ThemeVariables = Record<string, string>;
+
 export interface ThemeTemplate {
     id: string;
     name: string;
@@ -58,6 +73,12 @@ export interface ThemeTemplate {
     seed: ThemeSeed;
     /** Page colour the template starts from; null lets it be derived from the accent. */
     background: string | null;
+    /**
+     * Colours this template states rather than has derived, applied over the generated
+     * palette. They hold only while the template's own colours are still in place; adjusting
+     * the theme leaves them behind and the palette is derived from what was chosen instead.
+     */
+    variables?: ThemeVariables;
 }
 
 export interface ThemeModeOption {
@@ -70,6 +91,12 @@ export interface ThemeModeOption {
 export interface BackgroundFitOption {
     value: BackgroundFit;
     label: string;
+}
+
+export interface ThemeShadeOption {
+    value: ThemeShade;
+    label: string;
+    icon: string;
 }
 
 /** Neutral palette each theme starts from; the accent is blended into it by intensity. */

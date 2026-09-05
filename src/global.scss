@@ -27,17 +27,80 @@
 
 @import "video.js/dist/video-js.css";
 
-$theme-transition: 0.25s ease;
+/* Changing a theme rewrites the custom properties on the document, so every surface that
+   reads one fades to its new colour instead of snapping. The duration is a variable so a
+   reader who asks for less motion gets the same palette without the fade. */
+:root {
+  --flick-theme-transition-duration: 0.28s;
+  --flick-theme-transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-body,
-ion-content,
-ion-header,
-ion-toolbar,
-ion-card,
-ion-item,
-ion-list,
-.e-learning-tag {
-  transition: background-color $theme-transition, color $theme-transition, border-color $theme-transition;
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --flick-theme-transition-duration: 0s;
+  }
+}
+
+/*
+ * The colours a theme writes onto the document. Transitioning each element that reads one
+ * cannot keep them together: a toolbar, a card and the content resolve different variables
+ * through different parts of Ionic, so each fades on its own clock and the change arrives in
+ * pieces. Registering the variables as colours instead lets the values themselves be
+ * interpolated, on one element and one clock, so every surface reading them repaints in step
+ * — through Ionic's shadow trees as well, which custom properties inherit into.
+ */
+$theme-color-vars:
+  "--ion-background-color", "--ion-text-color",
+  "--ion-item-background", "--ion-item-background-activated",
+  "--ion-card-background", "--ion-toolbar-background", "--ion-toolbar-color",
+  "--ion-border-color",
+  "--flick-accent", "--flick-accent-text", "--flick-companion-text", "--flick-muted-text",
+  "--flick-surface", "--flick-surface-muted", "--flick-tag-color", "--flick-tag-background",
+  "--flick-warning-text", "--flick-series-fallback", "--flick-series-fallback-contrast";
+
+@each $step in 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950 {
+  $theme-color-vars: append($theme-color-vars, "--ion-color-step-#{$step}", comma);
+}
+
+@each $role in primary, secondary, tertiary, success, warning, danger, dark, medium, light {
+  @each $variant in "", "-shade", "-tint", "-contrast" {
+    $theme-color-vars: append($theme-color-vars, "--ion-color-#{$role}#{$variant}", comma);
+  }
+}
+
+@for $index from 0 through 7 {
+  $theme-color-vars: append($theme-color-vars, "--flick-series-#{$index}", comma);
+  $theme-color-vars: append($theme-color-vars, "--flick-series-#{$index}-contrast", comma);
+}
+
+@for $level from 0 through 4 {
+  $theme-color-vars: append($theme-color-vars, "--flick-heat-#{$level}", comma);
+}
+
+@each $name in $theme-color-vars {
+  @property #{$name} {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: transparent;
+  }
+}
+
+/*
+ * Only while a theme is actually changing: left on, it would put a fade on every hover and
+ * press that happens to shift a colour.
+ */
+html.flick-theme-animating {
+  $moves: ();
+
+  @each $name in $theme-color-vars {
+    $moves: append(
+      $moves,
+      unquote("#{$name} var(--flick-theme-transition-duration) var(--flick-theme-transition-easing)"),
+      comma
+    );
+  }
+
+  transition: $moves;
 }
 
 .small-text {
@@ -57,6 +120,19 @@ ion-list,
 
 ion-card:not(.ion-color) {
   color: var(--flick-muted-text);
+}
+
+/* A list header takes the page's own text colour rather than Ionic's default, which is
+   fixed against the stock palette and stays pale whatever the theme sets. */
+ion-list-header {
+  --background: transparent;
+  --color: var(--ion-text-color);
+
+  color: var(--ion-text-color);
+
+  ion-label {
+    color: inherit;
+  }
 }
 
 /* An item inside a coloured card keeps its own background, so it needs the page's text
@@ -124,3 +200,4 @@ body.flick-has-background-image {
     --background: transparent;
   }
 }
+

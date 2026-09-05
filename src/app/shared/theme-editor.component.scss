@@ -150,3 +150,44 @@ ion-segment-button {
     --color-checked: var(--flick-accent-text);
     --indicator-color: var(--flick-accent-text);
 }
+
+.saved-swatch {
+    position: relative;
+    display: inline-flex;
+}
+
+.swatch-remove {
+    position: absolute;
+    top: -0.2rem;
+    inset-inline-end: -0.2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    padding: 0;
+    font-size: 0.65rem;
+    border: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+    border-radius: 50%;
+    background: var(--ion-background-color);
+    color: var(--flick-muted-text);
+    cursor: pointer;
+}
+
+.swatch-save {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--flick-surface-muted);
+    color: var(--ion-text-color);
+}
+
+.swatch-save[disabled] {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.saved-empty {
+    margin: 0;
+    align-self: center;
+}
