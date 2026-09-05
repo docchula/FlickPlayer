@@ -1,0 +1,34 @@
+/*
+ * Settings that have to reach elements this file does not own.
+ *
+ * Each selector below names a widget that may or may not be part of this build. One that has
+ * not shipped yet simply matches nothing, so these rules are safe to keep ahead of the
+ * features they control and start working the moment a feature arrives. Hiding with CSS
+ * rather than dropping the element keeps the widget in the page, which is what lets the
+ * settings sheet go on finding it while it is switched off — and so lets it be switched
+ * back on.
+ */
+html[data-hidden~='pomodoro'] app-pomodoro-timer,
+html[data-hidden~='heatmap'] app-study-heatmap,
+html[data-hidden~='appearance'] app-theme-menu,
+html[data-hidden~='appearance'] app-theme-dropdown {
+    display: none !important;
+}
+
+/*
+ * Ionic's iOS rule sets the `font` shorthand from -apple-system-body, which carries a family
+ * of its own and would quietly drop the chosen font. Restating the family after it keeps both
+ * the dynamic type size and the font. This file is loaded after global.scss, so it comes
+ * after Ionic's own typography at the same specificity and wins on source order.
+ */
+html {
+    font-family: var(--ion-font-family);
+}
+
+/*
+ * Angsana New and its relatives render far smaller than Arial at the same size. The scale
+ * sits on body rather than html so 1rem still resolves to the size iOS chose for itself.
+ */
+body {
+    font-size: calc(1rem * var(--flick-font-scale, 1));
+}

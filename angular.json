@@ -35,6 +35,9 @@
                             },
                             {
                                 "input": "src/global.scss"
+                            },
+                            {
+                                "input": "src/settings.scss"
                             }
                         ],
                         "scripts": [],
