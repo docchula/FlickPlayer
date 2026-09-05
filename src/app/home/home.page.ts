@@ -30,6 +30,7 @@ import {
     IonToolbar,
 } from '@ionic/angular/standalone';
 import {AsyncPipe, NgStyle} from '@angular/common';
+import {SettingsMenuComponent} from '../shared/settings-menu.component';
 
 export interface EnrichedSearchResult extends SearchVideoResult {
     courseName?: string;
@@ -45,6 +46,7 @@ export interface EnrichedSearchResult extends SearchVideoResult {
         IonContent, IonGrid, IonRow, IonCol, IonCard, RouterLink, NgStyle,
         IonCardHeader, IonCardTitle, AsyncPipe, IonCardContent, IonItem,
         IonLabel, IonText, IonSpinner, IonSearchbar, IonList,
+        SettingsMenuComponent,
     ]
 })
 export class HomePage implements OnInit {
