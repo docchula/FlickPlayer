@@ -16,6 +16,7 @@ import {HttpErrorResponse} from "@angular/common/http";
 import {Subscription} from "rxjs";
 import {User} from "@angular/fire/auth";
 import {AuthService} from "../auth.service";
+import {ThemeMenuComponent} from "../shared/theme-menu.component";
 
 @Component({
   selector: "app-welcome",
@@ -29,6 +30,7 @@ import {AuthService} from "../auth.service";
     IonCardContent,
     IonButton,
     IonText,
+    ThemeMenuComponent,
   ],
 })
 export class WelcomePage implements OnInit, OnDestroy {

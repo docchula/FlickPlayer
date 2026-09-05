@@ -4,6 +4,7 @@
             MDCU Recorded Lecture
         </ion-title>
         <ion-buttons slot="end">
+            <app-theme-menu></app-theme-menu>
             <ion-button fill="outline" color="secondary" (click)="logout()">
                 <span class="ion-hide-sm-down text-sign-out">Sign out</span>
                 <ion-icon name="log-out-outline"></ion-icon>
@@ -53,7 +54,7 @@
                                                 <span class="duration-badge">{{ formatDuration(result.duration) }}</span>
                                             }
                                             @if (result.courseYear) {
-                                                <span class="course-year-badge" [ngStyle]="{'background-color': colorByFolderName(result.courseYear)}">{{ result.courseYear }}</span>
+                                                <span class="course-year-badge" [ngStyle]="{'background-color': colorByFolderName(result.courseYear), 'color': contrastByFolderName(result.courseYear)}">{{ result.courseYear }}</span>
                                             }
                                         </p>
                                     </ion-label>
@@ -83,7 +84,8 @@
                 <ion-row>
                     @for (folder of Object.keys(response.years); track folder) {
                         <ion-col size-xs="12" size-sm="6" size-md="4" size-lg="3" size-xl="2">
-                            <ion-card [routerLink]="folder" [ngStyle]="{'background-color': colorByFolderName(folder)}"
+                            <ion-card [routerLink]="folder"
+                                      [ngStyle]="{'background-color': colorByFolderName(folder), 'color': contrastByFolderName(folder)}"
                                       class="ion-text-center hover-card">
                                 <ion-card-header>
                                     <ion-card-title>{{ folder }}</ion-card-title>

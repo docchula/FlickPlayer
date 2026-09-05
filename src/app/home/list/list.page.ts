@@ -3,9 +3,10 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EMPTY, Observable, Subject, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, map, switchMap, tap } from 'rxjs/operators';
 import { ManService, SearchVideoResult } from '../../man.service';
-import { colorByFolderName } from '../../../helpers';
+import { colorByFolderName, contrastByFolderName } from '../../../helpers';
 import {
     IonBackButton,
+    IonButtons,
     IonContent,
     IonHeader,
     IonItem,
@@ -18,6 +19,7 @@ import {
     IonToolbar
 } from '@ionic/angular/standalone';
 import { AsyncPipe, NgStyle } from '@angular/common';
+import { ThemeMenuComponent } from '../../shared/theme-menu.component';
 
 export interface EnrichedSearchResult extends SearchVideoResult {
     courseName?: string;
@@ -31,7 +33,7 @@ export interface EnrichedSearchResult extends SearchVideoResult {
     imports: [
         IonHeader, IonToolbar, RouterLink, IonBackButton, IonTitle, NgStyle,
         IonContent, IonList, IonListHeader, IonItem, IonLabel, AsyncPipe,
-        IonSearchbar, IonSpinner,
+        IonSearchbar, IonSpinner, IonButtons, ThemeMenuComponent,
     ]
 })
 export class ListPage implements OnInit {
@@ -122,6 +124,7 @@ export class ListPage implements OnInit {
     }
 
     protected readonly colorByFolderName = colorByFolderName;
+    protected readonly contrastByFolderName = contrastByFolderName;
 
     private groupByAcademicYear(courses: { name: string, is_remote: boolean, id: number, link: string[] }[]) {
         const groups = new Map<string, typeof courses>();

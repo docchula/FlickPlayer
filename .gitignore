@@ -40,3 +40,10 @@ npm-debug.log*
 # Sentry Config File
 .env.sentry-build-plugin
 .sentryclirc
+
+# Local agent and assistant files
+/.agents
+/.claude
+AGENTS.md
+CLAUDE.md
+*.local.json

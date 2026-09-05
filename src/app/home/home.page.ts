@@ -3,7 +3,7 @@ import {Observable, Subject, combineLatest, of} from 'rxjs';
 import {CourseListResponse, Lecture, ManService, SearchVideoResult} from '../man.service';
 import {Router, RouterLink} from '@angular/router';
 import {AuthService} from '../auth.service';
-import {colorByFolderName} from '../../helpers';
+import {colorByFolderName, contrastByFolderName} from '../../helpers';
 import {addIcons} from "ionicons";
 import {logOutOutline, searchOutline} from "ionicons/icons";
 import {debounceTime, distinctUntilChanged, map, switchMap, tap} from 'rxjs/operators';
@@ -30,6 +30,7 @@ import {
     IonToolbar,
 } from '@ionic/angular/standalone';
 import {AsyncPipe, NgStyle} from '@angular/common';
+import {ThemeMenuComponent} from '../shared/theme-menu.component';
 
 export interface EnrichedSearchResult extends SearchVideoResult {
     courseName?: string;
@@ -45,6 +46,7 @@ export interface EnrichedSearchResult extends SearchVideoResult {
         IonContent, IonGrid, IonRow, IonCol, IonCard, RouterLink, NgStyle,
         IonCardHeader, IonCardTitle, AsyncPipe, IonCardContent, IonItem,
         IonLabel, IonText, IonSpinner, IonSearchbar, IonList,
+        ThemeMenuComponent,
     ]
 })
 export class HomePage implements OnInit {
@@ -120,6 +122,7 @@ export class HomePage implements OnInit {
     }
 
     protected readonly colorByFolderName = colorByFolderName;
+    protected readonly contrastByFolderName = contrastByFolderName;
     protected readonly Object = Object;
 
     goToLastVideo(lastVideo: Lecture) {

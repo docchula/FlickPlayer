@@ -1,4 +1,4 @@
-import {enableProdMode, importProvidersFrom} from '@angular/core';
+import {enableProdMode, importProvidersFrom, inject, provideAppInitializer} from '@angular/core';
 
 import {environment} from './environments/environment';
 import {RouteReuseStrategy} from '@angular/router';
@@ -21,6 +21,7 @@ import {WelcomePageModule} from './app/welcome/welcome.module';
 import {ServiceWorkerModule} from '@angular/service-worker';
 import {AppComponent} from './app/app.component';
 import Aura from '@primeuix/themes/aura';
+import {ThemeService} from './app/theme.service';
 
 if (environment.production) {
   enableProdMode();
@@ -30,6 +31,10 @@ bootstrapApplication(AppComponent, {
     providers: [
         importProvidersFrom(BrowserModule, AppRoutingModule, WelcomePageModule, ServiceWorkerModule.register('ngsw-worker.js', {enabled: environment.production})),
         {provide: RouteReuseStrategy, useClass: IonicRouteStrategy},
+        // Start theming before the first page renders, so the saved theme is live from the outset.
+        provideAppInitializer(() => {
+            inject(ThemeService);
+        }),
         UserTrackingService,
         {provide: INSTRUMENTATION_ENABLED, useValue: environment.production},
         {provide: DEBUG_MODE, useValue: !environment.production},

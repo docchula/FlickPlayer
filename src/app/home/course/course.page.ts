@@ -10,6 +10,7 @@ import {
     AlertController,
     IonBackButton,
     IonButton,
+    IonButtons,
     IonCard,
     IonCardContent,
     IonCardHeader,
@@ -40,6 +41,7 @@ import { ulid } from 'ulid';
 import { AsyncPipe, DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { ModalEvaluationComponent } from './modal-evaluation.component';
 import { PomodoroTimerComponent } from '../../shared/pomodoro-timer.component';
+import { ThemeMenuComponent } from '../../shared/theme-menu.component';
 
 @Component({
     selector: 'app-course',
@@ -72,6 +74,8 @@ import { PomodoroTimerComponent } from '../../shared/pomodoro-timer.component';
         DecimalPipe,
         DatePipe,
         PomodoroTimerComponent,
+        IonButtons,
+        ThemeMenuComponent,
     ]
 })
 export class CoursePage implements OnInit, AfterViewInit, OnDestroy {

@@ -7,6 +7,9 @@
                 <small>{{ (courseProgress.duration - courseProgress.viewed) / 3600 | number:'1.0-1' }} hours left ({{ (courseProgress.viewed / courseProgress.duration) * 100 | number:'1.0-1' }}%)</small>
             }
         </ion-title>
+        <ion-buttons slot="end">
+            <app-theme-menu></app-theme-menu>
+        </ion-buttons>
     </ion-toolbar>
 </ion-header>
 

@@ -27,6 +27,19 @@
 
 @import "video.js/dist/video-js.css";
 
+$theme-transition: 0.25s ease;
+
+body,
+ion-content,
+ion-header,
+ion-toolbar,
+ion-card,
+ion-item,
+ion-list,
+.e-learning-tag {
+  transition: background-color $theme-transition, color $theme-transition, border-color $theme-transition;
+}
+
 .small-text {
   font-size: 0.8em;
 }
@@ -35,19 +48,21 @@
   margin-right: 0.2em;
   padding: 0.15em 0.2em;
   font-size: 0.8em;
-  border: #22C55E solid 1px;
+  border: var(--flick-tag-color) solid 1px;
   border-radius: 2px;
-  background-color: #F0FDF4;
-  color: #22C55E;
+  background-color: var(--flick-tag-background);
+  color: var(--flick-tag-color);
   display: inline-block;
 }
 
-@media (prefers-color-scheme: dark) {
-  .e-learning-tag {
-    border: #15803D solid 1px;
-    background-color: #052E16;
-    color: #15803D;
-  }
+ion-card:not(.ion-color) {
+  color: var(--flick-muted-text);
+}
+
+/* An item inside a coloured card keeps its own background, so it needs the page's text
+   colour rather than the card's contrast colour, which is meant for the card itself. */
+ion-card.ion-color ion-item {
+  --color: var(--ion-text-color);
 }
 
 /* Fullscreen Pomodoro Notification Toast (Appended inside video fullscreen element) */
@@ -57,13 +72,13 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 2147483647;
-  background: rgba(34, 36, 40, 0.95);
-  color: #ffffff;
+  background: var(--ion-color-dark);
+  color: var(--ion-color-dark-contrast);
   padding: 0.75rem 1.5rem;
   border-radius: 2rem;
   font-size: 1.1rem;
   font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(var(--ion-color-dark-contrast-rgb), 0.25);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
   pointer-events: none;
   opacity: 0;
@@ -73,4 +88,39 @@
 .pomodoro-fullscreen-toast.show {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+/*
+ * Custom page background. The picture and its scrim sit behind the routed page, which
+ * becomes transparent so the image shows through while toolbars and cards stay readable.
+ */
+body.flick-has-background-image {
+  ion-app::before,
+  ion-app::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  ion-app::before {
+    background-image: var(--flick-background-image);
+    background-size: var(--flick-background-size);
+    background-repeat: var(--flick-background-repeat);
+    background-position: center center;
+    filter: blur(var(--flick-background-blur));
+    transform: scale(1.06);
+  }
+
+  ion-app::after {
+    background-color: var(--flick-background-scrim);
+  }
+
+  ion-router-outlet {
+    z-index: 1;
+  }
+
+  ion-content {
+    --background: transparent;
+  }
 }
