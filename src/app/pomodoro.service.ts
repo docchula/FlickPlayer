@@ -1,6 +1,8 @@
-import {Injectable} from '@angular/core';
+import {inject, Injectable} from '@angular/core';
 import {BehaviorSubject, Observable, Subject, Subscription, interval} from 'rxjs';
 import {map} from 'rxjs/operators';
+import {SettingsService} from './settings.service';
+import {nextResetAt, studyDayKey} from './settings/day';
 
 /** Pomodoro timer phase definitions */
 export interface PomodoroPhase {
@@ -95,6 +97,11 @@ export class PomodoroService {
     private completedSessions = new BehaviorSubject<number>(0);
     private studySessionsInCycle = 0;
 
+    /** The session count belongs to a day, and the day turns at an hour the reader picks. */
+    private settingsService = inject(SettingsService);
+    private resetHour = this.settingsService.settings.pomodoroResetHour;
+    private nextDayAt = nextResetAt(Date.now(), this.resetHour);
+
     /** Notification stream */
     private phaseNotificationSubject = new Subject<PhaseNotification>();
     phaseNotification$: Observable<PhaseNotification> = this.phaseNotificationSubject.asObservable();
@@ -117,6 +124,20 @@ export class PomodoroService {
     constructor() {
         this.loadPreferences(this.currentUserId);
         this.restoreTimerState(this.currentUserId);
+
+        this.settingsService.pomodoroResetHour$.subscribe(hour => {
+            this.resetHour = hour;
+            this.nextDayAt = nextResetAt(Date.now(), hour);
+            this.rollOverIfNewDay();
+        });
+
+        // The timer keeps running from the root injector whether or not the widget is on
+        // screen, so switching it off has to stop it rather than merely hide it.
+        this.settingsService.visible$('pomodoro').subscribe(visible => {
+            if (!visible) {
+                this.pause();
+            }
+        });
     }
 
     /** Request browser system notification permissions */
@@ -222,6 +243,26 @@ export class PomodoroService {
 
     // ────────────────────────── Private methods ──────────────────────────
 
+    /** Catch up on a day that turned while the app was closed or idle. */
+    private rollOverIfNewDay(): void {
+        const today = studyDayKey(Date.now(), this.resetHour);
+        if (this.settingsService.readPomodoroDayKey() !== today) {
+            this.rollOverDay();
+        }
+    }
+
+    /**
+     * Start the day's session count again. The running phase is left alone: crossing the
+     * boundary mid-session should not throw away the sitting the reader is in.
+     */
+    private rollOverDay(): void {
+        this.studySessionsInCycle = 0;
+        this.completedSessions.next(0);
+        this.nextDayAt = nextResetAt(Date.now(), this.resetHour);
+        this.settingsService.writePomodoroDayKey(studyDayKey(Date.now(), this.resetHour));
+        this.saveTimerState();
+    }
+
     private getStudyPhase(): PomodoroPhase {
         return POMODORO_PHASES.find(p => p.key === 'study') ?? POMODORO_PHASES[0];
     }
@@ -247,6 +288,10 @@ export class PomodoroService {
     private startTicking(): void {
         this.stopTicking();
         this.tickSubscription = interval(1000).subscribe(() => {
+            if (Date.now() >= this.nextDayAt) {
+                this.rollOverDay();
+            }
+
             const remaining = this.timeRemaining.value - 1;
 
             if (remaining <= 0) {
