@@ -1,8 +1,8 @@
-import { AfterViewInit, Component, ElementRef, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { combineLatest, EMPTY, fromEvent, mergeAll, Observable, of, pairwise, startWith, Subject, takeUntil, throttleTime } from 'rxjs';
-import { ActivatedRoute, Router } from '@angular/router';
-import { CourseMembers, EvaluationRecord, Lecture, ManService } from '../../man.service';
-import { first, map, switchMap, take } from 'rxjs/operators';
+import {AfterViewInit, Component, ElementRef, inject, OnDestroy, OnInit, ViewChild} from '@angular/core';
+import {combineLatest, EMPTY, fromEvent, mergeAll, Observable, of, pairwise, startWith, Subject, takeUntil, throttleTime} from 'rxjs';
+import {ActivatedRoute, Router} from '@angular/router';
+import {CourseMembers, EvaluationRecord, Lecture, ManService} from '../../man.service';
+import {first, map, switchMap} from 'rxjs/operators';
 import videojs from 'video.js';
 import 'videojs-hotkeys';
 import 'videojs-youtube';
@@ -31,15 +31,17 @@ import {
     IonToolbar,
     ModalController,
 } from '@ionic/angular/standalone';
-import { DomSanitizer } from '@angular/platform-browser';
-import { PlayHistory } from '../../play-tracker.service';
-import { addIcons } from "ionicons";
-import { checkmarkOutline, closeOutline, documentAttachOutline, download, pauseCircleOutline } from "ionicons/icons";
+import {DomSanitizer} from '@angular/platform-browser';
+import {PlayHistory} from '../../play-tracker.service';
+import {addIcons} from "ionicons";
+import {checkmarkOutline, closeOutline, documentAttachOutline, download, pauseCircleOutline} from "ionicons/icons";
 import type Player from 'video.js/dist/types/player';
-import { ulid } from 'ulid';
-import { AsyncPipe, DatePipe, DecimalPipe, NgClass } from '@angular/common';
-import { ModalEvaluationComponent } from './modal-evaluation.component';
-import { PomodoroTimerComponent } from '../../shared/pomodoro-timer.component';
+import {ulid} from 'ulid';
+import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
+import {ModalEvaluationComponent} from './modal-evaluation.component';
+import {PomodoroTimerComponent} from '../../shared/pomodoro-timer.component';
+import {Analytics, logEvent} from '@angular/fire/analytics';
+import {ConsentService} from '../../consent.service';
 
 @Component({
     selector: 'app-course',
@@ -81,6 +83,8 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     private alertController = inject(AlertController);
     private sanitizer = inject(DomSanitizer);
     private modalCtrl = inject(ModalController);
+    private analytics = inject(Analytics);
+    private consentService = inject(ConsentService);
 
     @ViewChild('videoPlayer') videoPlayerElement: ElementRef;
     videoPlayer: Player;
@@ -119,8 +123,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
 
     ngOnInit() {
         // Read optional `video`/`v` query param set by global search or direct link
-        const targetVideoId = this.route.snapshot.queryParamMap.get('video') || this.route.snapshot.queryParamMap.get('v');
-        this.videoIdFromSearch = targetVideoId;
+        this.videoIdFromSearch = this.route.snapshot.queryParamMap.get('video') || this.route.snapshot.queryParamMap.get('v');
 
         this.list$ = this.route.paramMap.pipe(
             first(),
@@ -384,6 +387,9 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                     handler: (i) => {
                         if (i.speed > 0.3 && i.speed < 9) {
                             this.videoPlayer.playbackRate(i.speed);
+                            if (this.consentService.current === 'granted') {
+                                logEvent(this.analytics, 'playback_speed_change', {speed: i.speed});
+                            }
                         }
                     }
                 }

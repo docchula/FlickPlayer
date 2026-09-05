@@ -1,0 +1,74 @@
+<ion-header>
+    <ion-toolbar>
+        <ion-buttons slot="start">
+            <ion-back-button defaultHref="/"></ion-back-button>
+        </ion-buttons>
+        <ion-title>Privacy Policy</ion-title>
+    </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+    <p class="last-updated">Last updated: {{ lastUpdated }}</p>
+
+    <p>
+        MDCU Recorded Lecture ("the app") is operated by the Student Union of the Faculty of Medicine,
+        Chulalongkorn University for students and staff of the Faculty. This page explains what
+        information the app collects, why, and the choices you have.
+    </p>
+
+    <h2>Account information</h2>
+    <p>
+        Signing in requires a Google account on the <strong>docchula.com</strong> domain. Firebase
+        Authentication receives your name, email address, profile photo, and account ID from Google.
+        This is used to verify you're a member of the Faculty and to identify your own watch history and
+        course access &mdash; it is not shared with anyone outside the systems described below.
+    </p>
+
+    <h2>Lecture watch history</h2>
+    <p>
+        To let you resume lectures where you left off and to support course evaluation, the app records
+        which videos you watch, how much of each you completed, and when, tied to your account.
+        This tracking is core to the app's functionality and is not affected by the analytics consent
+        choice below.
+    </p>
+
+    <h2>Analytics (optional)</h2>
+    <p>
+        The app uses Google Analytics for Firebase to understand how features are used and to improve
+        the app. This is only active if you accept the analytics banner shown on your first visit.
+        You can change your choice at any time by
+        clearing your browser's site data for this app, which will show the banner again.
+    </p>
+    <p>When enabled, analytics collects:</p>
+    <ul>
+        <li>Pages/screens you visit within the app.</li>
+        <li>Search terms you enter.</li>
+        <li>Use of the Pomodoro study timer and custom video playback speed setting.</li>
+        <li>Your account ID.</li>
+    </ul>
+    <p>
+        Analytics data is processed by Google in accordance with
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>.
+    </p>
+
+    <h2>App performance monitoring</h2>
+    <p>
+        The app uses Firebase Performance Monitoring and Firebase Remote Config to measure technical
+        performance (e.g. load times) and to manage app configuration. These collect technical data
+        about your device and network, not your personal identity, and run independently of the
+        analytics consent choice.
+    </p>
+
+    <h2>Data retention</h2>
+    <p>
+        Watch history is retained for as long as your account is active, to support resuming lectures
+        and course evaluation. Analytics data is retained according to Google Analytics' standard
+        retention settings.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+        Questions about this policy or your data can be directed to the Student Union of the Faculty of
+        Medicine, Chulalongkorn University.
+    </p>
+</ion-content>
