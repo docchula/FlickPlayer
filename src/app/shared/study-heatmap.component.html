@@ -1,0 +1,94 @@
+<ion-card class="heatmap-card">
+    <ion-card-header class="heatmap-header" (click)="toggleCollapse()" button>
+        <ion-card-title class="heatmap-title">
+            Study Heatmap
+            @if (stats.currentStreak > 0) {
+                <span class="streak-chip">
+                    <ion-icon name="flame-outline"></ion-icon>
+                    {{ stats.currentStreak }}
+                </span>
+            }
+            <ion-button fill="clear" size="small" class="guide-button"
+                        aria-label="What is this?" (click)="openGuide($event)">
+                <ion-icon name="information-circle-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+            <ion-icon [name]="isCollapsed ? 'chevron-down' : 'chevron-up'" class="collapse-icon"></ion-icon>
+        </ion-card-title>
+    </ion-card-header>
+
+    @if (!isCollapsed) {
+        <ion-card-content class="heatmap-content">
+            <ion-segment [value]="rangeKey" (ionChange)="selectRange($event)" class="range-segment">
+                @for (range of ranges; track range.key) {
+                    <ion-segment-button [value]="range.key">
+                        <ion-label>{{ range.label }}</ion-label>
+                    </ion-segment-button>
+                }
+            </ion-segment>
+
+            <div class="stat-row">
+                @for (tile of tiles; track tile.label) {
+                    <div class="stat-tile">
+                        <ion-icon [name]="tile.icon"></ion-icon>
+                        <div class="stat-value">{{ tile.value }}</div>
+                        <div class="stat-label">{{ tile.label }}</div>
+                        <div class="stat-detail">{{ tile.detail }}</div>
+                    </div>
+                }
+            </div>
+
+            <div class="calendar-wrapper">
+                <div class="calendar-area">
+                    <div class="calendar">
+                        <div class="weekday-column">
+                            @for (day of weekdayLabels; track $index) {
+                                <span class="weekday-label">{{ day }}</span>
+                            }
+                        </div>
+                        <div class="calendar-scroll" #scroller>
+                            <div class="weeks">
+                                <div class="month-row">
+                                    @for (week of weeks; track week.key) {
+                                        <span class="month-label">{{ week.monthLabel }}</span>
+                                    }
+                                </div>
+                                <div class="week-row">
+                                    @for (week of weeks; track week.key) {
+                                        <div class="week">
+                                            @for (cell of week.days; track cell.key) {
+                                                <div class="cell"
+                                                     [class.out-of-range]="!cell.inRange"
+                                                     [attr.data-level]="cell.level"
+                                                     [attr.aria-label]="cell.inRange ? cell.label : null"
+                                                     (mouseenter)="showTooltip(cell, $event)"
+                                                     (mouseleave)="hideTooltip()"></div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="legend">
+                        Less
+                        @for (level of legendLevels; track level) {
+                            <span class="cell" [attr.data-level]="level"></span>
+                        }
+                        More
+                    </div>
+                </div>
+
+                @if (tooltip) {
+                    <div class="cell-tooltip" [style.left.px]="tooltip.x" [style.top.px]="tooltip.y">
+                        {{ tooltip.text }}
+                    </div>
+                }
+            </div>
+
+            @if (emptyHint) {
+                <p class="empty-hint">{{ emptyHint }}</p>
+            }
+        </ion-card-content>
+    }
+</ion-card>

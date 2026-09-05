@@ -1,0 +1,223 @@
+/* Defaults from the Ionic palette, so the colours follow light and dark mode without a theme
+   installed. Every use reads --flick-* first, letting a theme override these. */
+:host {
+    --heat-0: color-mix(in srgb, var(--ion-text-color, #000000) 8%, var(--ion-background-color, #ffffff));
+    --heat-1: color-mix(in srgb, var(--ion-color-primary, #3880ff) 25%, var(--ion-background-color, #ffffff));
+    --heat-2: color-mix(in srgb, var(--ion-color-primary, #3880ff) 45%, var(--ion-background-color, #ffffff));
+    --heat-3: color-mix(in srgb, var(--ion-color-primary, #3880ff) 70%, var(--ion-background-color, #ffffff));
+    --heat-4: var(--ion-color-primary, #3880ff);
+    --muted: var(--ion-color-medium, #92949c);
+    --surface: var(--ion-color-light, #f4f5f8);
+    --accent: var(--ion-color-primary, #3880ff);
+    --warning: var(--ion-color-warning, #ffc409);
+}
+
+.heatmap-card {
+    margin: 0 0 1rem 0;
+}
+
+.heatmap-header {
+    cursor: pointer;
+    padding-bottom: 0.5rem;
+}
+
+.heatmap-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+}
+
+.streak-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 1rem;
+    background: var(--flick-surface-muted, var(--surface));
+    color: var(--flick-warning-text, var(--warning));
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.guide-button {
+    margin: 0 -0.35rem 0 auto;
+    --padding-start: 0.35rem;
+    --padding-end: 0.35rem;
+    --color: var(--flick-muted-text, var(--muted));
+}
+
+.collapse-icon {
+    color: var(--flick-muted-text, var(--muted));
+}
+
+.heatmap-content {
+    padding-top: 0;
+}
+
+.range-segment {
+    margin-bottom: 0.75rem;
+    font-size: 0.8rem;
+}
+
+.range-segment ion-segment-button {
+    --color: var(--flick-muted-text, var(--muted));
+    --color-checked: var(--flick-accent-text, var(--accent));
+    --indicator-color: var(--flick-accent-text, var(--accent));
+}
+
+.stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.stat-tile {
+    padding: 0.5rem 0.6rem;
+    border-radius: 8px;
+    background: var(--flick-surface-muted, var(--surface));
+
+    ion-icon {
+        color: var(--flick-muted-text, var(--muted));
+        font-size: 0.9rem;
+    }
+}
+
+.stat-value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--ion-text-color);
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--flick-muted-text, var(--muted));
+}
+
+.stat-detail {
+    font-size: 0.7rem;
+    color: var(--flick-muted-text, var(--muted));
+    opacity: 0.75;
+    min-height: 1em;
+}
+
+.calendar-wrapper {
+    position: relative;
+}
+
+.calendar-area {
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
+}
+
+.calendar-scroll {
+    overflow-x: auto;
+    min-width: 0;
+    padding-bottom: 0.25rem;
+}
+
+.calendar {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.weeks {
+    width: max-content;
+}
+
+.weekday-column {
+    display: grid;
+    grid-template-rows: repeat(7, var(--cell-size));
+    gap: var(--cell-gap);
+    padding-top: 1.1rem;
+}
+
+.weekday-label {
+    font-size: 0.6rem;
+    line-height: var(--cell-size);
+    color: var(--flick-muted-text, var(--muted));
+}
+
+.calendar {
+    --cell-size: 0.72rem;
+    --cell-gap: 0.18rem;
+}
+
+.month-row, .week-row {
+    display: flex;
+    gap: var(--cell-gap);
+}
+
+.month-row {
+    height: 1.1rem;
+    /* The last month name is wider than its column and would otherwise be clipped. */
+    padding-inline-end: 1.25rem;
+}
+
+.month-label {
+    width: var(--cell-size);
+    font-size: 0.6rem;
+    color: var(--flick-muted-text, var(--muted));
+    white-space: nowrap;
+}
+
+.week {
+    display: grid;
+    grid-template-rows: repeat(7, var(--cell-size));
+    gap: var(--cell-gap);
+}
+
+.cell {
+    width: var(--cell-size);
+    height: var(--cell-size);
+    border-radius: 2px;
+    background: var(--flick-heat-0, var(--heat-0));
+}
+
+.cell[data-level="1"] { background: var(--flick-heat-1, var(--heat-1)); }
+.cell[data-level="2"] { background: var(--flick-heat-2, var(--heat-2)); }
+.cell[data-level="3"] { background: var(--flick-heat-3, var(--heat-3)); }
+.cell[data-level="4"] { background: var(--flick-heat-4, var(--heat-4)); }
+
+.cell.out-of-range {
+    background: transparent;
+}
+
+.cell-tooltip {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    background: var(--ion-color-dark);
+    color: var(--ion-color-dark-contrast);
+    font-size: 0.7rem;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.legend {
+    --cell-size: 0.72rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.18rem;
+    margin-top: 0.4rem;
+    font-size: 0.7rem;
+    color: var(--flick-muted-text, var(--muted));
+}
+
+.legend .cell {
+    margin: 0 0.06rem;
+}
+
+.empty-hint {
+    margin: 0.6rem 0 0;
+    font-size: 0.72rem;
+    text-align: center;
+    color: var(--flick-muted-text, var(--muted));
+}

@@ -1,0 +1,16 @@
+<div class="guide">
+    <h3>{{ title }}</h3>
+    <p>{{ summary }}</p>
+    <ul>
+        <li>
+            <strong>Where it is kept.</strong>
+            <span class="point-detail">{{ (synced$ | async) ? storageWhenSynced : storageWhenLocal }}</span>
+        </li>
+        @for (point of points; track point.text) {
+            <li>
+                <strong>{{ point.text }}</strong>
+                <span class="point-detail">{{ point.detail }}</span>
+            </li>
+        }
+    </ul>
+</div>

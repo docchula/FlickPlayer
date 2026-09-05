@@ -1,6 +1,7 @@
-import {Injectable} from '@angular/core';
+import {inject, Injectable} from '@angular/core';
 import {BehaviorSubject, Observable, Subject, Subscription, interval} from 'rxjs';
 import {map} from 'rxjs/operators';
+import {StudyStatsService} from './study-stats.service';
 
 /** Pomodoro timer phase definitions */
 export interface PomodoroPhase {
@@ -82,6 +83,7 @@ export const DURATION_FIELDS: DurationField[] = [
 export class PomodoroService {
     private readonly STORAGE_KEY_PREFIX = 'pomodoroPrefs_';
     private readonly TIMER_KEY_PREFIX = 'pomodoroTimer_';
+    private studyStats = inject(StudyStatsService);
     private currentUserId = 'guest';
 
     /** Configurable settings */
@@ -249,6 +251,10 @@ export class PomodoroService {
         this.tickSubscription = interval(1000).subscribe(() => {
             const remaining = this.timeRemaining.value - 1;
 
+            if (this.currentPhase.value.key === 'study') {
+                this.studyStats.recordFocusTick();
+            }
+
             if (remaining <= 0) {
                 this.timeRemaining.next(0);
                 this.playNotificationSound();
@@ -278,6 +284,7 @@ export class PomodoroService {
         if (previousPhase.key === 'study') {
             this.studySessionsInCycle++;
             this.completedSessions.next(this.completedSessions.value + 1);
+            this.studyStats.recordFocusSession();
 
             if (this.studySessionsInCycle >= this.sessionsBeforeLongBreak) {
                 this.studySessionsInCycle = 0;

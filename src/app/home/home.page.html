@@ -22,6 +22,9 @@
 
 <ion-content [fullscreen]="true" class="ion-padding">
     <main>
+        @if (!searchQuery.trim()) {
+            <app-study-heatmap></app-study-heatmap>
+        }
         @if (searchQuery.trim()) {
             <!-- Global Search Results -->
             <div class="search-results-container">

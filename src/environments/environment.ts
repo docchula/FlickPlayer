@@ -15,7 +15,8 @@ export const environment = {
     measurementId: 'G-NRVJNXG64Q'
   },
   defaultRemoteConfig: {
-    manEndpoint: 'https://flick-man-cf.docchula.com/'
+    manEndpoint: 'https://flick-man-cf.docchula.com/',
+    userSyncEnabled: true
   }
 };
 

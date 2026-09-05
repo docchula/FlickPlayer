@@ -40,6 +40,7 @@ import { ulid } from 'ulid';
 import { AsyncPipe, DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { ModalEvaluationComponent } from './modal-evaluation.component';
 import { PomodoroTimerComponent } from '../../shared/pomodoro-timer.component';
+import { StudyStatsService } from '../../study-stats.service';
 
 @Component({
     selector: 'app-course',
@@ -81,6 +82,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     private alertController = inject(AlertController);
     private sanitizer = inject(DomSanitizer);
     private modalCtrl = inject(ModalController);
+    private studyStats = inject(StudyStatsService);
 
     @ViewChild('videoPlayer') videoPlayerElement: ElementRef;
     videoPlayer: Player;
@@ -265,6 +267,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                         lastLog.updatedAt = currentTimestamp;
                         this.playLog[lastLogKey] = lastLog;
                     }
+                    this.studyStats.recordVideoProgress(this.currentVideo?.id ?? null);
                 }
 
                 // Push to server
