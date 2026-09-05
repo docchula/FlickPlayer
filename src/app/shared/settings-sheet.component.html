@@ -16,18 +16,19 @@
                 <section class="settings-section">
                     <h2 class="section-title">Show or hide</h2>
                     <p class="section-hint">Kept on this device, so your phone and your computer can differ.</p>
-                    <ion-list lines="none">
+                    <ion-list lines="none" class="settings-card">
                         @for (widget of widgets; track widget.key) {
-                            <ion-item class="widget-item">
+                            <ion-item>
                                 <ion-icon [name]="widget.icon" slot="start" aria-hidden="true"></ion-icon>
-                                <ion-label class="ion-text-wrap">
-                                    <h3>{{ widget.label }}</h3>
-                                    <p>{{ widget.description }}</p>
-                                </ion-label>
-                                <ion-toggle slot="end"
+                                <!-- The label sits inside the toggle so the whole row is the control. -->
+                                <ion-toggle class="widget-toggle"
+                                            labelPlacement="start"
+                                            justify="space-between"
                                             [checked]="isVisible(settings, widget.key)"
-                                            [attr.aria-label]="widget.label"
-                                            (ionChange)="onWidgetToggle(widget.key, $event)"></ion-toggle>
+                                            (ionChange)="onWidgetToggle(widget.key, $event)">
+                                    <span class="widget-label">{{ widget.label }}</span>
+                                    <span class="widget-hint">{{ widget.description }}</span>
+                                </ion-toggle>
                             </ion-item>
                         }
                     </ion-list>
@@ -37,40 +38,38 @@
 
         <section class="settings-section">
             <h2 class="section-title">Font</h2>
-            <p class="section-hint">Changes every page. Thai and English are both shown, so you can judge the fit.</p>
-            <div class="font-list">
-                @for (font of settingsService.fonts; track font.id) {
-                    <button type="button" class="font-option"
-                            [class.selected]="font.id === settings.fontId"
-                            [style.font-family]="font.stack || null"
-                            [attr.aria-pressed]="font.id === settings.fontId"
-                            (click)="selectFont(font)">
-                        <span class="font-text">
-                            <span class="font-name">{{ font.name }}</span>
-                            <span class="font-sample">{{ sample }}</span>
-                        </span>
-                        @if (font.id === settings.fontId) {
-                            <ion-icon name="checkmark" class="font-check" aria-hidden="true"></ion-icon>
+            <p class="section-hint">Changes every page, on this device only.</p>
+            <ion-list lines="none" class="settings-card">
+                <ion-item>
+                    <ion-select label="Typeface" labelPlacement="start" interface="popover"
+                                [value]="settings.fontId"
+                                (ionChange)="onFontChange($event)">
+                        @for (font of settingsService.fonts; track font.id) {
+                            <ion-select-option [value]="font.id">{{ font.name }}</ion-select-option>
                         }
-                    </button>
-                }
-            </div>
+                    </ion-select>
+                </ion-item>
+            </ion-list>
+            @if (font$ | async; as font) {
+                <p class="font-preview" [style.font-family]="font.stack || null">{{ sample }}</p>
+            }
         </section>
 
         @if (pomodoroAvailable$ | async) {
             <section class="settings-section">
                 <h2 class="section-title">Pomodoro</h2>
                 <p class="section-hint">Where your day starts. The session count goes back to zero at this time.</p>
-                <ion-item lines="none" class="control-item">
-                    <ion-label>Day starts at</ion-label>
-                    <ion-select slot="end" interface="popover" aria-label="Day starts at"
-                                [value]="settings.pomodoroResetHour"
-                                (ionChange)="onResetHourChange($event)">
-                        @for (option of settingsService.resetHours; track option.value) {
-                            <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
-                        }
-                    </ion-select>
-                </ion-item>
+                <ion-list lines="none" class="settings-card">
+                    <ion-item>
+                        <ion-select label="Day starts at" labelPlacement="start" interface="popover"
+                                    [value]="settings.pomodoroResetHour"
+                                    (ionChange)="onResetHourChange($event)">
+                            @for (option of settingsService.resetHours; track option.value) {
+                                <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
+                            }
+                        </ion-select>
+                    </ion-item>
+                </ion-list>
             </section>
         }
 

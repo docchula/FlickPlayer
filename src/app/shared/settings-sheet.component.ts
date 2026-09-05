@@ -7,7 +7,6 @@ import {
     IonHeader,
     IonIcon,
     IonItem,
-    IonLabel,
     IonList,
     IonSelect,
     IonSelectOption,
@@ -19,14 +18,13 @@ import {
 import {addIcons} from 'ionicons';
 import {
     calendarOutline,
-    checkmark,
     close,
     colorPaletteOutline,
     timerOutline,
 } from 'ionicons/icons';
 import {SettingsService} from '../settings.service';
 import {FONT_SAMPLE} from '../settings/fonts';
-import {AppSettings, FontOption} from '../settings/settings.model';
+import {AppSettings} from '../settings/settings.model';
 
 /** Ionic hands its payload over in `detail`, which the DOM event types do not describe. */
 function detailValue<T>(event: Event): T {
@@ -51,7 +49,6 @@ function detailChecked(event: Event): boolean {
         IonContent,
         IonList,
         IonItem,
-        IonLabel,
         IonToggle,
         IonSelect,
         IonSelectOption,
@@ -65,10 +62,11 @@ export class SettingsSheetComponent {
     protected readonly settings$ = this.settingsService.settings$;
     protected readonly availableWidgets$ = this.settingsService.availableWidgets$;
     protected readonly pomodoroAvailable$ = this.settingsService.pomodoroAvailable$;
+    protected readonly font$ = this.settingsService.font$;
     protected readonly sample = FONT_SAMPLE;
 
     constructor() {
-        addIcons({close, checkmark, timerOutline, calendarOutline, colorPaletteOutline});
+        addIcons({close, timerOutline, calendarOutline, colorPaletteOutline});
 
         // Opening the sheet is an explicit request to look at the fonts, so draw them properly,
         // and take the chance to notice any widget this build turned out to have.
@@ -88,8 +86,8 @@ export class SettingsSheetComponent {
         this.settingsService.setVisible(key, detailChecked(event));
     }
 
-    selectFont(font: FontOption): void {
-        this.settingsService.setFont(font.id);
+    onFontChange(event: Event): void {
+        this.settingsService.setFont(detailValue<string>(event));
     }
 
     onResetHourChange(event: Event): void {
