@@ -74,7 +74,7 @@ export class WelcomePage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.authStateSubscription.unsubscribe();
+    this.authStateSubscription?.unsubscribe();
   }
 
   async login() {

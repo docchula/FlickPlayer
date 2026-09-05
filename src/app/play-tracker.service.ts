@@ -24,7 +24,8 @@ export class PlayTrackerService {
             broadcaster: 'reverb',
             key: 'wr2uu6n8zkbel4nalzzl',
             authEndpoint: 'https://flick-man-app.docchula.com/broadcasting/auth',
-            auth: {headers: {Authorization: "Bearer " + idToken}},
+            // Real token is set once idToken$ emits, in the tap() below.
+            auth: {headers: {Authorization: ''}},
             wsHost: "flick-man-ws.docchula.com",
             wsPort: 443,
             enabledTransports: ['wss', 'ws'],

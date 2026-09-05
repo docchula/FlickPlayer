@@ -59,10 +59,7 @@ describe('ManService', () => {
     describe('getVideoList', () => {
         beforeEach(() => service.setIdToken(VALID_TOKEN));
 
-        it('returns the same Observable instance on repeat calls, but does not dedupe the underlying HTTP request', () => {
-            // NOTE: this is a real caching bug (documented, not fixed here — see plan).
-            // getVideoList() reuses the same pipeline object, but never multicasts it
-            // (no shareReplay), so each subscription still issues its own HTTP request.
+        it('returns the same Observable instance and dedupes the underlying HTTP request across subscribers', () => {
             const first = service.getVideoList();
             const second = service.getVideoList();
             expect(second).toBe(first);
@@ -70,9 +67,22 @@ describe('ManService', () => {
             first.subscribe();
             second.subscribe();
 
-            const reqs = httpMock.match(APP_ENDPOINT + 'v1/video');
-            expect(reqs.length).toBe(2);
-            reqs.forEach(r => r.flush({status: 'success', data: {years: {}, last_fetched_at: '', last_played: null}}));
+            const req = httpMock.expectOne(APP_ENDPOINT + 'v1/video');
+            req.flush({status: 'success', data: {years: {}, last_fetched_at: '', last_played: null}});
+
+            httpMock.expectNone(APP_ENDPOINT + 'v1/video');
+        });
+
+        it('replays the cached value to a late subscriber without a new HTTP request', () => {
+            service.getVideoList().subscribe();
+            httpMock.expectOne(APP_ENDPOINT + 'v1/video')
+                .flush({status: 'success', data: {years: {}, last_fetched_at: '', last_played: null}});
+
+            let late: unknown;
+            service.getVideoList().subscribe(v => late = v);
+
+            expect(late).toEqual({years: {}, last_fetched_at: '', last_played: null});
+            httpMock.expectNone(APP_ENDPOINT + 'v1/video');
         });
     });
 

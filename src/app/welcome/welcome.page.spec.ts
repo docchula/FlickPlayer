@@ -29,10 +29,10 @@ describe('WelcomePage.goToHome', () => {
         component = TestBed.inject(WelcomePage);
         alertSpy = spyOn(component, 'alertError').and.returnValue(Promise.resolve());
         component.user = {getIdToken: () => Promise.resolve('token')} as never;
-        // These specs exercise goToHome() only, never ngOnInit(); without this,
-        // TestBed's teardown call to ngOnDestroy() throws on the undefined
-        // subscription (a pre-existing bug — see plan's "Deliberately skipped" notes).
-        component.authStateSubscription = {unsubscribe: () => {}} as never;
+    });
+
+    it('ngOnDestroy() does not throw when ngOnInit never set up the auth-state subscription', () => {
+        expect(() => component.ngOnDestroy()).not.toThrow();
     });
 
     it('navigates straight home without fetching a token when already auth-checked', () => {

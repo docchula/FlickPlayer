@@ -1,7 +1,7 @@
 import {inject, Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {combineLatestWith, Observable, of, startWith, takeUntil, timer} from 'rxjs';
-import {map, switchMap, timeout} from 'rxjs/operators';
+import {map, shareReplay, switchMap, timeout} from 'rxjs/operators';
 import {PlayHistory, PlayHistoryValue, PlayTrackerService} from './play-tracker.service';
 import {AuthService} from './auth.service';
 
@@ -44,7 +44,10 @@ export class ManService {
 
     getVideoList(): Observable<CourseListResponse> {
         if (!this.videoList) {
-            this.videoList = this.get<JSend<CourseListResponse>>('v1/video').pipe(map(response => response?.data));
+            this.videoList = this.get<JSend<CourseListResponse>>('v1/video').pipe(
+                map(response => response?.data),
+                shareReplay(1),
+            );
         }
         return this.videoList;
     }

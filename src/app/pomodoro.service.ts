@@ -430,7 +430,7 @@ export class PomodoroService {
 
             const saved = JSON.parse(raw);
             const savedState: TimerState = saved.timerState;
-            const phase = POMODORO_PHASES.find(p => p.key === saved.currentPhaseKey) ?? POMODORO_PHASES[0];
+            let phase = POMODORO_PHASES.find(p => p.key === saved.currentPhaseKey) ?? POMODORO_PHASES[0];
 
             this.completedSessions.next(saved.completedSessions ?? 0);
             this.studySessionsInCycle = saved.studySessionsInCycle ?? 0;
@@ -464,7 +464,8 @@ export class PomodoroService {
                 } else {
                     this.currentPhase.next(this.getStudyPhase());
                 }
-                const nextPhaseDuration = (this.durations[this.currentPhase.value.durationKey] ?? DEFAULT_DURATIONS.studyMinutes) * 60;
+                phase = this.currentPhase.value;
+                const nextPhaseDuration = (this.durations[phase.durationKey] ?? DEFAULT_DURATIONS.studyMinutes) * 60;
                 timeRemaining += nextPhaseDuration;
             }
 

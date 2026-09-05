@@ -91,9 +91,8 @@ describe('PomodoroService', () => {
     }));
 
     it('restoreTimerState() rolls forward through completed phases after a long gap', fakeAsync(() => {
-        // Note: the rollover loop re-checks the *saved* phase on every iteration
-        // (it never re-reads the updated current phase), so from a 'study' save
-        // it always re-advances into 'break' rather than alternating study/break.
+        // 700s gap from a 10s-remaining study phase: one full study->break->study
+        // cycle completes (break is 300s), landing back in study with time to spare.
         localStorage.setItem('pomodoroTimer_guest', JSON.stringify({
             timerState: 'running',
             timeRemaining: 10,
@@ -105,11 +104,11 @@ describe('PomodoroService', () => {
 
         service = createService();
 
-        expect(firstValue(service.currentPhase$).key).toBe('break');
-        expect(firstValue(service.completedSessions$)).toBe(3);
+        expect(firstValue(service.currentPhase$).key).toBe('study');
+        expect(firstValue(service.completedSessions$)).toBe(1);
         const remaining = firstValue(service.timeRemaining$);
-        expect(remaining).toBeGreaterThanOrEqual(200);
-        expect(remaining).toBeLessThanOrEqual(220);
+        expect(remaining).toBeGreaterThanOrEqual(1108);
+        expect(remaining).toBeLessThanOrEqual(1110);
 
         discardPeriodicTasks();
     }));
