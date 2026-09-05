@@ -1,34 +1,93 @@
-import {CUSTOM_ELEMENTS_SCHEMA} from '@angular/core';
-import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
-
+import {TestBed, fakeAsync, tick} from '@angular/core/testing';
+import {Router} from '@angular/router';
+import {throwError, of} from 'rxjs';
+import {HttpErrorResponse} from '@angular/common/http';
+import {provideIonicAngular} from '@ionic/angular/standalone';
 import {WelcomePage} from './welcome.page';
-import {RouterTestingModule} from '@angular/router/testing';
-import {AngularFireAuth} from '@angular/fire/compat/auth';
-import {FireAuthStub} from '../stubs';
-import {ManService, ManServiceStub} from '../man.service';
+import {ManService} from '../man.service';
+import {AuthService} from '../auth.service';
 
-describe('WelcomePage', () => {
+describe('WelcomePage.goToHome', () => {
     let component: WelcomePage;
-    let fixture: ComponentFixture<WelcomePage>;
-
-    beforeEach(waitForAsync(() => {
-        TestBed.configureTestingModule({
-    imports: [RouterTestingModule, WelcomePage],
-    providers: [
-        { provide: AngularFireAuth, useValue: FireAuthStub },
-        { provide: ManService, useValue: ManServiceStub }
-    ],
-    schemas: [CUSTOM_ELEMENTS_SCHEMA]
-}).compileComponents();
-    }));
+    let manService: jasmine.SpyObj<Pick<ManService, 'setIdToken' | 'checkAuthorization' | 'changeEndpoint'>>;
+    let router: jasmine.SpyObj<Pick<Router, 'navigate'>>;
+    let alertSpy: jasmine.Spy;
 
     beforeEach(() => {
-        fixture = TestBed.createComponent(WelcomePage);
-        component = fixture.componentInstance;
-        fixture.detectChanges();
+        manService = jasmine.createSpyObj('ManService', ['setIdToken', 'checkAuthorization', 'changeEndpoint']);
+        router = jasmine.createSpyObj('Router', ['navigate']);
+
+        TestBed.configureTestingModule({
+            providers: [
+                provideIonicAngular(),
+                WelcomePage,
+                {provide: Router, useValue: router},
+                {provide: ManService, useValue: manService},
+                {provide: AuthService, useValue: {}},
+            ],
+        });
+        component = TestBed.inject(WelcomePage);
+        alertSpy = spyOn(component, 'alertError').and.returnValue(Promise.resolve());
+        component.user = {getIdToken: () => Promise.resolve('token')} as never;
+        // These specs exercise goToHome() only, never ngOnInit(); without this,
+        // TestBed's teardown call to ngOnDestroy() throws on the undefined
+        // subscription (a pre-existing bug — see plan's "Deliberately skipped" notes).
+        component.authStateSubscription = {unsubscribe: () => {}} as never;
     });
 
-    it('should create', () => {
-        expect(component).toBeTruthy();
+    it('navigates straight home without fetching a token when already auth-checked', () => {
+        component.isAuthChecked = true;
+
+        component.goToHome();
+
+        expect(router.navigate).toHaveBeenCalledWith(['/home']);
+        expect(manService.setIdToken).not.toHaveBeenCalled();
     });
+
+    it('navigates home when authorization succeeds', fakeAsync(() => {
+        manService.checkAuthorization.and.returnValue(of(true));
+
+        component.goToHome();
+        tick();
+
+        expect(component.isAuthChecked).toBe(true);
+        expect(router.navigate).toHaveBeenCalledWith(['/home']);
+    }));
+
+    it('shows a client error for an ErrorEvent failure', fakeAsync(() => {
+        manService.checkAuthorization.and.returnValue(throwError(() => new ErrorEvent('offline')));
+
+        component.goToHome();
+        tick();
+
+        expect(alertSpy).toHaveBeenCalledWith('Client Error', jasmine.any(String));
+    }));
+
+    it('shows an unregistered error for a 401', fakeAsync(() => {
+        manService.checkAuthorization.and.returnValue(throwError(() => new HttpErrorResponse({status: 401})));
+
+        component.goToHome();
+        tick();
+
+        expect(alertSpy).toHaveBeenCalledWith('Unregistered!', jasmine.any(String));
+    }));
+
+    it('shows a server error for a 5xx status', fakeAsync(() => {
+        manService.checkAuthorization.and.returnValue(throwError(() => new HttpErrorResponse({status: 503})));
+
+        component.goToHome();
+        tick();
+
+        expect(alertSpy).toHaveBeenCalledWith('Server Error', jasmine.any(String));
+    }));
+
+    it('rotates the endpoint and shows a connection error for anything else', fakeAsync(() => {
+        manService.checkAuthorization.and.returnValue(throwError(() => new HttpErrorResponse({status: 418})));
+
+        component.goToHome();
+        tick();
+
+        expect(manService.changeEndpoint).toHaveBeenCalled();
+        expect(alertSpy).toHaveBeenCalledWith('Connection Error', jasmine.any(String));
+    }));
 });
