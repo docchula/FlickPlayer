@@ -10,6 +10,7 @@ import {
     AlertController,
     IonBackButton,
     IonButton,
+    IonButtons,
     IonCard,
     IonCardContent,
     IonCardHeader,
@@ -31,6 +32,7 @@ import {
     IonToolbar,
     ModalController,
 } from '@ionic/angular/standalone';
+import {SettingsMenuComponent} from '../../shared/settings-menu.component';
 import { DomSanitizer } from '@angular/platform-browser';
 import { PlayHistory } from '../../play-tracker.service';
 import { addIcons } from "ionicons";
@@ -49,6 +51,7 @@ import { PomodoroTimerComponent } from '../../shared/pomodoro-timer.component';
         IonHeader,
         IonToolbar,
         IonBackButton,
+        IonButtons,
         IonTitle,
         IonContent,
         IonGrid,
@@ -72,6 +75,7 @@ import { PomodoroTimerComponent } from '../../shared/pomodoro-timer.component';
         DecimalPipe,
         DatePipe,
         PomodoroTimerComponent,
+        SettingsMenuComponent,
     ]
 })
 export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
