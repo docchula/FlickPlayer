@@ -74,3 +74,34 @@
   opacity: 1;
   transform: translate(-50%, 0);
 }
+
+/* video.js adds .vjs-touch-enabled based on touch *capability* (navigator.maxTouchPoints), which
+   stays true on touchscreen laptops even when the mouse is the input in use. Gate on
+   (hover: none) and (pointer: coarse) too so these rules only kick in when touch is actually the
+   primary input, not just available. */
+@media (hover: none) and (pointer: coarse) {
+  /* Keep the play/pause toggle off the player's bottom-left corner, an awkward target on a tablet. */
+  .video-js.vjs-touch-enabled .vjs-control-bar .vjs-play-control {
+    margin-left: 1.5em;
+  }
+
+  /* The stock 3em bar makes every control 30px tall, short of the 44px a fingertip needs. */
+  .video-js.vjs-touch-enabled .vjs-control-bar {
+    height: 4.4em;
+  }
+
+  /* video.js centres these with line-heights worked out against the 3em bar, so each has to be
+     restated for 4.4em. The progress control centres itself with flexbox and needs nothing. */
+  .video-js.vjs-touch-enabled .vjs-control-bar .vjs-button > .vjs-icon-placeholder:before {
+    line-height: 2.4444; /* 1.8em glyph x 2.4444 */
+  }
+
+  .video-js.vjs-touch-enabled .vjs-control-bar .vjs-time-control,
+  .video-js.vjs-touch-enabled .vjs-control-bar .vjs-time-divider {
+    line-height: 4.4em;
+  }
+
+  .video-js.vjs-touch-enabled .vjs-control-bar .vjs-playback-rate .vjs-playback-rate-value {
+    line-height: 2.9333; /* 1.5em digits x 2.9333 */
+  }
+}
