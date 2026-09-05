@@ -76,6 +76,22 @@ export const DURATION_FIELDS: DurationField[] = [
     {label: 'Long Break Duration', key: 'longBreakMinutes', suffix: 'min'},
 ];
 
+/** What the user is studying from, which decides whether leaving the tab pauses the timer. */
+export type SessionMode = 'lecture' | 'elsewhere';
+
+export interface SessionModeOption {
+    key: SessionMode;
+    label: string;
+    hint: string;
+}
+
+export const SESSION_MODES: SessionModeOption[] = [
+    {key: 'lecture', label: 'Watching lectures', hint: 'Timer pauses when you leave this tab.'},
+    {key: 'elsewhere', label: 'Studying elsewhere', hint: 'Timer keeps running while you use other sites.'},
+];
+
+export const DEFAULT_SESSION_MODE: SessionMode = 'lecture';
+
 @Injectable({
     providedIn: 'root',
 })
@@ -89,6 +105,7 @@ export class PomodoroService {
     /** Configurable settings */
     private durations: PomodoroDurations = {...DEFAULT_DURATIONS};
     private sessionsBeforeLongBreak = DEFAULT_SESSIONS_BEFORE_LONG_BREAK;
+    private sessionMode = new BehaviorSubject<SessionMode>(DEFAULT_SESSION_MODE);
 
     /** Internal state */
     private timerState = new BehaviorSubject<TimerState>('idle');
@@ -119,6 +136,7 @@ export class PomodoroService {
     timeRemaining$: Observable<number> = this.timeRemaining.asObservable();
     currentPhase$: Observable<PomodoroPhase> = this.currentPhase.asObservable();
     completedSessions$: Observable<number> = this.completedSessions.asObservable();
+    sessionMode$: Observable<SessionMode> = this.sessionMode.asObservable();
     sessionsBeforeLongBreak$: Observable<number> = new BehaviorSubject<number>(this.sessionsBeforeLongBreak).asObservable();
 
     /** Formatted time string observable (HH:MM:SS) */
@@ -162,6 +180,19 @@ export class PomodoroService {
     /** Get current durations */
     getDurations(): PomodoroDurations {
         return {...this.durations};
+    }
+
+    getSessionMode(): SessionMode {
+        return this.sessionMode.value;
+    }
+
+    /** Choose whether leaving the tab pauses the timer. Takes effect from the next tab switch. */
+    setSessionMode(mode: SessionMode): void {
+        if (mode === this.sessionMode.value) {
+            return;
+        }
+        this.sessionMode.next(mode);
+        this.savePreferences();
     }
 
     /** Update duration config and save */
@@ -467,6 +498,9 @@ export class PomodoroService {
                 if (typeof parsed.sessionsBeforeLongBreak === 'number' && parsed.sessionsBeforeLongBreak > 0) {
                     this.sessionsBeforeLongBreak = parsed.sessionsBeforeLongBreak;
                 }
+                if (SESSION_MODES.some(mode => mode.key === parsed.sessionMode)) {
+                    this.sessionMode.next(parsed.sessionMode);
+                }
             }
         } catch {
             // Ignore parse errors
@@ -479,6 +513,7 @@ export class PomodoroService {
             JSON.stringify({
                 durations: this.durations,
                 sessionsBeforeLongBreak: this.sessionsBeforeLongBreak,
+                sessionMode: this.sessionMode.value,
             }),
         );
     }
@@ -504,8 +539,9 @@ export class PomodoroService {
     }
 
     /**
-     * Pause a running timer whenever the page is hidden, so time spent on another tab (or with the
-     * app backgrounded) is not counted as study time, and resume it as soon as the page comes back.
+     * In the lecture session mode, pause a running timer whenever the page is hidden, so time spent
+     * on another tab is not counted as study time, and resume it as soon as the page comes back. In
+     * the elsewhere mode the timer keeps running, since the studying is happening on another site.
      *
      * Only a pause this handler caused is resumed automatically: if the user paused deliberately
      * before switching away, the timer is still theirs to restart. A tab that was closed rather than
@@ -520,7 +556,7 @@ export class PomodoroService {
         }
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
-                if (this.timerState.value === 'running') {
+                if (this.sessionMode.value === 'lecture' && this.timerState.value === 'running') {
                     this.pause();
                     this.pausedByVisibility = true;
                 } else if (this.timerState.value !== 'idle') {

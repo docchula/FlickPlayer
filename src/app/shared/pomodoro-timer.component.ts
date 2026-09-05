@@ -8,9 +8,20 @@ import {
     IonIcon,
     IonInput,
     IonLabel,
+    IonSegment,
+    IonSegmentButton,
     PopoverController,
 } from '@ionic/angular/standalone';
-import {PomodoroService, DURATION_FIELDS, DurationField, PomodoroDurations} from '../pomodoro.service';
+import {
+    PomodoroService,
+    DURATION_FIELDS,
+    DurationField,
+    PomodoroDurations,
+    SESSION_MODES,
+    SessionMode,
+    SessionModeOption,
+    DEFAULT_SESSION_MODE,
+} from '../pomodoro.service';
 import {PomodoroToast} from './pomodoro-toast';
 import {AsyncPipe} from '@angular/common';
 import {addIcons} from 'ionicons';
@@ -150,6 +161,19 @@ export class PomodoroInfoPopoverComponent {
                         }
                     </div>
 
+                    <!-- Session mode -->
+                    <div class="mode-section">
+                        <ion-label class="mode-label">Session type</ion-label>
+                        <ion-segment [value]="sessionMode" (ionChange)="onSessionModeChange($event)">
+                            @for (mode of sessionModes; track mode.key) {
+                                <ion-segment-button [value]="mode.key">
+                                    <ion-label>{{ mode.label }}</ion-label>
+                                </ion-segment-button>
+                            }
+                        </ion-segment>
+                        <p class="mode-hint">{{ sessionModeHint }}</p>
+                    </div>
+
                     <!-- Duration Inputs -->
                     <div class="duration-section">
                         @for (field of durationFields; track field.key) {
@@ -256,6 +280,34 @@ export class PomodoroInfoPopoverComponent {
             margin-top: 0.5rem;
         }
 
+        .mode-section {
+            border-top: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.1));
+            padding-top: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .mode-label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--ion-color-medium);
+            margin-bottom: 0.35rem;
+        }
+
+        .mode-section ion-segment-button {
+            --padding-start: 0.25rem;
+            --padding-end: 0.25rem;
+            font-size: 0.8rem;
+            text-transform: none;
+            min-height: 2.25rem;
+        }
+
+        .mode-hint {
+            margin: 0.4rem 0 0 0;
+            font-size: 0.78rem;
+            line-height: 1.35;
+            color: var(--ion-color-medium);
+        }
+
         .duration-section {
             border-top: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.1));
             padding-top: 0.75rem;
@@ -303,6 +355,8 @@ export class PomodoroInfoPopoverComponent {
         IonIcon,
         IonInput,
         IonLabel,
+        IonSegment,
+        IonSegmentButton,
         AsyncPipe,
         FormsModule,
     ],
@@ -314,6 +368,9 @@ export class PomodoroTimerComponent implements OnInit, OnDestroy {
     durationFields: DurationField[] = DURATION_FIELDS;
     currentDurations: PomodoroDurations;
 
+    sessionModes: SessionModeOption[] = SESSION_MODES;
+    sessionMode: SessionMode = DEFAULT_SESSION_MODE;
+
     isCollapsed = true;
 
     private notificationSub: Subscription | null = null;
@@ -323,8 +380,13 @@ export class PomodoroTimerComponent implements OnInit, OnDestroy {
         addIcons({play, pause, stop, playSkipForward, chevronDown, chevronUp, informationCircleOutline, notificationsOutline});
     }
 
+    get sessionModeHint(): string {
+        return this.sessionModes.find(mode => mode.key === this.sessionMode)?.hint ?? '';
+    }
+
     ngOnInit(): void {
         this.currentDurations = this.pomodoroService.getDurations();
+        this.sessionMode = this.pomodoroService.getSessionMode();
         this.toast = new PomodoroToast();
 
         // Listen for phase notifications and display in-app toast
@@ -343,6 +405,14 @@ export class PomodoroTimerComponent implements OnInit, OnDestroy {
         this.isCollapsed = !this.isCollapsed;
         if (!this.isCollapsed) {
             this.currentDurations = this.pomodoroService.getDurations();
+        }
+    }
+
+    onSessionModeChange(event: CustomEvent<{value?: string | number}>): void {
+        const selected = this.sessionModes.find(mode => mode.key === event.detail.value);
+        if (selected) {
+            this.sessionMode = selected.key;
+            this.pomodoroService.setSessionMode(selected.key);
         }
     }
 
