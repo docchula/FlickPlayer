@@ -8,9 +8,21 @@ import {
     IonIcon,
     IonInput,
     IonLabel,
+    IonSegment,
+    IonSegmentButton,
     PopoverController,
 } from '@ionic/angular/standalone';
-import {PomodoroService, DURATION_FIELDS, DurationField, PomodoroDurations, PhaseNotification} from '../pomodoro.service';
+import {
+    PomodoroService,
+    DURATION_FIELDS,
+    DurationField,
+    PomodoroDurations,
+    SESSION_MODES,
+    SessionMode,
+    SessionModeOption,
+    DEFAULT_SESSION_MODE,
+} from '../pomodoro.service';
+import {PomodoroToast} from './pomodoro-toast';
 import {AsyncPipe} from '@angular/common';
 import {addIcons} from 'ionicons';
 import {
@@ -88,17 +100,12 @@ export class PomodoroInfoPopoverComponent {
 @Component({
     selector: 'app-pomodoro-timer',
     template: `
-        <!-- Floating notification toast for in-app & video fullscreen mode -->
-        @if (activeNotification) {
-            <div class="pomodoro-toast-overlay">
-                <ion-icon name="notifications-outline" class="toast-icon"></ion-icon>
-                <div class="toast-text">
-                    <strong>{{ activeNotification.title }}</strong>
-                    <span>{{ activeNotification.body }}</span>
-                </div>
-            </div>
-        }
-
+        <!--
+          The phase notification is not rendered here. PomodoroToast attaches it to document.body,
+          or to the fullscreen element while one is active, because .ion-page sets "contain: layout"
+          and so becomes the containing block for position:fixed descendants — a toast rendered in
+          this component is positioned against the page box instead of the viewport.
+        -->
         <ion-card class="pomodoro-card">
             <ion-card-header class="pomodoro-header" (click)="toggleCollapse()" button>
                 <ion-card-title class="pomodoro-title">
@@ -152,6 +159,19 @@ export class PomodoroInfoPopoverComponent {
                                 Session {{ pomodoroService.completedSessions$ | async }} completed
                             </div>
                         }
+                    </div>
+
+                    <!-- Session mode -->
+                    <div class="mode-section">
+                        <ion-label class="mode-label">Session type</ion-label>
+                        <ion-segment [value]="sessionMode" (ionChange)="onSessionModeChange($event)">
+                            @for (mode of sessionModes; track mode.key) {
+                                <ion-segment-button [value]="mode.key">
+                                    <ion-label>{{ mode.label }}</ion-label>
+                                </ion-segment-button>
+                            }
+                        </ion-segment>
+                        <p class="mode-hint">{{ sessionModeHint }}</p>
                     </div>
 
                     <!-- Duration Inputs -->
@@ -260,6 +280,34 @@ export class PomodoroInfoPopoverComponent {
             margin-top: 0.5rem;
         }
 
+        .mode-section {
+            border-top: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.1));
+            padding-top: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .mode-label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--ion-color-medium);
+            margin-bottom: 0.35rem;
+        }
+
+        .mode-section ion-segment-button {
+            --padding-start: 0.25rem;
+            --padding-end: 0.25rem;
+            font-size: 0.8rem;
+            text-transform: none;
+            min-height: 2.25rem;
+        }
+
+        .mode-hint {
+            margin: 0.4rem 0 0 0;
+            font-size: 0.78rem;
+            line-height: 1.35;
+            color: var(--ion-color-medium);
+        }
+
         .duration-section {
             border-top: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.1));
             padding-top: 0.75rem;
@@ -295,48 +343,8 @@ export class PomodoroInfoPopoverComponent {
             color: var(--ion-color-medium);
         }
 
-        /* Fullscreen & Floating Toast Overlay */
-        .pomodoro-toast-overlay {
-            position: fixed;
-            top: 4.5rem;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 999999;
-            background: var(--ion-color-dark, #222428);
-            color: var(--ion-color-dark-contrast, #ffffff);
-            padding: 0.75rem 1.25rem;
-            border-radius: 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            animation: slideDownFade 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            pointer-events: none;
-            max-width: 90vw;
-        }
-
-        .toast-icon {
-            font-size: 1.5rem;
-            color: var(--ion-color-warning, #ffc409);
-        }
-
-        .toast-text {
-            display: flex;
-            flex-direction: column;
-            font-size: 0.85rem;
-            line-height: 1.3;
-        }
-
-        @keyframes slideDownFade {
-            from {
-                opacity: 0;
-                transform: translate(-50%, -20px);
-            }
-            to {
-                opacity: 1;
-                transform: translate(-50%, 0);
-            }
-        }
+        /* The phase-notification toast lives outside this component's view (see template note),
+           so its styles are global — see .pomodoro-toast in global.scss. */
     `],
     imports: [
         IonCard,
@@ -347,6 +355,8 @@ export class PomodoroInfoPopoverComponent {
         IonIcon,
         IonInput,
         IonLabel,
+        IonSegment,
+        IonSegmentButton,
         AsyncPipe,
         FormsModule,
     ],
@@ -358,68 +368,51 @@ export class PomodoroTimerComponent implements OnInit, OnDestroy {
     durationFields: DurationField[] = DURATION_FIELDS;
     currentDurations: PomodoroDurations;
 
+    sessionModes: SessionModeOption[] = SESSION_MODES;
+    sessionMode: SessionMode = DEFAULT_SESSION_MODE;
+
     isCollapsed = true;
 
-    activeNotification: PhaseNotification | null = null;
     private notificationSub: Subscription | null = null;
-    private toastTimer: any = null;
+    private toast: PomodoroToast | null = null;
 
     constructor() {
         addIcons({play, pause, stop, playSkipForward, chevronDown, chevronUp, informationCircleOutline, notificationsOutline});
     }
 
+    get sessionModeHint(): string {
+        return this.sessionModes.find(mode => mode.key === this.sessionMode)?.hint ?? '';
+    }
+
     ngOnInit(): void {
         this.currentDurations = this.pomodoroService.getDurations();
+        this.sessionMode = this.pomodoroService.getSessionMode();
+        this.toast = new PomodoroToast();
 
         // Listen for phase notifications and display in-app toast
         this.notificationSub = this.pomodoroService.phaseNotification$.subscribe(notif => {
-            this.showToast(notif);
+            this.toast?.show(notif.title, notif.body);
         });
     }
 
     ngOnDestroy(): void {
         this.notificationSub?.unsubscribe();
-        if (this.toastTimer) {
-            clearTimeout(this.toastTimer);
-        }
-    }
-
-    private showToast(notif: PhaseNotification): void {
-        this.activeNotification = notif;
-        if (this.toastTimer) {
-            clearTimeout(this.toastTimer);
-        }
-
-        // Handle Fullscreen Video DOM Overlay (inject directly into active fullscreen element)
-        const fullscreenEl = typeof document !== 'undefined'
-            ? (document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).mozFullScreenElement)
-            : null;
-
-        if (fullscreenEl) {
-            let fullscreenToast = fullscreenEl.querySelector('.pomodoro-fullscreen-toast') as HTMLElement;
-            if (!fullscreenToast) {
-                fullscreenToast = document.createElement('div');
-                fullscreenToast.className = 'pomodoro-fullscreen-toast';
-                fullscreenEl.appendChild(fullscreenToast);
-            }
-            fullscreenToast.textContent = `${notif.title}: ${notif.body}`;
-            fullscreenToast.classList.add('show');
-
-            setTimeout(() => {
-                fullscreenToast?.classList.remove('show');
-            }, 5000);
-        }
-
-        // Auto hide standard in-app toast after 5 seconds
-        this.toastTimer = setTimeout(() => {
-            this.activeNotification = null;
-        }, 5000);
+        this.toast?.destroy();
+        this.toast = null;
     }
 
     toggleCollapse(): void {
         this.isCollapsed = !this.isCollapsed;
         if (!this.isCollapsed) {
             this.currentDurations = this.pomodoroService.getDurations();
+        }
+    }
+
+    onSessionModeChange(event: CustomEvent<{value?: string | number}>): void {
+        const selected = this.sessionModes.find(mode => mode.key === event.detail.value);
+        if (selected) {
+            this.sessionMode = selected.key;
+            this.pomodoroService.setSessionMode(selected.key);
         }
     }
 

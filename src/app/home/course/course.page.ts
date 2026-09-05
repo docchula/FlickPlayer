@@ -181,6 +181,16 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 },
             },
             techOrder: ['html5', 'youtube'],
+            // Keep playback in the page instead of handing off to Apple's native fullscreen player.
+            // That player renders outside the web view, so nothing in the DOM — including the
+            // Pomodoro phase notification — can be drawn over it.
+            playsinline: true,
+            // Only consulted when the browser exposes no Fullscreen API (iPhone, and the in-app
+            // web views used by the Google and Chrome apps on iOS). Without it video.js hands those
+            // browsers to the native player; with it they get video.js's own full-window mode, which
+            // keeps the page — and any overlay on it — visible. Browsers that do have the Fullscreen
+            // API are unaffected: they fullscreen the player element and overlays are placed inside it.
+            preferFullWindow: true,
         }, () => {
             this.isPlayerReady = true;
             if (this.pendingVideoToPlay) {
