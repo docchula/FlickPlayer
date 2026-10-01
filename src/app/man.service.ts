@@ -103,6 +103,27 @@ export class ManService {
             }));
     }
 
+    getVideo(videoId: string): Observable<LectureDocInfo> {
+        const body = {
+            query: `query GetVideo($id: ID) {
+                video(id: $id) {
+                    id
+                    document
+                }
+            }`,
+            variables: {id: videoId},
+        };
+        if (this.httpOptions.headers.get('Authorization').length < 30) {
+            console.error('ManService ID token is not set.');
+            return of([]);
+        }
+        return this.http.post<{ data: { videos: { data: LectureDocInfo } } }>(
+            this.getEndpointLocation() + 'graphql',
+            body,
+            this.httpOptions
+        ).pipe(map(response => response?.data?.videos?.data ?? []));
+    }
+
     getPlayRecord(year: string, course: string, courseId: string | null, stopPolling: Observable<boolean>): Observable<{
         records: PlayHistory,
         evaluations: { [key: number]: EvaluationRecord },
@@ -282,11 +303,17 @@ export interface Lecture {
     durationInMin?: number;
     history?: PlayHistoryValue;
     is_evaluated?: boolean;
+    has_document?: boolean;
     course?: {
         id: number;
         name: string;
         category: string;
     };
+}
+
+export interface LectureDocInfo {
+    id: number; // Server-side ID
+    document: string;
 }
 
 export interface JSend<A> {
