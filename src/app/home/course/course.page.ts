@@ -494,6 +494,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             componentProps: { video: this.currentVideo },
         });
         await modal.present();
+        logEvent(this.analytics, 'view_transcript', {video_id: this.currentVideo.id, video_title: this.currentVideo.title});
     }
 
     // Resolves true only if the user explicitly accepts the AI disclaimer (or accepted it within the last 7 days
