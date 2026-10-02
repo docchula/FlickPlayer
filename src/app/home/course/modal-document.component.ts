@@ -14,7 +14,7 @@ import {marked} from 'marked';
 import {Lecture, ManService} from '../../man.service';
 
 // Matches a leading YAML frontmatter block: `---` ... `---` at the very start of the document.
-const FRONTMATTER = /^﻿?---[ \t]*\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/;
+const FRONTMATTER = /^\uFEFF?---[ \t]*\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/;
 
 export interface DocHeading {
     index: number; // position among the rendered h1-h3 elements
