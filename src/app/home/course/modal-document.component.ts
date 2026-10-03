@@ -1,4 +1,4 @@
-import {Component, ElementRef, inject, Input, OnInit, ViewEncapsulation} from '@angular/core';
+import {afterNextRender, Component, ElementRef, inject, Injector, Input, OnInit, ViewEncapsulation} from '@angular/core';
 import {
     IonButton,
     IonButtons,
@@ -10,8 +10,8 @@ import {
     IonToolbar,
     ModalController,
 } from '@ionic/angular/standalone';
-import {marked} from 'marked';
 import {Lecture, ManService} from '../../man.service';
+import {markedWithMath, renderMath} from './markdown-math';
 
 // Matches a leading YAML frontmatter block: `---` ... `---` at the very start of the document.
 const FRONTMATTER = /^\uFEFF?---[ \t]*\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/;
@@ -49,6 +49,7 @@ export class ModalDocumentComponent implements OnInit {
     private manService = inject(ManService);
     private modalCtrl = inject(ModalController);
     private host = inject<ElementRef<HTMLElement>>(ElementRef);
+    private injector = inject(Injector);
 
     @Input() video: Lecture;
 
@@ -67,8 +68,10 @@ export class ModalDocumentComponent implements OnInit {
                 if (document) {
                     this.models = extractModels(document);
                     ({html: this.html, headings: this.headings} = this.addHeadingIds(
-                        marked.parse(stripFrontmatter(document), {async: false}),
+                        markedWithMath.parse(stripFrontmatter(document), {async: false}),
                     ));
+                    // The math placeholders only exist in the DOM once the sanitized HTML has been rendered.
+                    afterNextRender(() => renderMath(this.host.nativeElement), {injector: this.injector});
                     this.activeHeading = this.headings.length ? 0 : -1;
                 }
                 this.loading = false;
