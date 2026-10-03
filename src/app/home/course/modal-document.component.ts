@@ -1,15 +1,5 @@
 import {afterNextRender, Component, ElementRef, inject, Injector, Input, OnInit, ViewEncapsulation} from '@angular/core';
-import {
-    IonButton,
-    IonButtons,
-    IonContent,
-    IonHeader,
-    IonNote,
-    IonSpinner,
-    IonTitle,
-    IonToolbar,
-    ModalController,
-} from '@ionic/angular/standalone';
+import {IonButton, IonButtons, IonContent, IonHeader, IonNote, IonSpinner, IonTitle, IonToolbar, ModalController} from '@ionic/angular/standalone';
 import {Lecture, ManService} from '../../man.service';
 import {markedWithMath, renderMath} from './markdown-math';
 
@@ -30,11 +20,34 @@ const unquote =(value: string | undefined) => value?.trim().replace(/^(["'])(.*)
 
 // Reads the AI model names from the frontmatter without a full YAML parser (only two simple scalar fields are needed).
 export function extractModels(markdown: string): {transcription: string | null, article: string | null} {
-    const frontmatter = markdown.match(FRONTMATTER)?.[0] ?? '';
-    return {
-        transcription: unquote(frontmatter.match(/^transcription:[ \t]*\r?\n(?:[ \t]+.*\r?\n)*?[ \t]+model:[ \t]*(.+?)[ \t]*\r?$/m)?.[1]),
-        article: unquote(frontmatter.match(/^article_model:[ \t]*(.+?)[ \t]*\r?$/m)?.[1]),
-    };
+    const lines = (markdown.match(FRONTMATTER)?.[0] ?? '').split(/\r?\n/);
+    let article: string | null = null;
+    const transcription: string[] = [];
+    let inTranscription = false;
+    let inModelList = false;
+    // Scanned line by line: a single regex over the whole block overflows Firefox's regex stack on long frontmatter.
+    for (const line of lines) {
+        if (/^\S/.test(line)) {
+            inTranscription = /^transcription:[ \t]*$/.test(line);
+            inModelList = false;
+            article ??= unquote(line.match(/^article_model:[ \t]*(.+?)[ \t]*$/)?.[1]);
+        } else if (inTranscription) {
+            const model = line.match(/^[ \t]+model:[ \t]*(.*?)[ \t]*$/);
+            const item = line.match(/^[ \t]+-[ \t]+(.+?)[ \t]*$/);
+            if (model) {
+                inModelList = !model[1];
+                const value = unquote(model[1]);
+                if (value) {
+                    transcription.push(value);
+                }
+            } else if (inModelList && item) {
+                transcription.push(unquote(item[1]) ?? '');
+            } else {
+                inModelList = false;
+            }
+        }
+    }
+    return {transcription: transcription.filter(Boolean).join(', ') || null, article};
 }
 
 @Component({
