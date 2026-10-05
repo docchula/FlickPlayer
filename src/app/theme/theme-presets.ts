@@ -1,5 +1,7 @@
 import {
     BackgroundFitOption,
+    BackgroundPictureModeOption,
+    SlideshowIntervalOption,
     ThemeShade,
     ThemeShadeOption,
     BaseScheme,
@@ -392,12 +394,33 @@ export const BACKGROUND_FIT_OPTIONS: BackgroundFitOption[] = [
     {value: 'contain', label: 'Fit'},
 ];
 
+export const BACKGROUND_PICTURE_MODES: BackgroundPictureModeOption[] = [
+    {value: 'none', label: 'None'},
+    {value: 'single', label: 'Picture'},
+    {value: 'slideshow', label: 'Slideshow'},
+];
+
+/** The steps Windows offers for its desktop slideshow, plus two hours. */
+export const SLIDESHOW_INTERVALS: SlideshowIntervalOption[] = [
+    {minutes: 1, label: '1 minute'},
+    {minutes: 10, label: '10 minutes'},
+    {minutes: 30, label: '30 minutes'},
+    {minutes: 60, label: '1 hour'},
+    {minutes: 120, label: '2 hours'},
+    {minutes: 360, label: '6 hours'},
+    {minutes: 1440, label: '1 day'},
+];
+
 export const DEFAULT_BACKGROUND: ThemeBackground = {
     color: null,
     imageId: null,
     imageOpacity: 0.35,
     imageBlur: 2,
     imageFit: 'cover',
+    pictureMode: 'none',
+    slideshowMinutes: 30,
+    slideshowShuffle: false,
+    slideshowSince: 0,
 };
 
 /** The seed the standard modes use: no accent, so the base palette renders untouched. */

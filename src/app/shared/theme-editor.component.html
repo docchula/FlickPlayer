@@ -126,21 +126,62 @@
 
         <section class="theme-section">
             <h2 class="section-title">Background picture</h2>
-            <p class="section-hint">Optional, and kept on this device only.</p>
+            <p class="section-hint">Kept on this device only. Pictures stay in the folder until you delete them.</p>
 
-            <div class="image-row">
-                <ion-button fill="outline" size="small" class="accent-button" (click)="pickImage()">
-                    <ion-icon name="image-outline" slot="start"></ion-icon>
-                    {{ (backgroundImageUrl$ | async) ? 'Replace' : 'Upload' }}
-                </ion-button>
-                @if (backgroundImageUrl$ | async; as imageUrl) {
-                    <img class="image-preview" [src]="imageUrl" alt="Current background"/>
-                    <ion-button fill="clear" size="small" color="danger" (click)="removeImage()">Remove</ion-button>
+            <ion-segment [value]="settings.custom.background.pictureMode" (ionChange)="onPictureModeChange($event)">
+                @for (option of themeService.pictureModes; track option.value) {
+                    <ion-segment-button [value]="option.value">
+                        <ion-label>{{ option.label }}</ion-label>
+                    </ion-segment-button>
                 }
+            </ion-segment>
+            <p class="hint">
+                @switch (settings.custom.background.pictureMode) {
+                    @case ('single') { Tap a picture to show it. }
+                    @case ('slideshow') { Every picture in the folder takes a turn. }
+                    @default { No picture on the page. Your pictures are still kept below. }
+                }
+            </p>
+
+            <div class="picture-grid">
+                @for (picture of pictures; track picture.id; let index = $index) {
+                    <div class="picture-tile" [class.selected]="picture.id === (shownPictureId$ | async)">
+                        <button type="button" class="picture-button"
+                                [disabled]="settings.custom.background.pictureMode === 'slideshow'"
+                                [attr.aria-label]="'Show picture ' + (index + 1)"
+                                (click)="showPicture(picture.id)">
+                            <img [src]="picture.url" alt=""/>
+                        </button>
+                        <button type="button" class="picture-delete"
+                                [attr.aria-label]="'Delete picture ' + (index + 1)"
+                                (click)="deletePicture(picture.id)">
+                            <ion-icon name="close"></ion-icon>
+                        </button>
+                    </div>
+                }
+                <button type="button" class="picture-tile picture-add" aria-label="Add pictures" (click)="pickImage()">
+                    <ion-icon name="add"></ion-icon>
+                </button>
             </div>
-            <input #fileInput class="file-input" type="file" accept="image/*" (change)="onImageSelected($event)"/>
+            <input #fileInput class="file-input" type="file" accept="image/*" multiple (change)="onImageSelected($event)"/>
             @if (imageError) {
                 <ion-text color="danger"><p class="hint">{{ imageError }}</p></ion-text>
+            }
+
+            @if (settings.custom.background.pictureMode === 'slideshow') {
+                <ion-item lines="none" class="control-item">
+                    <ion-select label="Change picture every" interface="popover"
+                                [value]="settings.custom.background.slideshowMinutes"
+                                (ionChange)="onIntervalChange($event)">
+                        @for (option of themeService.slideshowIntervals; track option.minutes) {
+                            <ion-select-option [value]="option.minutes">{{ option.label }}</ion-select-option>
+                        }
+                    </ion-select>
+                </ion-item>
+                <ion-item lines="none" class="control-item">
+                    <ion-toggle [checked]="settings.custom.background.slideshowShuffle"
+                                (ionChange)="onShuffleChange($event)">Shuffle</ion-toggle>
+                </ion-item>
             }
 
             @if (backgroundImageUrl$ | async) {

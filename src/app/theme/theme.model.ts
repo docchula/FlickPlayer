@@ -3,6 +3,8 @@ export type ThemeMode = 'light' | 'dark' | 'system' | 'custom';
 export type ColorScheme = 'light' | 'dark';
 export type SchemePreference = ColorScheme | 'system';
 export type BackgroundFit = 'cover' | 'contain';
+/** No picture, one chosen picture, or every stored picture in turn. */
+export type BackgroundPictureMode = 'none' | 'single' | 'slideshow';
 
 /**
  * How a chosen colour is drawn. Every colour belongs to one of these by how light it is, and
@@ -37,10 +39,16 @@ export interface ThemeSeed {
 
 export interface ThemeBackground {
     color: string | null;
+    /** The picture shown in 'single' mode, kept while another mode is chosen. */
     imageId: string | null;
     imageOpacity: number;
     imageBlur: number;
     imageFit: BackgroundFit;
+    pictureMode: BackgroundPictureMode;
+    slideshowMinutes: number;
+    slideshowShuffle: boolean;
+    /** When the slideshow's timing was last started, so it carries on across reloads. */
+    slideshowSince: number;
 }
 
 /**
@@ -90,6 +98,16 @@ export interface ThemeModeOption {
 
 export interface BackgroundFitOption {
     value: BackgroundFit;
+    label: string;
+}
+
+export interface BackgroundPictureModeOption {
+    value: BackgroundPictureMode;
+    label: string;
+}
+
+export interface SlideshowIntervalOption {
+    minutes: number;
     label: string;
 }
 

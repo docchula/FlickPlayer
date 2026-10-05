@@ -28,8 +28,9 @@ function transact<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => I
 }
 
 /**
- * Background images stay on the device that uploaded them. Only the small display settings
- * travel between devices, so nothing large is ever written to the server.
+ * Every background picture the user adds, kept on the device that added it until they delete it.
+ * Only the small display settings travel between devices, so nothing large is ever written to
+ * the server. Identifiers are ULIDs, so sorting them puts the pictures in the order they came.
  */
 export class BackgroundImageStore {
     save(id: string, image: Blob): Promise<void> {
@@ -48,17 +49,8 @@ export class BackgroundImageStore {
 
     keys(): Promise<string[]> {
         return transact<IDBValidKey[]>('readonly', store => store.getAllKeys())
-            .then(keys => keys.map(String))
+            .then(keys => keys.map(String).sort())
             .catch(() => []);
-    }
-
-    /** Drop every stored image except the one still in use. */
-    async prune(keepId: string | null): Promise<void> {
-        for (const key of await this.keys()) {
-            if (key !== keepId) {
-                await this.remove(key);
-            }
-        }
     }
 }
 

@@ -9,6 +9,7 @@ import {BLACK, isValidColor, parseColor, readableOn, toHex} from './theme/color'
 import {buildThemeVariables, CssVariables, shadeForColor} from './theme/palette';
 import {
     BACKGROUND_FIT_OPTIONS,
+    BACKGROUND_PICTURE_MODES,
     DEFAULT_BACKGROUND,
     defaultCustomTheme,
     defaultThemeSettings,
@@ -23,10 +24,12 @@ import {
     OWN_COLOR_TEMPLATE_ID,
     THEME_MODES,
     THEME_TEMPLATES,
+    SLIDESHOW_INTERVALS,
 } from './theme/theme-presets';
 import {BackgroundImageStore, prepareBackgroundImage} from './theme/background-store';
 import {
     BackgroundFit,
+    BackgroundPictureMode,
     ColorScheme,
     ThemeShade,
     ThemeTemplate,
@@ -48,6 +51,12 @@ export const SAVED_COLORS_KEY_PREFIX = 'flickThemeColors_';
 /** The shade last chosen for each colour and template. Kept on the device, like the rest. */
 export const SHADE_MEMORY_KEY_PREFIX = 'flickThemeShades_';
 export const BACKGROUND_IMAGE_CLASS = 'flick-has-background-image';
+/** Fades the picture out while the slideshow swaps it, for the length of BACKGROUND_FADE_MS. */
+export const BACKGROUND_FADING_CLASS = 'flick-background-fading';
+/** Kept in step with the opacity transition on the picture in the global stylesheet. */
+export const BACKGROUND_FADE_MS = 600;
+/** The longest delay setTimeout honours; anything above it fires at once. */
+const MAX_TIMEOUT_MS = 2 ** 31 - 1;
 /**
  * Set on the document element for the length of a change of theme. The colour variables are
  * interpolated while it is present, so every surface reading them moves together instead of
@@ -119,6 +128,64 @@ function sanitizeColor(value: unknown): string | null {
     return typeof value === 'string' && isValidColor(value) ? value : null;
 }
 
+/** Which picture shows is decided on each device, since the pictures themselves stay there. */
+type DevicePicture = Pick<ThemeBackground,
+    'imageId' | 'pictureMode' | 'slideshowMinutes' | 'slideshowShuffle' | 'slideshowSince'>;
+
+function devicePicture(background: ThemeBackground): DevicePicture {
+    const {imageId, pictureMode, slideshowMinutes, slideshowShuffle, slideshowSince} = background;
+    return {imageId, pictureMode, slideshowMinutes, slideshowShuffle, slideshowSince};
+}
+
+/** The same order every time for a given seed, so a reload lands on the same picture. */
+function shuffled(ids: string[], seed: number): string[] {
+    const order = [...ids];
+    let state = seed >>> 0;
+    const random = () => {
+        state = (state + 0x6D2B79F5) >>> 0;
+        let t = state;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+    }
+    return order;
+}
+
+/**
+ * The slideshow picture at a moment, and when it next changes. The pictures go round in the
+ * order they were added, or with shuffle on, in a new order each time round so that every
+ * picture shows once before any repeats.
+ */
+export function slideshowPicture(ids: string[], background: ThemeBackground, now: number): {
+    id: string | null,
+    changesAt: number | null,
+} {
+    if (!ids.length) {
+        return {id: null, changesAt: null};
+    }
+    const interval = background.slideshowMinutes * 60000;
+    const since = Math.min(background.slideshowSince, now);
+    const step = Math.floor((now - since) / interval);
+    const round = Math.floor(step / ids.length);
+    // Two pictures can only alternate, and shuffling them would show one twice running.
+    let order = ids;
+    if (background.slideshowShuffle && ids.length > 2) {
+        order = shuffled(ids, since + round);
+        // A new round must not open on the picture the last one ended with.
+        if (round > 0 && order[0] === shuffled(ids, since + round - 1)[ids.length - 1]) {
+            order = [order[1], order[0], ...order.slice(2)];
+        }
+    }
+    return {
+        id: order[step % ids.length],
+        changesAt: ids.length > 1 ? since + (step + 1) * interval : null,
+    };
+}
+
 function sanitizeSeed(raw: unknown): ThemeSeed {
     const seed = (raw ?? {}) as Partial<ThemeSeed>;
     return {
@@ -156,6 +223,15 @@ function sanitizeCustom(raw: unknown): CustomTheme {
             imageFit: BACKGROUND_FIT_OPTIONS.some(option => option.value === background.imageFit)
                 ? background.imageFit as BackgroundFit
                 : DEFAULT_BACKGROUND.imageFit,
+            // Saved before there was a choice, a stored picture meant it was on show.
+            pictureMode: BACKGROUND_PICTURE_MODES.some(option => option.value === background.pictureMode)
+                ? background.pictureMode as BackgroundPictureMode
+                : (typeof background.imageId === 'string' ? 'single' : 'none'),
+            slideshowMinutes: SLIDESHOW_INTERVALS.some(option => option.minutes === background.slideshowMinutes)
+                ? background.slideshowMinutes as number
+                : DEFAULT_BACKGROUND.slideshowMinutes,
+            slideshowShuffle: background.slideshowShuffle === true,
+            slideshowSince: Math.max(0, Number(background.slideshowSince) || 0),
         },
     };
 }
@@ -185,16 +261,24 @@ export class ThemeService {
     readonly standardModes = STANDARD_MODES;
     readonly shades = THEME_SHADES;
     readonly backgroundFitOptions = BACKGROUND_FIT_OPTIONS;
+    readonly pictureModes = BACKGROUND_PICTURE_MODES;
+    readonly slideshowIntervals = SLIDESHOW_INTERVALS;
 
     private readonly settingsSubject = new BehaviorSubject<ThemeSettings>(defaultThemeSettings());
     private readonly schemeSubject = new BehaviorSubject<ColorScheme>('light');
     private readonly imageUrlSubject = new BehaviorSubject<string | null>(null);
     private readonly savedColorsSubject = new BehaviorSubject<string[]>([]);
+    private readonly pictureIdsSubject = new BehaviorSubject<string[]>([]);
+    private readonly shownPictureSubject = new BehaviorSubject<string | null>(null);
 
     readonly settings$: Observable<ThemeSettings> = this.settingsSubject.asObservable();
     readonly scheme$: Observable<ColorScheme> = this.schemeSubject.asObservable();
     readonly backgroundImageUrl$: Observable<string | null> = this.imageUrlSubject.asObservable();
     readonly savedColors$: Observable<string[]> = this.savedColorsSubject.asObservable();
+    /** Every picture kept on this device, oldest first. */
+    readonly pictureIds$: Observable<string[]> = this.pictureIdsSubject.asObservable();
+    /** The picture on the page right now, which the slideshow moves along. */
+    readonly shownPictureId$: Observable<string | null> = this.shownPictureSubject.asObservable();
     readonly mode$: Observable<ThemeMode> = this.settings$.pipe(
         map(settings => settings.mode),
         distinctUntilChanged(),
@@ -209,6 +293,9 @@ export class ThemeService {
     private animationTimer: number | null = null;
     private tweenFrame: number | null = null;
     private objectUrl: string | null = null;
+    private pictureTicket = 0;
+    private slideshowTimer: number | null = null;
+    private libraryLoaded = this.reloadLibrary();
     private darkQuery: MediaQueryList | null = null;
 
     constructor() {
@@ -216,8 +303,17 @@ export class ThemeService {
         this.darkQuery = window.matchMedia?.('(prefers-color-scheme: dark)') ?? null;
         const onSystemChange = () => this.apply(this.settingsSubject.value, false);
         this.darkQuery?.addEventListener('change', onSystemChange);
+        // A hidden tab's timers are held back, so a slideshow catches up when the page returns.
+        const onVisible = () => {
+            if (!document.hidden) {
+                void this.showBackgroundPicture(this.resolve(this.settings).background, true);
+            }
+        };
+        document.addEventListener('visibilitychange', onVisible);
         destroyRef.onDestroy(() => {
             this.darkQuery?.removeEventListener('change', onSystemChange);
+            document.removeEventListener('visibilitychange', onVisible);
+            this.clearSlideshowTimer();
             if (this.animationTimer !== null) {
                 clearTimeout(this.animationTimer);
             }
@@ -331,21 +427,89 @@ export class ThemeService {
         this.updateCustom({background: {...this.settings.custom.background, imageBlur: clamp(imageBlur, 0, 20)}});
     }
 
-    /** Store an uploaded picture on this device and use it as the page background. */
-    async setBackgroundImage(file: File): Promise<void> {
-        const image = await prepareBackgroundImage(file);
-        const imageId = ulid();
-        await this.imageStore.save(imageId, image);
-        await this.imageStore.prune(imageId);
-        this.updateCustom({background: {...this.settings.custom.background, imageId}});
+    /**
+     * Add pictures to this device's folder. The last one goes on show, unless a slideshow is
+     * running, which takes it into the rotation instead. Returns how many could not be used.
+     */
+    async addBackgroundImages(files: File[]): Promise<number> {
+        let failed = 0;
+        let added: string | null = null;
+        for (const file of files) {
+            try {
+                const image = await prepareBackgroundImage(file);
+                const id = ulid();
+                await this.imageStore.save(id, image);
+                added = id;
+            } catch {
+                failed++;
+            }
+        }
+        await (this.libraryLoaded = this.reloadLibrary());
+        if (added) {
+            const background = this.settings.custom.background;
+            this.updateCustom({
+                background: background.pictureMode === 'slideshow'
+                    ? {...background}
+                    : {...background, imageId: added, pictureMode: 'single'},
+            });
+        }
+        return failed;
     }
 
-    async clearBackgroundImage(): Promise<void> {
-        const {imageId} = this.settings.custom.background;
-        if (imageId) {
-            await this.imageStore.remove(imageId);
+    /** Show one picture from the folder, stopping a slideshow. */
+    showPicture(imageId: string): void {
+        this.updateCustom({background: {...this.settings.custom.background, imageId, pictureMode: 'single'}});
+    }
+
+    /** Delete a picture from this device's folder for good. The only way a picture is removed. */
+    async deletePicture(id: string): Promise<void> {
+        await this.imageStore.remove(id);
+        await (this.libraryLoaded = this.reloadLibrary());
+        const ids = this.pictureIdsSubject.value;
+        const background = this.settings.custom.background;
+        this.update({
+            custom: {
+                ...this.settings.custom,
+                background: {
+                    ...background,
+                    imageId: background.imageId === id ? ids[ids.length - 1] ?? null : background.imageId,
+                    pictureMode: ids.length ? background.pictureMode : 'none',
+                },
+            },
+        });
+    }
+
+    loadPicture(id: string): Promise<Blob | null> {
+        return this.imageStore.load(id);
+    }
+
+    /** None hides the picture without forgetting it; a slideshow starts from its first picture. */
+    setPictureMode(pictureMode: BackgroundPictureMode): void {
+        const background = this.settings.custom.background;
+        const ids = this.pictureIdsSubject.value;
+        this.updateCustom({
+            background: {
+                ...background,
+                pictureMode,
+                imageId: background.imageId ?? ids[ids.length - 1] ?? null,
+                slideshowSince: pictureMode === 'slideshow' ? Date.now() : background.slideshowSince,
+            },
+        });
+    }
+
+    setSlideshowInterval(slideshowMinutes: number): void {
+        if (!SLIDESHOW_INTERVALS.some(option => option.minutes === slideshowMinutes)) {
+            return;
         }
-        this.updateCustom({background: {...this.settings.custom.background, imageId: null}});
+        this.updateCustom({
+            background: {...this.settings.custom.background, slideshowMinutes, slideshowSince: Date.now()},
+        });
+    }
+
+    setSlideshowShuffle(slideshowShuffle: boolean): void {
+        this.updateCustom({
+            background: {...this.settings.custom.background, slideshowShuffle, slideshowSince: Date.now()},
+        });
     }
 
     get savedColors(): string[] {
@@ -417,7 +581,7 @@ export class ThemeService {
 
     /**
      * What "Restore default settings" means for the theme: plain light, with the default colours
-     * and no background picture.
+     * and no picture on show. The pictures themselves stay in this device's folder.
      */
     restorePlainLight(): void {
         this.update({...defaultThemeSettings(), mode: 'light'});
@@ -508,7 +672,7 @@ export class ThemeService {
         this.schemeSubject.next(scheme);
         this.settingsSubject.next(settings);
         this.writeAppliedMirror(scheme, variables);
-        void this.applyBackgroundImage(background.imageId);
+        void this.showBackgroundPicture(background, false);
 
         if (persist) {
             this.writeLocal(settings);
@@ -589,16 +753,71 @@ export class ThemeService {
         }
     }
 
-    private async applyBackgroundImage(imageId: string | null): Promise<void> {
-        const image = imageId ? await this.imageStore.load(imageId) : null;
-        this.releaseObjectUrl();
-        if (image) {
-            this.objectUrl = URL.createObjectURL(image);
+    private async reloadLibrary(): Promise<void> {
+        this.pictureIdsSubject.next(await this.imageStore.keys());
+    }
+
+    /**
+     * Put the right picture on the page for this background and time the slideshow's next
+     * change. A later call supersedes an earlier one still loading, so a quick run of theme
+     * edits cannot leave an older picture on show.
+     */
+    private async showBackgroundPicture(background: ThemeBackground, fade: boolean): Promise<void> {
+        const ticket = ++this.pictureTicket;
+        this.clearSlideshowTimer();
+        document.body.classList.remove(BACKGROUND_FADING_CLASS);
+
+        let imageId = background.pictureMode === 'single' ? background.imageId : null;
+        if (background.pictureMode === 'slideshow') {
+            await this.libraryLoaded;
+            if (ticket !== this.pictureTicket) {
+                return;
+            }
+            const next = slideshowPicture(this.pictureIdsSubject.value, background, Date.now());
+            imageId = next.id;
+            if (next.changesAt !== null) {
+                this.slideshowTimer = window.setTimeout(
+                    () => void this.showBackgroundPicture(this.resolve(this.settings).background, true),
+                    Math.min(next.changesAt - Date.now(), MAX_TIMEOUT_MS),
+                );
+            }
         }
+        if (imageId === this.shownPictureSubject.value && (imageId === null || this.objectUrl)) {
+            return;
+        }
+
+        const image = imageId ? await this.imageStore.load(imageId) : null;
+        if (ticket !== this.pictureTicket) {
+            return;
+        }
+        const url = image ? URL.createObjectURL(image) : null;
+        if (url && fade && this.objectUrl && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+            const decoder = new Image();
+            decoder.src = url;
+            await decoder.decode().catch(() => undefined);
+            document.body.classList.add(BACKGROUND_FADING_CLASS);
+            await new Promise(resolve => setTimeout(resolve, BACKGROUND_FADE_MS));
+            if (ticket !== this.pictureTicket) {
+                URL.revokeObjectURL(url);
+                return;
+            }
+        }
+
+        this.releaseObjectUrl();
+        this.objectUrl = url;
         const root = document.documentElement;
-        root.style.setProperty('--flick-background-image', this.objectUrl ? `url("${this.objectUrl}")` : 'none');
-        document.body.classList.toggle(BACKGROUND_IMAGE_CLASS, !!this.objectUrl);
-        this.imageUrlSubject.next(this.objectUrl);
+        root.style.setProperty('--flick-background-image', url ? `url("${url}")` : 'none');
+        document.body.classList.toggle(BACKGROUND_IMAGE_CLASS, !!url);
+        document.body.classList.remove(BACKGROUND_FADING_CLASS);
+        this.shownPictureSubject.next(url ? imageId : null);
+        this.imageUrlSubject.next(url);
+    }
+
+    private clearSlideshowTimer(): void {
+        if (this.slideshowTimer !== null) {
+            clearTimeout(this.slideshowTimer);
+            this.slideshowTimer = null;
+        }
     }
 
     private releaseObjectUrl(): void {
@@ -624,8 +843,8 @@ export class ThemeService {
     }
 
     /**
-     * Adopt the theme another device set more recently. The picture never travels, so
-     * whatever this device shows stays in place.
+     * Adopt the theme another device set more recently. Pictures never travel, so whatever
+     * this device shows, and how, stays in place.
      */
     private async pullRemote(uid: string, sending: boolean): Promise<void> {
         const remote = await this.sync.read();
@@ -640,7 +859,7 @@ export class ThemeService {
             ...incoming,
             custom: {
                 ...incoming.custom,
-                background: {...incoming.custom.background, imageId: this.settings.custom.background.imageId},
+                background: {...incoming.custom.background, ...devicePicture(this.settings.custom.background)},
             },
         };
         const colors = (remote.theme as {colors?: unknown}).colors;
@@ -657,7 +876,7 @@ export class ThemeService {
         }
     }
 
-    /** Everything but the picture, which is too large to send and stays where it was chosen. */
+    /** Everything but the pictures, which are too large to send and stay where they were added. */
     private queueSync(settings: ThemeSettings): void {
         if (this.userId === GUEST_ID) {
             return;
@@ -666,7 +885,7 @@ export class ThemeService {
         this.sync.queue({
             theme: {
                 ...settings,
-                custom: {...custom, background: {...custom.background, imageId: null}},
+                custom: {...custom, background: {...custom.background, ...devicePicture(DEFAULT_BACKGROUND)}},
                 colors: this.savedColors,
             },
         }, true);

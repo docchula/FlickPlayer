@@ -186,6 +186,12 @@ body.flick-has-background-image {
     background-position: center center;
     filter: blur(var(--flick-background-blur));
     transform: scale(1.06);
+    /* Kept in step with BACKGROUND_FADE_MS, which waits this out before a slideshow swaps. */
+    transition: opacity 0.6s ease;
+  }
+
+  &.flick-background-fading ion-app::before {
+    opacity: 0;
   }
 
   ion-app::after {

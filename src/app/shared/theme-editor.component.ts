@@ -1,6 +1,7 @@
-import {Component, ElementRef, inject, ViewChild} from '@angular/core';
+import {Component, ElementRef, inject, OnDestroy, ViewChild} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
 import {
+    AlertController,
     IonButton,
     IonButtons,
     IonContent,
@@ -11,8 +12,11 @@ import {
     IonRange,
     IonSegment,
     IonSegmentButton,
+    IonSelect,
+    IonSelectOption,
     IonText,
     IonTitle,
+    IonToggle,
     IonToolbar,
     ModalController,
 } from '@ionic/angular/standalone';
@@ -22,14 +26,20 @@ import {
     close,
     colorFillOutline,
     colorPaletteOutline,
-    imageOutline,
     moonOutline,
     phonePortraitOutline,
     sunnyOutline,
 } from 'ionicons/icons';
 import {OWN_COLOR_TEMPLATE_ID, ThemeService} from '../theme.service';
 import {ACCENT_SWATCHES} from '../theme/theme-presets';
-import {BackgroundFit, ThemeMode, ThemeSettings, ThemeShade, ThemeTemplate} from '../theme/theme.model';
+import {
+    BackgroundFit,
+    BackgroundPictureMode,
+    ThemeMode,
+    ThemeSettings,
+    ThemeShade,
+    ThemeTemplate,
+} from '../theme/theme.model';
 
 function detailValue<T>(event: Event): T | undefined {
     return (event as CustomEvent<{value?: T}>).detail?.value;
@@ -41,26 +51,44 @@ function detailValue<T>(event: Event): T | undefined {
     styleUrls: ['./theme-editor.component.scss'],
     imports: [
         IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon, IonContent,
-        IonSegment, IonSegmentButton, IonLabel, IonItem, IonRange, IonText, AsyncPipe,
+        IonSegment, IonSegmentButton, IonLabel, IonItem, IonRange, IonText, IonSelect, IonSelectOption,
+        IonToggle, AsyncPipe,
     ],
 })
-export class ThemeEditorComponent {
+export class ThemeEditorComponent implements OnDestroy {
     protected themeService = inject(ThemeService);
     private modalCtrl = inject(ModalController);
+    private alertCtrl = inject(AlertController);
 
     @ViewChild('fileInput') fileInput: ElementRef<HTMLInputElement>;
 
     protected readonly accentSwatches = ACCENT_SWATCHES;
     protected readonly settings$ = this.themeService.settings$;
     protected readonly backgroundImageUrl$ = this.themeService.backgroundImageUrl$;
+    protected readonly shownPictureId$ = this.themeService.shownPictureId$;
     protected readonly savedColors$ = this.themeService.savedColors$;
     protected imageError: string | null = null;
+    /** The folder's pictures with a URL each, for the thumbnails. */
+    protected pictures: {id: string, url: string}[] = [];
+
+    private thumbnailUrls = new Map<string, string>();
+    private thumbnailTicket = 0;
+    private readonly pictureSubscription = this.themeService.pictureIds$
+        .subscribe(ids => void this.loadThumbnails(ids));
 
     constructor() {
         addIcons({
-            add, close, colorFillOutline, colorPaletteOutline, imageOutline,
+            add, close, colorFillOutline, colorPaletteOutline,
             sunnyOutline, moonOutline, phonePortraitOutline,
         });
+    }
+
+    ngOnDestroy(): void {
+        this.pictureSubscription.unsubscribe();
+        for (const url of this.thumbnailUrls.values()) {
+            URL.revokeObjectURL(url);
+        }
+        this.thumbnailUrls.clear();
     }
 
     close(): void {
@@ -167,20 +195,79 @@ export class ThemeEditorComponent {
 
     async onImageSelected(event: Event): Promise<void> {
         const input = event.target as HTMLInputElement;
-        const file = input.files?.[0];
+        const files = Array.from(input.files ?? []);
         input.value = '';
-        if (!file) {
+        if (!files.length) {
             return;
         }
-        try {
-            await this.themeService.setBackgroundImage(file);
-        } catch {
-            this.imageError = 'That picture could not be used. Please try another one.';
+        const failed = await this.themeService.addBackgroundImages(files);
+        if (failed === files.length) {
+            this.imageError = files.length === 1
+                ? 'That picture could not be used. Please try another one.'
+                : 'Those pictures could not be used. Please try others.';
+        } else if (failed) {
+            this.imageError = `${failed} of the ${files.length} pictures could not be used.`;
         }
     }
 
-    async removeImage(): Promise<void> {
+    onPictureModeChange(event: Event): void {
+        const value = detailValue<BackgroundPictureMode>(event);
+        if (value) {
+            this.themeService.setPictureMode(value);
+        }
+    }
+
+    onIntervalChange(event: Event): void {
+        const value = detailValue<number>(event);
+        if (typeof value === 'number') {
+            this.themeService.setSlideshowInterval(value);
+        }
+    }
+
+    onShuffleChange(event: Event): void {
+        this.themeService.setSlideshowShuffle((event as CustomEvent<{checked: boolean}>).detail.checked);
+    }
+
+    showPicture(id: string): void {
         this.imageError = null;
-        await this.themeService.clearBackgroundImage();
+        this.themeService.showPicture(id);
+    }
+
+    /** Deleting is the one thing that takes a picture out of the folder, so it asks first. */
+    async deletePicture(id: string): Promise<void> {
+        const alert = await this.alertCtrl.create({
+            header: 'Delete this picture?',
+            message: 'It will be removed from this device. This cannot be undone.',
+            buttons: [
+                {text: 'Cancel', role: 'cancel'},
+                {text: 'Delete', role: 'destructive', handler: () => void this.themeService.deletePicture(id)},
+            ],
+        });
+        await alert.present();
+    }
+
+    /** A later list supersedes one still loading, and each URL is made once and revoked once. */
+    private async loadThumbnails(ids: string[]): Promise<void> {
+        const ticket = ++this.thumbnailTicket;
+        for (const id of ids) {
+            if (!this.thumbnailUrls.has(id)) {
+                const blob = await this.themeService.loadPicture(id);
+                if (blob && !this.thumbnailUrls.has(id)) {
+                    this.thumbnailUrls.set(id, URL.createObjectURL(blob));
+                }
+            }
+        }
+        if (ticket !== this.thumbnailTicket) {
+            return;
+        }
+        for (const [id, url] of this.thumbnailUrls) {
+            if (!ids.includes(id)) {
+                URL.revokeObjectURL(url);
+                this.thumbnailUrls.delete(id);
+            }
+        }
+        this.pictures = ids
+            .filter(id => this.thumbnailUrls.has(id))
+            .map(id => ({id, url: this.thumbnailUrls.get(id) as string}));
     }
 }

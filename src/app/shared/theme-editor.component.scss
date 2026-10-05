@@ -109,19 +109,74 @@
     padding-inline-end: 0;
 }
 
-.image-row {
-    display: flex;
-    align-items: center;
+.picture-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
     gap: 0.5rem;
-    flex-wrap: wrap;
+    margin: 0.75rem 0 0.5rem;
 }
 
-.image-preview {
-    width: 4rem;
-    height: 2.5rem;
+.picture-tile {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid transparent;
+}
+
+.picture-tile.selected {
+    border-color: var(--flick-accent-text);
+}
+
+.picture-button {
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+}
+
+.picture-button:disabled {
+    cursor: default;
+}
+
+.picture-button img {
+    display: block;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    border-radius: 6px;
-    border: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+}
+
+/* Big enough to hit with a fingertip on a tablet, small enough to leave the picture visible. */
+.picture-delete {
+    position: absolute;
+    top: 0.2rem;
+    right: 0.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(var(--ion-color-dark-rgb), 0.6);
+    color: var(--ion-color-dark-contrast);
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.picture-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--flick-accent-text);
+    background: transparent;
+    color: var(--flick-accent-text);
+    font-size: 1.5rem;
+    cursor: pointer;
 }
 
 .file-input {
