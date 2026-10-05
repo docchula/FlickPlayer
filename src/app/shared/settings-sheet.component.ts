@@ -23,6 +23,7 @@ import {
     timerOutline,
 } from 'ionicons/icons';
 import {SettingsService} from '../settings.service';
+import {RestoreDefaultsService} from '../restore-defaults.service';
 import {FONT_SAMPLE, fontOptionClass} from '../settings/fonts';
 import {AppSettings} from '../settings/settings.model';
 
@@ -57,6 +58,7 @@ function detailChecked(event: Event): boolean {
 })
 export class SettingsSheetComponent {
     protected settingsService = inject(SettingsService);
+    private restoreDefaults = inject(RestoreDefaultsService);
     private modalCtrl = inject(ModalController);
 
     protected readonly settings$ = this.settingsService.settings$;
@@ -95,7 +97,8 @@ export class SettingsSheetComponent {
         this.settingsService.setPomodoroResetHour(detailValue<number>(event));
     }
 
+    /** Puts back this sheet's settings and anything else that listens, such as the theme. */
     reset(): void {
-        this.settingsService.reset();
+        this.restoreDefaults.restore();
     }
 }

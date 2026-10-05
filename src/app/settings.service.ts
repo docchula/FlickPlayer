@@ -5,6 +5,7 @@ import {distinctUntilChanged, filter, map} from 'rxjs/operators';
 import {findFont, FONT_OPTIONS, fontHref, previewHref, previewRules} from './settings/fonts';
 import {defaultSettings, RESET_HOURS, WIDGETS} from './settings/settings-presets';
 import {sanitizeSettings} from './settings/sanitize';
+import {RestoreDefaultsService} from './restore-defaults.service';
 import {AppliedFont, AppSettings, FontOption, WidgetOption} from './settings/settings.model';
 
 /** Settings stay on the device that set them, so the key carries no account id. */
@@ -55,6 +56,7 @@ export class SettingsService {
         const subscription = inject(Router).events
             .pipe(filter(event => event instanceof NavigationEnd))
             .subscribe(() => setTimeout(() => this.probe()));
+        subscription.add(inject(RestoreDefaultsService).restore$.subscribe(() => this.reset()));
         inject(DestroyRef).onDestroy(() => {
             clearTimeout(timer);
             subscription.unsubscribe();
