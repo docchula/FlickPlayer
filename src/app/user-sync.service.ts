@@ -19,11 +19,13 @@ export const SYNC_READ_TTL_MS = 5 * 60 * 1000;
  */
 export const SYNC_URGENT_DELAY_MS = 2000;
 /**
- * Study time accumulates continuously, so it is sent at most once per this interval. Leaving
- * the page does not break the limit either: what is held back is still on the device, and it
- * goes out the next time the app opens there.
+ * Study time accumulates continuously, so a device sends it at most once per this interval,
+ * which caps it at 48 writes a day. Leaving or reloading the page does not break the limit:
+ * what is held back is still on the device, and it goes out the next time the app opens there.
  */
-export const SYNC_BACKGROUND_DELAY_MS = 15 * 60 * 1000;
+export const SYNC_BACKGROUND_DELAY_MS = 30 * 60 * 1000;
+/** When this device last wrote, so the interval holds across reloads. */
+export const SYNC_SENT_AT_KEY = 'flickSyncSentAt';
 
 export interface RemoteUserSettings {
     theme?: unknown;
@@ -71,7 +73,7 @@ export class UserSyncService {
     private enabled = true;
     private pending: Record<string, unknown> = {};
     private urgentPending = false;
-    private lastSentAt = 0;
+    private lastSentAt = this.readSentAt();
     private timer: ReturnType<typeof setTimeout> | null = null;
     private dueAt = 0;
     /** Every caller opening the app at once shares the one read in flight. */
@@ -185,7 +187,7 @@ export class UserSyncService {
         if (!uid || !this.enabled || !Object.keys(patch).length) {
             return;
         }
-        this.lastSentAt = Date.now();
+        this.writeSentAt(Date.now());
         this.mergeCache(uid, patch);
         setDoc(doc(this.firestore, USER_SYNC_COLLECTION, uid), patch, {merge: true})
             .catch(() => this.disable());
@@ -206,6 +208,23 @@ export class UserSyncService {
         if (this.timer) {
             clearTimeout(this.timer);
             this.timer = null;
+        }
+    }
+
+    private readSentAt(): number {
+        try {
+            return Number(localStorage.getItem(SYNC_SENT_AT_KEY)) || 0;
+        } catch {
+            return 0;
+        }
+    }
+
+    private writeSentAt(at: number): void {
+        this.lastSentAt = at;
+        try {
+            localStorage.setItem(SYNC_SENT_AT_KEY, String(at));
+        } catch {
+            // Without it the interval still holds within this page.
         }
     }
 
