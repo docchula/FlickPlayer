@@ -45,7 +45,7 @@
                                 [value]="settings.fontId"
                                 (ionChange)="onFontChange($event)">
                         @for (font of settingsService.fonts; track font.id) {
-                            <ion-select-option [value]="font.id">{{ font.name }}</ion-select-option>
+                            <ion-select-option [value]="font.id" [class]="fontOptionClass(font)">{{ font.name }}</ion-select-option>
                         }
                     </ion-select>
                 </ion-item>
@@ -73,6 +73,6 @@
             </section>
         }
 
-        <ion-button expand="block" fill="clear" class="quiet-button" (click)="reset()">Start over</ion-button>
+        <ion-button expand="block" fill="clear" class="quiet-button" (click)="reset()">Restore default settings</ion-button>
     }
 </ion-content>

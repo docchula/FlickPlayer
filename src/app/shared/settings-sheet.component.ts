@@ -23,7 +23,7 @@ import {
     timerOutline,
 } from 'ionicons/icons';
 import {SettingsService} from '../settings.service';
-import {FONT_SAMPLE} from '../settings/fonts';
+import {FONT_SAMPLE, fontOptionClass} from '../settings/fonts';
 import {AppSettings} from '../settings/settings.model';
 
 /** Ionic hands its payload over in `detail`, which the DOM event types do not describe. */
@@ -64,6 +64,7 @@ export class SettingsSheetComponent {
     protected readonly pomodoroAvailable$ = this.settingsService.pomodoroAvailable$;
     protected readonly font$ = this.settingsService.font$;
     protected readonly sample = FONT_SAMPLE;
+    protected readonly fontOptionClass = fontOptionClass;
 
     constructor() {
         addIcons({close, timerOutline, calendarOutline, colorPaletteOutline});

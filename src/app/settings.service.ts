@@ -2,7 +2,7 @@ import {DestroyRef, inject, Injectable} from '@angular/core';
 import {NavigationEnd, Router} from '@angular/router';
 import {BehaviorSubject, Observable} from 'rxjs';
 import {distinctUntilChanged, filter, map} from 'rxjs/operators';
-import {findFont, FONT_OPTIONS, fontHref, previewHref} from './settings/fonts';
+import {findFont, FONT_OPTIONS, fontHref, previewHref, previewRules} from './settings/fonts';
 import {defaultSettings, RESET_HOURS, WIDGETS} from './settings/settings-presets';
 import {sanitizeSettings} from './settings/sanitize';
 import {AppliedFont, AppSettings, FontOption, WidgetOption} from './settings/settings.model';
@@ -16,6 +16,7 @@ export const HIDDEN_ATTRIBUTE = 'data-hidden';
 
 const FONT_LINK_PREFIX = 'flick-font-';
 const PREVIEW_LINK_ID = 'flick-font-previews';
+const PREVIEW_STYLE_ID = 'flick-font-preview-rules';
 
 /**
  * The device's own preferences: which widgets to show, the font to read the app in, and when
@@ -111,6 +112,12 @@ export class SettingsService {
     /** Draw the picker in the real faces, in one request small enough to be worth it. */
     loadFontPreviews(): void {
         this.ensureLink(PREVIEW_LINK_ID, previewHref());
+        if (!document.getElementById(PREVIEW_STYLE_ID)) {
+            const style = document.createElement('style');
+            style.id = PREVIEW_STYLE_ID;
+            style.textContent = previewRules();
+            document.head.appendChild(style);
+        }
     }
 
     /**

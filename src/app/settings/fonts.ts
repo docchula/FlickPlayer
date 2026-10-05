@@ -42,6 +42,28 @@ export function fontHref(font: FontOption): string {
     return GOOGLE_CSS_URL + '?family=' + encodeURIComponent(font.google) + ':' + WEIGHTS + '&display=swap';
 }
 
+/** Marks a picker option so its row in the popover can be drawn in that face. */
+export function fontOptionClass(font: FontOption): string {
+    return 'flick-font-option-' + font.id;
+}
+
+/**
+ * Ionic's popover copies each option's classes onto its row but not its styles, so every row
+ * takes its face from a rule keyed by that class. Default names Ionic's own font rather than
+ * inheriting, which would otherwise show whichever font is currently chosen.
+ */
+export function previewRules(): string {
+    return FONT_OPTIONS.map(font => {
+        const selector = '.' + fontOptionClass(font);
+        let rules = selector + ' { --ion-font-family: ' + (font.stack || 'var(--ion-default-font)') + '; }';
+        if (font.scale) {
+            rules += ' ' + selector + ' ion-radio { font-size: ' + font.scale + 'em; }';
+        }
+
+        return rules;
+    }).join('\n');
+}
+
 /**
  * One request covering every downloadable face in the picker, cut down with Google's `text`
  * parameter to the handful of characters the picker actually draws. That turns opening the

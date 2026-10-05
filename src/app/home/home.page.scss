@@ -188,3 +188,13 @@ p {
   font-weight: 600;
   letter-spacing: 0.02em;
 }
+
+/* iOS centres the title between fixed gutters, which the toolbar buttons outgrow on a phone.
+   There the title moves to the start and gives way to them instead of running underneath. */
+@media (max-width: 575.98px) {
+  ion-title.ios {
+    position: static;
+    padding-inline: 16px 0;
+    text-align: start;
+  }
+}
