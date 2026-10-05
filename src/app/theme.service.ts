@@ -3,6 +3,7 @@ import {BehaviorSubject, Observable} from 'rxjs';
 import {distinctUntilChanged, map} from 'rxjs/operators';
 import {ulid} from 'ulid';
 import {AuthService} from './auth.service';
+import {UserSyncService} from './user-sync.service';
 import {BLACK, isValidColor, parseColor, readableOn, toHex} from './theme/color';
 import {buildThemeVariables, CssVariables, shadeForColor} from './theme/palette';
 import {
@@ -41,7 +42,7 @@ import {
 /** Mirrors the last applied palette so index.html can paint it before Angular boots. */
 export const APPLIED_THEME_KEY = 'flickThemeApplied';
 export const THEME_STORAGE_KEY_PREFIX = 'flickTheme_';
-/** Colours the reader has kept. They stay on this device, like the background picture. */
+/** Colours the reader has kept. They travel with the theme; the background picture does not. */
 export const SAVED_COLORS_KEY_PREFIX = 'flickThemeColors_';
 /** The shade last chosen for each colour and template. Kept on the device, like the rest. */
 export const SHADE_MEMORY_KEY_PREFIX = 'flickThemeShades_';
@@ -103,6 +104,14 @@ function normalizeColor(value: unknown): string | null {
     }
     const parsed = parseColor(value);
     return parsed ? toHex(parsed) : null;
+}
+
+function sanitizeSavedColors(entries: unknown[]): string[] {
+    const colors = entries
+        // Entries kept while a colour also carried a page of its own are read as colours.
+        .map(entry => normalizeColor(typeof entry === 'string' ? entry : (entry as {color?: unknown})?.color))
+        .filter((color): color is string => color !== null);
+    return [...new Set(colors)].slice(0, MAX_SAVED_COLORS);
 }
 
 function sanitizeColor(value: unknown): string | null {
@@ -168,6 +177,7 @@ export function sanitizeSettings(raw: unknown): ThemeSettings {
 })
 export class ThemeService {
     private imageStore = new BackgroundImageStore();
+    private sync = inject(UserSyncService);
 
     readonly modes = THEME_MODES;
     readonly templates = THEME_TEMPLATES;
@@ -352,8 +362,7 @@ export class ThemeService {
         }
         const kept = [normalized, ...this.savedColors.filter(saved => saved !== normalized)]
             .slice(0, MAX_SAVED_COLORS);
-        this.savedColorsSubject.next(kept);
-        this.writeSavedColors(kept);
+        this.setSavedColors(kept);
     }
 
     removeColor(color: string): void {
@@ -361,9 +370,17 @@ export class ThemeService {
         if (!normalized) {
             return;
         }
-        const kept = this.savedColors.filter(saved => saved !== normalized);
-        this.savedColorsSubject.next(kept);
-        this.writeSavedColors(kept);
+        this.setSavedColors(this.savedColors.filter(saved => saved !== normalized));
+    }
+
+    /** The colours share the theme's timestamp, so the newest device wins for both at once. */
+    private setSavedColors(colors: string[]): void {
+        this.savedColorsSubject.next(colors);
+        this.writeSavedColors(colors);
+        const settings = {...this.settings, updatedAt: Date.now()};
+        this.settingsSubject.next(settings);
+        this.writeLocal(settings);
+        this.queueSync(settings);
     }
 
     /** The page the custom theme renders, whether it was named or derived. */
@@ -484,6 +501,7 @@ export class ThemeService {
 
         if (persist) {
             this.writeLocal(settings);
+            this.queueSync(settings);
         }
     }
 
@@ -585,14 +603,66 @@ export class ThemeService {
         }
         const guestSettings = this.userId === GUEST_ID ? this.settings : null;
         this.userId = uid;
+        this.sync.attach(uid);
         const stored = this.readLocal(uid);
         const adoptGuest = guestSettings && guestSettings.updatedAt > stored.updatedAt;
-        this.apply(adoptGuest ? guestSettings : stored, adoptGuest);
         this.savedColorsSubject.next(this.readSavedColors(uid));
         this.shadeMemory = this.readShadeMemory(uid);
+        this.apply(adoptGuest ? guestSettings : stored, adoptGuest);
+        void this.pullRemote(uid, !!adoptGuest);
+    }
+
+    /**
+     * Adopt the theme another device set more recently. The picture never travels, so
+     * whatever this device shows stays in place.
+     */
+    private async pullRemote(uid: string, sending: boolean): Promise<void> {
+        const remote = await this.sync.read();
+        if (this.userId !== uid || !remote?.theme) {
+            return;
+        }
+        const incoming = sanitizeSettings(remote.theme);
+        if (incoming.updatedAt <= this.settings.updatedAt) {
+            return;
+        }
+        const settings: ThemeSettings = {
+            ...incoming,
+            custom: {
+                ...incoming.custom,
+                background: {...incoming.custom.background, imageId: this.settings.custom.background.imageId},
+            },
+        };
+        const colors = (remote.theme as {colors?: unknown}).colors;
+        if (Array.isArray(colors)) {
+            const kept = sanitizeSavedColors(colors);
+            this.savedColorsSubject.next(kept);
+            this.writeSavedColors(kept);
+        }
+        this.apply(settings, false);
+        this.writeLocal(settings);
+        // A guest theme already on its way out is older than this one, so it must not land.
+        if (sending) {
+            this.queueSync(settings);
+        }
+    }
+
+    /** Everything but the picture, which is too large to send and stays where it was chosen. */
+    private queueSync(settings: ThemeSettings): void {
+        if (this.userId === GUEST_ID) {
+            return;
+        }
+        const custom = settings.custom;
+        this.sync.queue({
+            theme: {
+                ...settings,
+                custom: {...custom, background: {...custom.background, imageId: null}},
+                colors: this.savedColors,
+            },
+        }, true);
     }
 
     private detachUser(): void {
+        this.sync.detach();
         this.userId = GUEST_ID;
         this.apply(this.readLocal(GUEST_ID), false);
         this.savedColorsSubject.next(this.readSavedColors(GUEST_ID));
@@ -654,14 +724,7 @@ export class ThemeService {
         try {
             const raw = localStorage.getItem(SAVED_COLORS_KEY_PREFIX + uid);
             const parsed: unknown = raw ? JSON.parse(raw) : null;
-            if (!Array.isArray(parsed)) {
-                return [];
-            }
-            const colors = parsed
-                // Entries kept while a colour also carried a page of its own are read as colours.
-                .map(entry => normalizeColor(typeof entry === 'string' ? entry : entry?.color))
-                .filter((color): color is string => color !== null);
-            return [...new Set(colors)].slice(0, MAX_SAVED_COLORS);
+            return Array.isArray(parsed) ? sanitizeSavedColors(parsed) : [];
         } catch {
             return [];
         }

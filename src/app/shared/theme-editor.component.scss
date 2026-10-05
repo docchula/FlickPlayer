@@ -151,6 +151,11 @@ ion-segment-button {
     --indicator-color: var(--flick-accent-text);
 }
 
+/* iOS fills the chosen segment instead of underlining it, so the label needs the page behind it. */
+ion-segment-button.ios {
+    --indicator-color: var(--ion-background-color, #fff);
+}
+
 .saved-swatch {
     position: relative;
     display: inline-flex;
