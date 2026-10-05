@@ -4,6 +4,7 @@ import {distinctUntilChanged, map} from 'rxjs/operators';
 import {ulid} from 'ulid';
 import {AuthService} from './auth.service';
 import {UserSyncService} from './user-sync.service';
+import {RestoreDefaultsService} from './restore-defaults.service';
 import {BLACK, isValidColor, parseColor, readableOn, toHex} from './theme/color';
 import {buildThemeVariables, CssVariables, shadeForColor} from './theme/palette';
 import {
@@ -237,6 +238,8 @@ export class ThemeService {
                 this.detachUser();
             }
         });
+
+        inject(RestoreDefaultsService).restore$.subscribe(() => this.restorePlainLight());
     }
 
     get settings(): ThemeSettings {
@@ -410,6 +413,14 @@ export class ThemeService {
 
     resetToDefault(): void {
         this.update(defaultThemeSettings());
+    }
+
+    /**
+     * What "Restore default settings" means for the theme: plain light, with the default colours
+     * and no background picture.
+     */
+    restorePlainLight(): void {
+        this.update({...defaultThemeSettings(), mode: 'light'});
     }
 
     /** Palette for a seed without applying it, used to preview a template in the picker. */
