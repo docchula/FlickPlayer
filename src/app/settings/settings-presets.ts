@@ -11,7 +11,7 @@ export const WIDGETS: WidgetOption[] = [
     {
         key: 'pomodoro',
         label: 'Pomodoro timer',
-        description: 'The focus timer on a course page.',
+        description: 'The focus timer for study sessions.',
         icon: 'timer-outline',
         selectors: ['app-pomodoro-timer'],
     },
