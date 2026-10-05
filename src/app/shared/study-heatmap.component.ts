@@ -1,4 +1,4 @@
-import {AfterViewInit, Component, ElementRef, inject, OnDestroy, OnInit, ViewChild} from '@angular/core';
+import {AfterViewInit, Component, ElementRef, HostListener, inject, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {
     IonButton,
     IonCard,
@@ -80,6 +80,7 @@ export class StudyHeatmapComponent implements OnInit, AfterViewInit, OnDestroy {
     private popoverCtrl = inject(PopoverController);
 
     @ViewChild('scroller') scroller: ElementRef<HTMLDivElement>;
+    private lastWidth = window.innerWidth;
 
     readonly ranges = HEATMAP_RANGES;
     readonly weekdayLabels = WEEKDAY_LABELS;
@@ -117,6 +118,18 @@ export class StudyHeatmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
     ngOnDestroy() {
         this.subscription?.unsubscribe();
+    }
+
+    /**
+     * Turning a tablet changes the room the calendar has, so today is brought back into view.
+     * Height alone changes whenever iOS hides its toolbar, which is no reason to move.
+     */
+    @HostListener('window:resize')
+    onResize() {
+        if (window.innerWidth !== this.lastWidth) {
+            this.lastWidth = window.innerWidth;
+            this.scrollToToday();
+        }
     }
 
     async openGuide(event: Event) {

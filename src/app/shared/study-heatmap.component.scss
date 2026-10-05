@@ -66,6 +66,11 @@
     --indicator-color: var(--flick-accent-text, var(--accent));
 }
 
+/* iOS fills the chosen segment instead of underlining it, so the label needs the page behind it. */
+.range-segment ion-segment-button.ios {
+    --indicator-color: var(--ion-background-color, #fff);
+}
+
 .stat-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));

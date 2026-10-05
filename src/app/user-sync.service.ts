@@ -13,9 +13,16 @@ export const SYNC_ENABLED_KEY = 'userSyncEnabled';
  * at most once per this interval however many times the app is opened or reloaded.
  */
 export const SYNC_READ_TTL_MS = 5 * 60 * 1000;
-/** A settled preference is worth sending promptly; it happens rarely. */
+/**
+ * A preference is sent once it has been left alone this long, so dragging a slider or a colour
+ * picker costs one write rather than one per step.
+ */
 export const SYNC_URGENT_DELAY_MS = 2000;
-/** Study time accumulates continuously, so it is only sent on this cadence, or on the way out. */
+/**
+ * Study time accumulates continuously, so it is sent at most once per this interval. Leaving
+ * the page does not break the limit either: what is held back is still on the device, and it
+ * goes out the next time the app opens there.
+ */
 export const SYNC_BACKGROUND_DELAY_MS = 15 * 60 * 1000;
 
 export interface RemoteUserSettings {
@@ -63,8 +70,12 @@ export class UserSyncService {
     private userId: string | null = null;
     private enabled = true;
     private pending: Record<string, unknown> = {};
+    private urgentPending = false;
+    private lastSentAt = 0;
     private timer: ReturnType<typeof setTimeout> | null = null;
     private dueAt = 0;
+    /** Every caller opening the app at once shares the one read in flight. */
+    private reading: Promise<RemoteUserSettings | null> | null = null;
 
     constructor() {
         const remoteConfig = inject(RemoteConfig, {optional: true});
@@ -79,15 +90,15 @@ export class UserSyncService {
             }
         }
 
-        const flush = () => this.flush();
-        window.addEventListener('pagehide', flush);
+        const leave = () => this.flush(false);
+        window.addEventListener('pagehide', leave);
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
-                this.flush();
+                leave();
             }
         });
         inject(DestroyRef).onDestroy(() => {
-            window.removeEventListener('pagehide', flush);
+            window.removeEventListener('pagehide', leave);
             this.flush();
         });
     }
@@ -121,6 +132,13 @@ export class UserSyncService {
             this.activeSubject.next(true);
             return cached.data;
         }
+        this.reading ??= this.fetch(uid, cached).finally(() => {
+            this.reading = null;
+        });
+        return this.reading;
+    }
+
+    private async fetch(uid: string, cached: CachedSettings | null): Promise<RemoteUserSettings | null> {
         try {
             const snapshot = await getDoc(doc(this.firestore, USER_SYNC_COLLECTION, uid));
             const data = (snapshot.data() ?? {}) as RemoteUserSettings;
@@ -142,25 +160,41 @@ export class UserSyncService {
             return;
         }
         mergePatch(this.pending, patch);
-        this.schedule(urgent ? SYNC_URGENT_DELAY_MS : SYNC_BACKGROUND_DELAY_MS);
+        if (urgent) {
+            this.urgentPending = true;
+            this.schedule(SYNC_URGENT_DELAY_MS, true);
+        } else {
+            this.schedule(SYNC_BACKGROUND_DELAY_MS);
+        }
     }
 
-    flush(): void {
-        this.clearTimer();
+    /**
+     * Send whatever is waiting. Leaving the page (`force` false) sends a preference straight
+     * away, but holds study time back while the last write is recent, so switching apps over
+     * and over never adds writes.
+     */
+    flush(force = true): void {
         const uid = this.userId;
+        if (!force && !this.urgentPending && Date.now() - this.lastSentAt < SYNC_BACKGROUND_DELAY_MS) {
+            return;
+        }
+        this.clearTimer();
         const patch = this.pending;
         this.pending = {};
+        this.urgentPending = false;
         if (!uid || !this.enabled || !Object.keys(patch).length) {
             return;
         }
+        this.lastSentAt = Date.now();
         this.mergeCache(uid, patch);
         setDoc(doc(this.firestore, USER_SYNC_COLLECTION, uid), patch, {merge: true})
             .catch(() => this.disable());
     }
 
-    private schedule(delay: number): void {
+    /** A `restart` waits for changes to stop; otherwise the earliest send already due holds. */
+    private schedule(delay: number, restart = false): void {
         const due = Date.now() + delay;
-        if (this.timer && this.dueAt <= due) {
+        if (this.timer && this.dueAt <= due && !restart) {
             return;
         }
         this.clearTimer();

@@ -107,6 +107,14 @@ function sanitizeSyncedDevices(raw: unknown, skipDeviceId: string): SyncedDevice
     return devices;
 }
 
+/** Whether the shared copy already has every day this device would send. */
+function holdsDays(stored: unknown, days: SyncedDayMap): boolean {
+    const copy = (stored ?? {}) as Record<string, Partial<SyncedDay> | undefined>;
+    return Object.entries(days).every(([date, day]) => copy[date]?.seconds === day.seconds
+        && copy[date]?.videos === day.videos
+        && copy[date]?.pomodoros === day.pomodoros);
+}
+
 /**
  * The calendar shown is this device's own record plus every other device's, added together.
  * Each device only ever writes its own entry, so no device can overwrite another's history
@@ -222,8 +230,13 @@ export class StudyStatsService {
 
         inject(AuthService).user.subscribe(user => {
             if (user?.uid) {
+                // The user stream also fires on every hourly token refresh, which is no reason
+                // to spend another read.
+                const arriving = this.currentUserId !== user.uid;
                 this.loadForUser(user.uid);
-                void this.pullRemote();
+                if (arriving) {
+                    void this.pullRemote();
+                }
             } else if (this.currentUserId !== this.GUEST_ID) {
                 this.clearForUser();
             }
@@ -269,6 +282,11 @@ export class StudyStatsService {
         this.sync.attach(this.currentUserId);
         const remote = await this.sync.read();
         this.otherDevices = sanitizeSyncedDevices(remote?.study?.devices, this.deviceId);
+        // Study time held back when the page last closed is still here; send what is missing.
+        if (remote && !holdsDays(remote.study?.devices?.[this.deviceId], this.syncPayload())) {
+            this.syncDirty = true;
+            this.save();
+        }
         this.publish(false);
     }
 
