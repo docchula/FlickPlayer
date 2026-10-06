@@ -14,18 +14,21 @@
         <section class="theme-section">
             <h2 class="section-title">Ready-made</h2>
             <p class="section-hint">Tap one to start from it. Changing a colour below makes it your own.</p>
-            <div class="template-row">
-                @for (template of themeService.templates; track template.id) {
-                    <button type="button" class="template-option"
-                            [class.selected]="template.id === settings.custom.templateId"
-                            [attr.aria-pressed]="template.id === settings.custom.templateId"
-                            [attr.aria-label]="template.name + '. ' + template.description"
-                            (click)="selectTemplate(template.id)">
-                        <span class="swatch swatch-template" [style]="templateSwatch(template)"></span>
-                        <span class="template-name">{{ template.name }}</span>
-                    </button>
-                }
-            </div>
+            @for (group of themeService.templateGroups; track group.value) {
+                <h3 class="template-group-label">{{ group.label }}</h3>
+                <div class="template-row">
+                    @for (template of templatesIn(group.value); track template.id) {
+                        <button type="button" class="template-option"
+                                [class.selected]="template.id === settings.custom.templateId"
+                                [attr.aria-pressed]="template.id === settings.custom.templateId"
+                                [attr.aria-label]="template.name + '. ' + template.description"
+                                (click)="selectTemplate(template.id)">
+                            <span class="swatch swatch-template" [style]="templateSwatch(template)"></span>
+                            <span class="template-name">{{ template.name }}</span>
+                        </button>
+                    }
+                </div>
+            }
         </section>
 
         <section class="theme-section">
@@ -57,21 +60,34 @@
                 }
                 @if (role === 'background') {
                     <button type="button" class="choice-chip"
-                            [class.selected]="isDerivedPage(settings, 'light')"
-                            [attr.aria-pressed]="isDerivedPage(settings, 'light')"
-                            (click)="useDerivedPage('light')">
-                        <ion-icon name="sunny-outline" aria-hidden="true"></ion-icon>
-                        Light
-                    </button>
-                    <button type="button" class="choice-chip"
-                            [class.selected]="isDerivedPage(settings, 'dark')"
-                            [attr.aria-pressed]="isDerivedPage(settings, 'dark')"
-                            (click)="useDerivedPage('dark')">
-                        <ion-icon name="moon-outline" aria-hidden="true"></ion-icon>
-                        Dark
-                    </button>
+                            [class.selected]="isAutoPage(settings)"
+                            [attr.aria-pressed]="isAutoPage(settings)"
+                            (click)="useAutoPage(settings)">Auto</button>
                 }
             </div>
+
+            @if (role === 'primary') {
+                <div class="shade-block" role="group" aria-labelledby="custom-shade-label">
+                    <span id="custom-shade-label" class="shade-label">Custom theme shade</span>
+                    <div class="shade-row">
+                        <button type="button" id="custom-shade-light" class="choice-chip"
+                                [class.selected]="isShade(settings, 'light')"
+                                [attr.aria-pressed]="isShade(settings, 'light')"
+                                (click)="useShade('light')">
+                            <ion-icon name="sunny-outline" aria-hidden="true"></ion-icon>
+                            Light
+                        </button>
+                        <button type="button" id="custom-shade-dark" class="choice-chip"
+                                [class.selected]="isShade(settings, 'dark')"
+                                [attr.aria-pressed]="isShade(settings, 'dark')"
+                                (click)="useShade('dark')">
+                            <ion-icon name="moon-outline" aria-hidden="true"></ion-icon>
+                            Dark
+                        </button>
+                    </div>
+                    <p class="section-hint shade-hint">{{ customShadeHint }}</p>
+                </div>
+            }
 
             <div class="swatch-row">
                 @for (swatch of roleSwatches; track swatch) {

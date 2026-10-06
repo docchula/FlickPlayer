@@ -22,6 +22,7 @@ import {
     OWN_COLOR_TEMPLATE_ID,
     THEME_MODES,
     THEME_TEMPLATES,
+    THEME_TEMPLATE_GROUPS,
     SLIDESHOW_INTERVALS,
 } from './theme/theme-presets';
 import {BackgroundImageStore, prepareBackgroundImage} from './theme/background-store';
@@ -253,6 +254,7 @@ export class ThemeService {
 
     readonly modes = THEME_MODES;
     readonly templates = THEME_TEMPLATES;
+    readonly templateGroups = THEME_TEMPLATE_GROUPS;
     readonly backgroundFitOptions = BACKGROUND_FIT_OPTIONS;
     readonly pictureModes = BACKGROUND_PICTURE_MODES;
     readonly slideshowIntervals = SLIDESHOW_INTERVALS;

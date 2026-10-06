@@ -14,6 +14,7 @@ import {
     ThemeModeOption,
     ThemeSettings,
     ThemeTemplate,
+    ThemeTemplateGroupOption,
 } from './theme.model';
 
 /**
@@ -209,6 +210,20 @@ export const UNIVERSITY_PAGE = '#fff0f5';
 export const FACULTY_PAGE = '#f2f6f4';
 
 /**
+ * Single-colour templates, each a button colour on a pale page of the same hue. The accents
+ * are deep enough to read as text on their own page, so they are drawn exactly as listed.
+ */
+const COLOUR_TEMPLATES: {id: string, name: string, accent: string, page: string}[] = [
+    {id: 'red', name: 'Red', accent: '#c62828', page: '#fdf0f0'},
+    {id: 'orange', name: 'Orange', accent: '#c2410c', page: '#fff4ec'},
+    {id: 'gold', name: 'Gold', accent: '#a16207', page: '#fdf8e7'},
+    {id: 'teal', name: 'Teal', accent: '#0f766e', page: '#eef8f6'},
+    {id: 'blue', name: 'Blue', accent: '#1d5fd1', page: '#eef4fb'},
+    {id: 'purple', name: 'Purple', accent: '#7c3aed', page: '#f5f0fe'},
+    {id: 'slate', name: 'Slate', accent: '#475569', page: '#f3f5f8'},
+];
+
+/**
  * Ready-made colour templates. Each names the page it is drawn on and the colour everything
  * else is drawn in, so a pairing can be offered either way round.
  */
@@ -217,6 +232,7 @@ export const THEME_TEMPLATES: ThemeTemplate[] = [
         id: 'university',
         name: 'Pink',
         description: 'Pink page with pink buttons.',
+        group: 'brand',
         seed: {accent: UNIVERSITY_ACCENT, companion: null, tertiary: null, surfaceTint: null, intensity: 1},
         background: UNIVERSITY_PAGE,
         variables: {
@@ -337,6 +353,7 @@ export const THEME_TEMPLATES: ThemeTemplate[] = [
         id: 'faculty',
         name: 'Green',
         description: 'Green page with green buttons.',
+        group: 'brand',
         seed: {accent: FACULTY_ACCENT, companion: null, tertiary: null, surfaceTint: null, intensity: 1},
         background: FACULTY_PAGE,
     },
@@ -344,6 +361,7 @@ export const THEME_TEMPLATES: ThemeTemplate[] = [
         id: 'university-faculty',
         name: 'Pink & Green',
         description: 'Pink page with green buttons.',
+        group: 'brand',
         seed: {
             accent: FACULTY_ACCENT,
             companion: null,
@@ -357,6 +375,7 @@ export const THEME_TEMPLATES: ThemeTemplate[] = [
         id: 'faculty-university',
         name: 'Green & Pink',
         description: 'Green page with pink buttons.',
+        group: 'brand',
         seed: {
             accent: UNIVERSITY_ACCENT,
             companion: null,
@@ -366,6 +385,19 @@ export const THEME_TEMPLATES: ThemeTemplate[] = [
         },
         background: FACULTY_PAGE,
     },
+    ...COLOUR_TEMPLATES.map(({id, name, accent, page}): ThemeTemplate => ({
+        id,
+        name,
+        description: `${name} page with ${name.toLowerCase()} buttons.`,
+        group: 'colour',
+        seed: {accent, companion: null, tertiary: null, surfaceTint: null, intensity: 1},
+        background: page,
+    })),
+];
+
+export const THEME_TEMPLATE_GROUPS: ThemeTemplateGroupOption[] = [
+    {value: 'brand', label: 'Faculty & university'},
+    {value: 'colour', label: 'Colours'},
 ];
 
 /** Used when the colour comes from the picker rather than a template. */
@@ -405,9 +437,17 @@ export const COLOR_ROLES: ColorRoleOption[] = [
     {
         value: 'background',
         label: 'Background',
-        hint: 'The page behind everything. Light and Dark are tinted with your primary colour; a colour you pick is used exactly.',
+        hint: 'The page behind everything. Auto works it out from your primary colour, light or dark as set under Primary; a colour you pick is used exactly.',
     },
 ];
+
+/**
+ * Shown beside the Light and Dark choices under Primary, which only set how the custom theme
+ * draws its colour. The app's own light and dark modes live in the theme menu.
+ */
+export const CUSTOM_SHADE_HINT =
+    'Only for this custom theme: draws your primary colour on a light or dark page. '
+    + 'The app\'s own Light and Dark modes are in the theme menu.';
 
 /** A colour picked in the editor tints the page as fully as a template does. */
 export const OWN_COLOR_INTENSITY = 1;

@@ -4,6 +4,7 @@ import {
     BASE_SCHEMES,
     DEFAULT_BACKGROUND,
     DEFAULT_SERIES_COLORS,
+    MIN_ACCENT_CONTRAST,
     MIN_MUTED_CONTRAST,
     MIN_SERIES_CONTRAST,
     MIN_TEXT_CONTRAST,
@@ -118,5 +119,14 @@ describe('buildThemeVariables', () => {
         const levels = [0, 1, 2, 3, 4].map(level => variables[`--flick-heat-${level}`]);
         expect(new Set(levels).size).toBe(levels.length);
         expect(levels[4]).toBe(variables['--flick-accent']);
+    });
+
+    it('should keep every template readable on its own page', () => {
+        for (const template of THEME_TEMPLATES) {
+            const variables = build(template.seed, 'light', {...DEFAULT_BACKGROUND, color: template.background});
+            const page = variables['--ion-background-color'];
+            expect(ratio(variables['--ion-text-color'], page)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+            expect(ratio(variables['--flick-accent-text'], page)).toBeGreaterThanOrEqual(MIN_ACCENT_CONTRAST);
+        }
     });
 });

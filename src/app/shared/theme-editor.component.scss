@@ -315,3 +315,44 @@ ion-segment-button.ios {
     color: var(--flick-accent-text);
     font-weight: 600;
 }
+
+.template-group-label {
+    margin: 0.75rem 0 0.45rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--flick-muted-text);
+}
+
+.template-group-label:first-of-type {
+    margin-top: 0;
+}
+
+/* Set apart from the colour picker so the Light and Dark choices read as the custom theme's
+   own setting rather than the app's light and dark modes. */
+.shade-block {
+    margin: 0 0 0.75rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+    border-radius: 10px;
+    background: var(--flick-surface);
+}
+
+.shade-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--flick-muted-text);
+}
+
+.shade-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.shade-hint {
+    margin: 0.45rem 0 0;
+}

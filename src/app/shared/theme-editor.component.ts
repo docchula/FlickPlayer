@@ -24,7 +24,7 @@ import {addIcons} from 'ionicons';
 import {add, close, moonOutline, sunnyOutline} from 'ionicons/icons';
 import {ThemeService} from '../theme.service';
 import {CssVariables} from '../theme/palette';
-import {ACCENT_SWATCHES, COLOR_ROLES, PAGE_SWATCHES} from '../theme/theme-presets';
+import {ACCENT_SWATCHES, COLOR_ROLES, CUSTOM_SHADE_HINT, PAGE_SWATCHES} from '../theme/theme-presets';
 import {
     BackgroundFit,
     BackgroundPictureMode,
@@ -32,6 +32,7 @@ import {
     CustomTheme,
     ThemeSettings,
     ThemeTemplate,
+    ThemeTemplateGroup,
 } from '../theme/theme.model';
 
 function detailValue<T>(event: Event): T | undefined {
@@ -56,6 +57,7 @@ export class ThemeEditorComponent implements OnDestroy {
     @ViewChild('fileInput') fileInput: ElementRef<HTMLInputElement>;
 
     protected readonly colorRoles = COLOR_ROLES;
+    protected readonly customShadeHint = CUSTOM_SHADE_HINT;
     /** The colour the palette below sets. */
     protected role: ColorRole = 'primary';
     protected readonly settings$ = this.themeService.settings$;
@@ -90,6 +92,10 @@ export class ThemeEditorComponent implements OnDestroy {
 
     selectTemplate(templateId: string): void {
         this.themeService.selectTemplate(templateId);
+    }
+
+    templatesIn(group: ThemeTemplateGroup): ThemeTemplate[] {
+        return this.themeService.templates.filter(template => template.group === group);
     }
 
     get roleHint(): string {
@@ -127,12 +133,25 @@ export class ThemeEditorComponent implements OnDestroy {
         this.themeService.setSecondaryColor(null);
     }
 
-    useDerivedPage(page: 'light' | 'dark'): void {
-        this.themeService.setPage(page);
+    /**
+     * Light and Dark set how the custom theme draws the primary colour, on a light page tinted
+     * with it or a dark page filled with it. They are not the app's own light and dark modes.
+     */
+    useShade(shade: 'light' | 'dark'): void {
+        this.themeService.setPage(shade);
     }
 
-    isDerivedPage(settings: ThemeSettings, page: 'light' | 'dark'): boolean {
-        return settings.custom.background.color === null && settings.custom.shade === page;
+    isShade(settings: ThemeSettings, shade: 'light' | 'dark'): boolean {
+        return settings.custom.background.color === null && settings.custom.shade === shade;
+    }
+
+    /** Hands the page back to the primary colour, on the shade chosen under Primary. */
+    useAutoPage(settings: ThemeSettings): void {
+        this.themeService.setPage(settings.custom.shade === 'dark' ? 'dark' : 'light');
+    }
+
+    isAutoPage(settings: ThemeSettings): boolean {
+        return settings.custom.background.color === null;
     }
 
     /** The colour a role ends up as, which for Auto and a derived page is the one worked out. */
@@ -179,7 +198,7 @@ export class ThemeEditorComponent implements OnDestroy {
     templateSwatch(template: ThemeTemplate): Record<string, string> {
         const accent = template.seed.accent ?? '';
         return {
-            '--swatch-from': template.seed.surfaceTint ?? accent,
+            '--swatch-from': template.seed.surfaceTint ?? template.background ?? accent,
             '--swatch-to': accent,
         };
     }

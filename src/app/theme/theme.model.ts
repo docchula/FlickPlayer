@@ -74,10 +74,19 @@ export interface ThemeSettings {
  */
 export type ThemeVariables = Record<string, string>;
 
+/** The rows the ready-made templates are listed in: the brand pairings, then single colours. */
+export type ThemeTemplateGroup = 'brand' | 'colour';
+
+export interface ThemeTemplateGroupOption {
+    value: ThemeTemplateGroup;
+    label: string;
+}
+
 export interface ThemeTemplate {
     id: string;
     name: string;
     description: string;
+    group: ThemeTemplateGroup;
     seed: ThemeSeed;
     /** Page colour the template starts from; null lets it be derived from the accent. */
     background: string | null;
