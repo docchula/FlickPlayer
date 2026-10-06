@@ -557,12 +557,8 @@ export class ThemeService {
         return parsed && readableOn(parsed) === BLACK ? 'light' : 'dark';
     }
 
-    resetToDefault(): void {
-        this.update(defaultThemeSettings());
-    }
-
     /**
-     * What "Restore default settings" means for the theme: plain light, with the default colours
+     * What "Restore default settings" and the editor's reset both mean for the theme: plain light, with the default colours
      * and no picture on show. The pictures themselves stay in this device's folder.
      */
     restorePlainLight(): void {

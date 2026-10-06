@@ -371,20 +371,6 @@ export const THEME_TEMPLATES: ThemeTemplate[] = [
         },
         background: UNIVERSITY_PAGE,
     },
-    {
-        id: 'faculty-university',
-        name: 'Green & Pink',
-        description: 'Green page with pink buttons.',
-        group: 'brand',
-        seed: {
-            accent: UNIVERSITY_ACCENT,
-            companion: null,
-            tertiary: null,
-            surfaceTint: FACULTY_ACCENT,
-            intensity: 1,
-        },
-        background: FACULTY_PAGE,
-    },
     ...COLOUR_TEMPLATES.map(({id, name, accent, page}): ThemeTemplate => ({
         id,
         name,
@@ -396,7 +382,7 @@ export const THEME_TEMPLATES: ThemeTemplate[] = [
 ];
 
 export const THEME_TEMPLATE_GROUPS: ThemeTemplateGroupOption[] = [
-    {value: 'brand', label: 'Faculty & university'},
+    {value: 'brand', label: 'MDCU'},
     {value: 'colour', label: 'Colours'},
 ];
 
@@ -440,14 +426,6 @@ export const COLOR_ROLES: ColorRoleOption[] = [
         hint: 'The page behind everything. Auto works it out from your primary colour, light or dark as set under Primary; a colour you pick is used exactly.',
     },
 ];
-
-/**
- * Shown beside the Light and Dark choices under Primary, which only set how the custom theme
- * draws its colour. The app's own light and dark modes live in the theme menu.
- */
-export const CUSTOM_SHADE_HINT =
-    'Only for this custom theme: draws your primary colour on a light or dark page. '
-    + 'The app\'s own Light and Dark modes are in the theme menu.';
 
 /** A colour picked in the editor tints the page as fully as a template does. */
 export const OWN_COLOR_INTENSITY = 1;

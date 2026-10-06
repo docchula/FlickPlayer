@@ -24,7 +24,7 @@ import {addIcons} from 'ionicons';
 import {add, close, moonOutline, sunnyOutline} from 'ionicons/icons';
 import {ThemeService} from '../theme.service';
 import {CssVariables} from '../theme/palette';
-import {ACCENT_SWATCHES, COLOR_ROLES, CUSTOM_SHADE_HINT, PAGE_SWATCHES} from '../theme/theme-presets';
+import {ACCENT_SWATCHES, COLOR_ROLES, PAGE_SWATCHES} from '../theme/theme-presets';
 import {
     BackgroundFit,
     BackgroundPictureMode,
@@ -57,7 +57,6 @@ export class ThemeEditorComponent implements OnDestroy {
     @ViewChild('fileInput') fileInput: ElementRef<HTMLInputElement>;
 
     protected readonly colorRoles = COLOR_ROLES;
-    protected readonly customShadeHint = CUSTOM_SHADE_HINT;
     /** The colour the palette below sets. */
     protected role: ColorRole = 'primary';
     protected readonly settings$ = this.themeService.settings$;
@@ -190,7 +189,7 @@ export class ThemeEditorComponent implements OnDestroy {
 
     reset(): void {
         this.imageError = null;
-        this.themeService.resetToDefault();
+        this.themeService.restorePlainLight();
         this.close();
     }
 
