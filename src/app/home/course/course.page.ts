@@ -1,8 +1,8 @@
-import { AfterViewInit, Component, ElementRef, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { combineLatest, EMPTY, fromEvent, mergeAll, Observable, of, pairwise, startWith, Subject, takeUntil, throttleTime } from 'rxjs';
-import { ActivatedRoute, Router } from '@angular/router';
-import { CourseMembers, EvaluationRecord, Lecture, ManService } from '../../man.service';
-import { first, map, switchMap, take } from 'rxjs/operators';
+import {AfterViewInit, Component, ElementRef, inject, OnDestroy, OnInit, ViewChild} from '@angular/core';
+import {combineLatest, EMPTY, fromEvent, mergeAll, Observable, of, pairwise, startWith, Subject, takeUntil, throttleTime} from 'rxjs';
+import {ActivatedRoute, Router} from '@angular/router';
+import {CourseMembers, EvaluationRecord, Lecture, ManService} from '../../man.service';
+import {first, map, switchMap} from 'rxjs/operators';
 import videojs from 'video.js';
 import 'videojs-hotkeys';
 import 'videojs-youtube';
@@ -33,15 +33,25 @@ import {
     ModalController,
 } from '@ionic/angular/standalone';
 import {SettingsMenuComponent} from '../../shared/settings-menu.component';
-import { DomSanitizer } from '@angular/platform-browser';
-import { PlayHistory } from '../../play-tracker.service';
-import { addIcons } from "ionicons";
-import { checkmarkOutline, closeOutline, documentAttachOutline, download, pauseCircleOutline } from "ionicons/icons";
+import {DomSanitizer} from '@angular/platform-browser';
+import {PlayHistory} from '../../play-tracker.service';
+import {addIcons} from "ionicons";
+import {checkmarkOutline, closeOutline, documentAttachOutline, documentTextOutline, download, pauseCircleOutline} from "ionicons/icons";
 import type Player from 'video.js/dist/types/player';
-import { ulid } from 'ulid';
-import { AsyncPipe, DatePipe, DecimalPipe, NgClass } from '@angular/common';
-import { ModalEvaluationComponent } from './modal-evaluation.component';
-import { PomodoroTimerComponent } from '../../shared/pomodoro-timer.component';
+import {ulid} from 'ulid';
+import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
+import {ModalEvaluationComponent} from './modal-evaluation.component';
+import {ModalDocumentComponent} from './modal-document.component';
+import {PomodoroTimerComponent} from '../../shared/pomodoro-timer.component';
+import {Analytics, logEvent} from '@angular/fire/analytics';
+import {ConsentService} from '../../consent.service';
+
+// The video.js SeekBar handlers wrapped by CoursePage.requireDragToSeekOnTouch()
+interface SeekBarPointerHandlers {
+    handleMouseDown(event: Event): void;
+    handleMouseMove(event: Event, mouseDown?: boolean): void;
+    handleMouseUp(event: Event): void;
+}
 
 @Component({
     selector: 'app-course',
@@ -85,6 +95,8 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     private alertController = inject(AlertController);
     private sanitizer = inject(DomSanitizer);
     private modalCtrl = inject(ModalController);
+    private analytics = inject(Analytics);
+    private consentService = inject(ConsentService);
 
     @ViewChild('videoPlayer') videoPlayerElement: ElementRef;
     videoPlayer: Player;
@@ -118,13 +130,12 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     isPlayerReady = false;
 
     constructor() {
-        addIcons({ download, documentAttachOutline, checkmarkOutline, closeOutline, pauseCircleOutline });
+        addIcons({ download, documentAttachOutline, documentTextOutline, checkmarkOutline, closeOutline, pauseCircleOutline });
     }
 
     ngOnInit() {
         // Read optional `video`/`v` query param set by global search or direct link
-        const targetVideoId = this.route.snapshot.queryParamMap.get('video') || this.route.snapshot.queryParamMap.get('v');
-        this.videoIdFromSearch = targetVideoId;
+        this.videoIdFromSearch = this.route.snapshot.queryParamMap.get('video') || this.route.snapshot.queryParamMap.get('v');
 
         this.list$ = this.route.paramMap.pipe(
             first(),
@@ -198,6 +209,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 enableModifiersForNumbers: false,
                 enableVolumeScroll: false,
             });
+            this.requireDragToSeekOnTouch();
             this.videoPlayer.on('ended', () => {
                 this.updatePlayRecord();
                 if (!this.currentVideo.is_evaluated && !this.isEvaluated) {
@@ -288,6 +300,74 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
 
     ngOnDestroy() {
         this.stopPolling$.next(true);
+    }
+
+    // video.js seeks as soon as a touch lands on the progress control, so a fingertip brushing
+    // the bar jumps the video and that position is saved as the play record (issue #64).
+    // Require the touch to move first. Mouse and keyboard handling is unchanged.
+    private requireDragToSeekOnTouch() {
+        const seekBar = this.videoPlayer.getChild('controlBar')
+            ?.getChild('progressControl')
+            ?.getChild('seekBar') as unknown as SeekBarPointerHandlers | undefined;
+        if (!seekBar) {
+            return;
+        }
+
+        const dragThresholdPx = 8;
+        const originalMouseDown = seekBar.handleMouseDown.bind(seekBar);
+        const originalMouseMove = seekBar.handleMouseMove.bind(seekBar);
+        const originalMouseUp = seekBar.handleMouseUp.bind(seekBar);
+        const isTouch = (event: Event) => !!event && event.type.startsWith('touch');
+        const touchPoint = (event: Event) => {
+            const touchEvent = event as TouchEvent;
+            return touchEvent.changedTouches?.[0] ?? touchEvent.touches?.[0] ?? null;
+        };
+
+        let touchOrigin: { x: number, y: number } | null = null;
+        let isDragging = false;
+
+        seekBar.handleMouseDown = (event: Event) => {
+            if (!isTouch(event)) {
+                originalMouseDown(event);
+                return;
+            }
+            // Record the landing point only; the original handler pauses and seeks immediately.
+            // Do not stop propagation: ProgressControl attaches the document-level touchmove and
+            // touchend listeners that drive the handlers below.
+            const point = touchPoint(event);
+            touchOrigin = point ? { x: point.clientX, y: point.clientY } : null;
+            isDragging = false;
+        };
+
+        seekBar.handleMouseMove = (event: Event, mouseDown = false) => {
+            if (!isTouch(event) || isDragging) {
+                originalMouseMove(event, mouseDown);
+                return;
+            }
+            const origin = touchOrigin;
+            const point = touchPoint(event);
+            if (!origin || !point) {
+                return;
+            }
+            if (Math.abs(point.clientX - origin.x) < dragThresholdPx
+                && Math.abs(point.clientY - origin.y) < dragThresholdPx) {
+                return; // Within the slop of a stationary touch
+            }
+            // Hand over to video.js as if the drag started here. Set the flag first,
+            // since originalMouseDown calls back into handleMouseMove.
+            isDragging = true;
+            originalMouseDown(event);
+        };
+
+        seekBar.handleMouseUp = (event: Event) => {
+            const wasStrayTouch = isTouch(event) && !isDragging;
+            touchOrigin = null;
+            isDragging = false;
+            if (wasStrayTouch) {
+                return; // Nothing was started, so there is no scrub state to tear down
+            }
+            originalMouseUp(event);
+        };
     }
 
     mergeVideoInfo(videos: CourseMembers, history: PlayHistory, evaluations: { [key: number]: EvaluationRecord }) {
@@ -388,6 +468,9 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                     handler: (i) => {
                         if (i.speed > 0.3 && i.speed < 9) {
                             this.videoPlayer.playbackRate(i.speed);
+                            if (this.consentService.current === 'granted') {
+                                logEvent(this.analytics, 'playback_speed_change', {speed: i.speed});
+                            }
                         }
                     }
                 }
@@ -403,6 +486,61 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             componentProps: { video: this.currentVideo },
         });
         await modal.present();
+    }
+
+    async openDocumentModal() {
+        if (!await this.confirmAiDisclaimer()) {
+            return;
+        }
+        const modal = await this.modalCtrl.create({
+            component: ModalDocumentComponent,
+            cssClass: 'modal-document',
+            componentProps: { video: this.currentVideo },
+        });
+        await modal.present();
+        logEvent(this.analytics, 'view_transcript', {video_id: this.currentVideo.id, video_title: this.currentVideo.title});
+    }
+
+    // Resolves true only if the user explicitly accepts the AI disclaimer (or accepted it within the last 7 days
+    // and ticked "don't show again").
+    private async confirmAiDisclaimer(): Promise<boolean> {
+        const storageKey = 'aiDocDisclaimerAcceptedAt';
+        try {
+            const acceptedAt = Number(localStorage.getItem(storageKey));
+            if (acceptedAt && Date.now() - acceptedAt < 7 * 24 * 60 * 60 * 1000) {
+                return true;
+            }
+        } catch {
+            // Storage unavailable; just ask again
+        }
+        const alert = await this.alertController.create({
+            header: 'AI-generated content',
+            message: 'This document is generated by AI from the lecture recording. ' +
+                'This feature is intended only to assist with content mapping and searching, ' +
+                'not as a source of study material or a replacement for the lecture and official course materials. ' +
+                'AI can make mistakes, so please verify important information before relying on it.',
+            backdropDismiss: false,
+            inputs: [
+                {type: 'checkbox', label: "Don't show this again for 7 days", value: 'skip', checked: false},
+            ],
+            buttons: [
+                {text: 'Cancel', role: 'cancel'},
+                {text: 'I understand and accept', role: 'confirm'},
+            ],
+        });
+        await alert.present();
+        const {role, data} = await alert.onDidDismiss();
+        if (role !== 'confirm') {
+            return false;
+        }
+        if (data?.values?.includes('skip')) {
+            try {
+                localStorage.setItem(storageKey, String(Date.now()));
+            } catch {
+                // Storage unavailable; the user will be asked again next time
+            }
+        }
+        return true;
     }
 
     preventMouseEvent($event: MouseEvent) {

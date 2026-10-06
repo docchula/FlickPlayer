@@ -66,8 +66,8 @@
                                 },
                                 {
                                     "type": "anyComponentStyle",
-                                    "maximumWarning": "2kb",
-                                    "maximumError": "4kb"
+                                    "maximumWarning": "30kb",
+                                    "maximumError": "40kb"
                                 }
                             ],
                             "serviceWorker": "ngsw-config.json"
@@ -120,7 +120,6 @@
                 "test": {
                     "builder": "@angular-devkit/build-angular:karma",
                     "options": {
-                        "main": "src/test.ts",
                         "polyfills": [
                             "zone.js",
                             "zone.js/testing"

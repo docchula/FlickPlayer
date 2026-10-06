@@ -1,6 +1,8 @@
 import {inject, Injectable} from '@angular/core';
-import {BehaviorSubject, Observable, Subject, Subscription, interval} from 'rxjs';
+import {BehaviorSubject, interval, Observable, Subject, Subscription} from 'rxjs';
 import {map} from 'rxjs/operators';
+import {Analytics, logEvent} from '@angular/fire/analytics';
+import {ConsentService} from './consent.service';
 import {SettingsService} from './settings.service';
 import {nextResetAt, studyDayKey} from './settings/day';
 
@@ -82,6 +84,9 @@ export const DURATION_FIELDS: DurationField[] = [
     providedIn: 'root',
 })
 export class PomodoroService {
+    private analytics = inject(Analytics);
+    private consentService = inject(ConsentService);
+
     private readonly STORAGE_KEY_PREFIX = 'pomodoroPrefs_';
     private readonly TIMER_KEY_PREFIX = 'pomodoroTimer_';
     private currentUserId = 'guest';
@@ -191,6 +196,9 @@ export class PomodoroService {
         if (this.timerState.value === 'idle') {
             this.timeRemaining.next(this.getCurrentPhaseDuration());
             this.notifyPhase(this.currentPhase.value, true);
+            if (this.consentService.current === 'granted') {
+                logEvent(this.analytics, 'pomodoro_start', {phase: this.currentPhase.value.key});
+            }
         }
 
         this.timerState.next('running');
@@ -467,7 +475,7 @@ export class PomodoroService {
 
             const saved = JSON.parse(raw);
             const savedState: TimerState = saved.timerState;
-            const phase = POMODORO_PHASES.find(p => p.key === saved.currentPhaseKey) ?? POMODORO_PHASES[0];
+            let phase = POMODORO_PHASES.find(p => p.key === saved.currentPhaseKey) ?? POMODORO_PHASES[0];
 
             this.completedSessions.next(saved.completedSessions ?? 0);
             this.studySessionsInCycle = saved.studySessionsInCycle ?? 0;
@@ -501,7 +509,8 @@ export class PomodoroService {
                 } else {
                     this.currentPhase.next(this.getStudyPhase());
                 }
-                const nextPhaseDuration = (this.durations[this.currentPhase.value.durationKey] ?? DEFAULT_DURATIONS.studyMinutes) * 60;
+                phase = this.currentPhase.value;
+                const nextPhaseDuration = (this.durations[phase.durationKey] ?? DEFAULT_DURATIONS.studyMinutes) * 60;
                 timeRemaining += nextPhaseDuration;
             }
 

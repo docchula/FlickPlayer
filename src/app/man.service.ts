@@ -1,7 +1,7 @@
 import {inject, Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {combineLatestWith, Observable, of, startWith, takeUntil, timer} from 'rxjs';
-import {map, switchMap, timeout} from 'rxjs/operators';
+import {map, shareReplay, switchMap, timeout} from 'rxjs/operators';
 import {PlayHistory, PlayHistoryValue, PlayTrackerService} from './play-tracker.service';
 import {AuthService} from './auth.service';
 
@@ -44,7 +44,10 @@ export class ManService {
 
     getVideoList(): Observable<CourseListResponse> {
         if (!this.videoList) {
-            this.videoList = this.get<JSend<CourseListResponse>>('v1/video').pipe(map(response => response?.data));
+            this.videoList = this.get<JSend<CourseListResponse>>('v1/video').pipe(
+                map(response => response?.data),
+                shareReplay(1),
+            );
         }
         return this.videoList;
     }
@@ -98,6 +101,27 @@ export class ManService {
                 }
                 return data;
             }));
+    }
+
+    getVideo(videoId: string): Observable<LectureDocInfo | null> {
+        const body = {
+            query: `query GetVideo($id: ID!) {
+                video(id: $id) {
+                    id
+                    document
+                }
+            }`,
+            variables: {id: videoId},
+        };
+        if (this.httpOptions.headers.get('Authorization').length < 30) {
+            console.error('ManService ID token is not set.');
+            return of(null);
+        }
+        return this.http.post<{ data: { video: LectureDocInfo | null } }>(
+            this.getEndpointLocation() + 'graphql',
+            body,
+            this.httpOptions
+        ).pipe(map(response => response?.data?.video ?? null));
     }
 
     getPlayRecord(year: string, course: string, courseId: string | null, stopPolling: Observable<boolean>): Observable<{
@@ -279,11 +303,17 @@ export interface Lecture {
     durationInMin?: number;
     history?: PlayHistoryValue;
     is_evaluated?: boolean;
+    has_document?: boolean;
     course?: {
         id: number;
         name: string;
         category: string;
     };
+}
+
+export interface LectureDocInfo {
+    id: number; // Server-side ID
+    document: string | null;
 }
 
 export interface JSend<A> {

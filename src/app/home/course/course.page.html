@@ -54,6 +54,12 @@
                             size="small" tabindex="0" class="set-playback-speed-button">
                             Set playback speed
                         </ion-button>
+                        @if (currentVideo.id && currentVideo.has_document) {
+                        <ion-button (click)="openDocumentModal()" fill="outline" size="small" class="set-playback-speed-button">
+                            <ion-icon slot="start" name="document-text-outline"></ion-icon>
+                            Transcript
+                        </ion-button>
+                        }
                         @if (currentVideo.sourceExternal?.includes('1.mp4')) {
                         <span>
                             | <a [href]="sanitize('//player.docchula.com/?url='+currentVideo.sourceExternal)"
