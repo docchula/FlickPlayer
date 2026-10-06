@@ -51,6 +51,9 @@ export class ThemeMenuComponent {
             component: ThemeEditorComponent,
             breakpoints: [0, 0.9],
             initialBreakpoint: 0.9,
+            // Otherwise the content is laid out for the full height while the sheet stops at
+            // 0.9, and the last part of the editor can never be scrolled into view.
+            expandToScroll: false,
         });
         await modal.present();
     }
