@@ -2,6 +2,7 @@ import {Component, inject, OnInit} from '@angular/core';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {EMPTY, Observable, of, Subject} from 'rxjs';
 import {debounceTime, distinctUntilChanged, map, switchMap, tap} from 'rxjs/operators';
+import {SettingsMenuComponent} from '../../shared/settings-menu.component';
 import {ManService, SearchVideoResult} from '../../man.service';
 import {colorByFolderName} from '../../../helpers';
 import {
@@ -18,7 +19,6 @@ import {
     IonTitle,
     IonToolbar,
 } from '@ionic/angular/standalone';
-import {SettingsMenuComponent} from '../../shared/settings-menu.component';
 import {AsyncPipe, NgStyle} from '@angular/common';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../../consent.service';
@@ -33,9 +33,11 @@ export interface EnrichedSearchResult extends SearchVideoResult {
     templateUrl: './list.page.html',
     styleUrls: ['./list.page.scss'],
     imports: [
-        IonHeader, IonToolbar, RouterLink, IonBackButton, IonButtons, IonTitle, NgStyle,
+        IonHeader, IonToolbar, RouterLink, IonBackButton, IonTitle, NgStyle,
+        IonButtons,
         IonContent, IonList, IonListHeader, IonItem, IonLabel, AsyncPipe,
-        IonSearchbar, IonSpinner, SettingsMenuComponent,
+        IonSearchbar, IonSpinner,
+        SettingsMenuComponent,
     ]
 })
 export class ListPage implements OnInit {

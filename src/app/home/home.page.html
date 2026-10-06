@@ -65,6 +65,7 @@
                 }
             </div>
         } @else if (response$ | async; as response) {
+            <app-pomodoro-timer></app-pomodoro-timer>
             @if (response.last_played) {
                 <ion-card color="tertiary" class="ion-margin-top">
                     <ion-card-header>

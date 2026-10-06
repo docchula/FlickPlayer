@@ -2,6 +2,8 @@ import {Component, inject, OnInit} from '@angular/core';
 import {Observable, of, Subject} from 'rxjs';
 import {CourseListResponse, Lecture, ManService, SearchVideoResult} from '../man.service';
 import {Router, RouterLink} from '@angular/router';
+import {SettingsMenuComponent} from '../shared/settings-menu.component';
+import {PomodoroTimerComponent} from '../shared/pomodoro-timer.component';
 import {AuthService} from '../auth.service';
 import {colorByFolderName} from '../../helpers';
 import {addIcons} from "ionicons";
@@ -30,7 +32,6 @@ import {
     IonToolbar,
 } from '@ionic/angular/standalone';
 import {AsyncPipe, NgStyle} from '@angular/common';
-import {SettingsMenuComponent} from '../shared/settings-menu.component';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../consent.service';
 
@@ -45,10 +46,10 @@ export interface EnrichedSearchResult extends SearchVideoResult {
     styleUrls: ['home.page.scss'],
     imports: [
         IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon,
+        SettingsMenuComponent, PomodoroTimerComponent,
         IonContent, IonGrid, IonRow, IonCol, IonCard, RouterLink, NgStyle,
         IonCardHeader, IonCardTitle, AsyncPipe, IonCardContent, IonItem,
         IonLabel, IonText, IonSpinner, IonSearchbar, IonList,
-        SettingsMenuComponent,
     ]
 })
 export class HomePage implements OnInit {

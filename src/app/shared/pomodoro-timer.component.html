@@ -1,0 +1,97 @@
+<!--
+  The phase notification is not rendered here. PomodoroService shows it through PomodoroToast, which
+  attaches to document.body, or to the fullscreen element while one is active, because .ion-page sets
+  "contain: layout" and so becomes the containing block for position:fixed descendants.
+-->
+<ion-card class="pomodoro-card">
+    <ion-card-header class="pomodoro-header" (click)="toggleCollapse()" button>
+        <ion-card-title class="pomodoro-title">
+            Pomodoro Timer
+            <ion-icon [name]="isCollapsed ? 'chevron-down' : 'chevron-up'" class="collapse-icon"></ion-icon>
+        </ion-card-title>
+    </ion-card-header>
+
+    @if (!isCollapsed) {
+        <ion-card-content class="pomodoro-content">
+            <!-- Timer Display -->
+            <div class="timer-section">
+                <div class="timer-label">
+                    <span class="phase-label">{{ (pomodoroService.currentPhase$ | async)?.label ?? 'Timer' }}</span>
+                    <ion-button fill="clear" size="small" (click)="openInfoPopover($event)" class="info-btn">
+                        <ion-icon name="information-circle-outline" slot="icon-only" color="medium"></ion-icon>
+                    </ion-button>
+                </div>
+                <div class="timer-display">{{ pomodoroService.formattedTime$ | async }}</div>
+
+                <!-- Controls -->
+                <div class="timer-controls">
+                    @if ((pomodoroService.timerState$ | async) === 'idle') {
+                        <ion-button fill="clear" (click)="pomodoroService.start()" aria-label="Start timer">
+                            <ion-icon name="play" slot="icon-only" color="medium" size="large"></ion-icon>
+                        </ion-button>
+                    }
+                    @if ((pomodoroService.timerState$ | async) === 'running') {
+                        <ion-button fill="clear" (click)="pomodoroService.pause()" aria-label="Pause timer">
+                            <ion-icon name="pause" slot="icon-only" color="medium" size="large"></ion-icon>
+                        </ion-button>
+                    }
+                    @if ((pomodoroService.timerState$ | async) === 'paused') {
+                        <ion-button fill="clear" (click)="pomodoroService.resume()" aria-label="Resume timer">
+                            <ion-icon name="play" slot="icon-only" color="primary" size="large"></ion-icon>
+                        </ion-button>
+                    }
+                    @if ((pomodoroService.timerState$ | async) !== 'idle') {
+                        <ion-button fill="clear" (click)="pomodoroService.skipPhase()" aria-label="Skip phase">
+                            <ion-icon name="play-skip-forward" slot="icon-only" color="medium"></ion-icon>
+                        </ion-button>
+                        <ion-button fill="clear" (click)="pomodoroService.reset()" aria-label="Reset timer">
+                            <ion-icon name="stop" slot="icon-only" color="danger"></ion-icon>
+                        </ion-button>
+                    }
+                </div>
+
+                <!-- Session counter -->
+                @if ((pomodoroService.completedSessions$ | async)! > 0) {
+                    <div class="session-counter">
+                        Session {{ pomodoroService.completedSessions$ | async }} completed
+                    </div>
+                }
+            </div>
+
+            <!-- Duration Inputs -->
+            <div class="duration-section">
+                @for (field of durationFields; track field.key) {
+                    <div class="duration-field">
+                        <ion-label class="duration-label">{{ field.label }}</ion-label>
+                        <div class="duration-input-wrapper">
+                            <ion-input
+                                type="number"
+                                [value]="currentDurations[field.key]"
+                                (ionChange)="onDurationChange(field.key, $event)"
+                                [min]="1"
+                                [max]="120"
+                                class="duration-input"
+                                [disabled]="(pomodoroService.timerState$ | async) !== 'idle'"
+                            ></ion-input>
+                            <span class="duration-suffix">{{ field.suffix }}</span>
+                        </div>
+                    </div>
+                }
+                <div class="duration-field">
+                    <ion-label class="duration-label">Long Break After</ion-label>
+                    <div class="duration-input-wrapper">
+                        <ion-input
+                            type="number"
+                            [value]="pomodoroService.sessionsBeforeLongBreak$ | async"
+                            (ionChange)="onSessionsBeforeLongBreakChange($event)"
+                            [min]="1"
+                            [max]="maxSessionsBeforeLongBreak"
+                            class="duration-input"
+                        ></ion-input>
+                        <span class="duration-suffix">sessions</span>
+                    </div>
+                </div>
+            </div>
+        </ion-card-content>
+    }
+</ion-card>
