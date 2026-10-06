@@ -3,13 +3,13 @@ import {enableProdMode, importProvidersFrom, inject, provideAppInitializer} from
 import {environment} from './environments/environment';
 import {RouteReuseStrategy} from '@angular/router';
 import {IonicRouteStrategy, provideIonicAngular} from '@ionic/angular/standalone';
-import {DEBUG_MODE, UserTrackingService} from '@angular/fire/compat/analytics';
+import {DEBUG_MODE} from '@angular/fire/compat/analytics';
 import {INSTRUMENTATION_ENABLED} from '@angular/fire/compat/performance';
 import {DEFAULTS} from '@angular/fire/compat/remote-config';
 import {initializeApp, provideFirebaseApp} from '@angular/fire/app';
 import {getFirestore, provideFirestore} from '@angular/fire/firestore';
 import {getAuth, provideAuth} from '@angular/fire/auth';
-import {getAnalytics, provideAnalytics, ScreenTrackingService, UserTrackingService as UserTrackingService_alias} from '@angular/fire/analytics';
+import {getAnalytics, provideAnalytics, ScreenTrackingService, UserTrackingService} from '@angular/fire/analytics';
 import {getPerformance, providePerformance} from '@angular/fire/performance';
 import {getRemoteConfig, provideRemoteConfig} from '@angular/fire/remote-config';
 import {provideHttpClient, withFetch, withInterceptorsFromDi} from '@angular/common/http';
@@ -35,7 +35,6 @@ bootstrapApplication(AppComponent, {
         provideAppInitializer(() => {
             inject(ThemeService);
         }),
-        UserTrackingService,
         {provide: INSTRUMENTATION_ENABLED, useValue: environment.production},
         {provide: DEBUG_MODE, useValue: !environment.production},
         {provide: DEFAULTS, useValue: environment.defaultRemoteConfig},
@@ -48,7 +47,7 @@ bootstrapApplication(AppComponent, {
         provideRemoteConfig(() => getRemoteConfig()),
         provideHttpClient(withFetch(), withInterceptorsFromDi()),
         ScreenTrackingService,
-        UserTrackingService_alias,
+        UserTrackingService,
         provideAnimationsAsync(),
         providePrimeNG({
             theme: {

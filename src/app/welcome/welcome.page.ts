@@ -1,16 +1,16 @@
 import {Component, inject, OnDestroy, OnInit} from "@angular/core";
 import {
-    AlertController,
-    IonButton,
-    IonCard,
-    IonCardContent,
-    IonCardHeader,
-    IonCardTitle,
-    IonContent,
-    IonText,
-    LoadingController,
+  AlertController,
+  IonButton,
+  IonCard,
+  IonCardContent,
+  IonCardHeader,
+  IonCardTitle,
+  IonContent,
+  IonText,
+  LoadingController,
 } from "@ionic/angular/standalone";
-import {Router} from "@angular/router";
+import {Router, RouterLink} from "@angular/router";
 import {ManService} from "../man.service";
 import {HttpErrorResponse} from "@angular/common/http";
 import {Subscription} from "rxjs";
@@ -31,6 +31,7 @@ import {ThemeMenuComponent} from "../shared/theme-menu.component";
     IonButton,
     IonText,
     ThemeMenuComponent,
+    RouterLink,
   ],
 })
 export class WelcomePage implements OnInit, OnDestroy {
@@ -75,7 +76,7 @@ export class WelcomePage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.authStateSubscription.unsubscribe();
+    this.authStateSubscription?.unsubscribe();
   }
 
   async login() {

@@ -41,9 +41,9 @@ npm-debug.log*
 .env.sentry-build-plugin
 .sentryclirc
 
-# Local agent and assistant files
+# Local editor and tool settings
+.claude/
 /.agents
-/.claude
 AGENTS.md
 CLAUDE.md
 *.local.json
