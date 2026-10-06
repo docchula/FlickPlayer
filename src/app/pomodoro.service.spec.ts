@@ -112,7 +112,7 @@ describe('PomodoroService', () => {
         discardPeriodicTasks();
     }));
 
-    it('pauses on leaving the tab only in the mode chosen for watching lectures', () => {
+    it('pauses on leaving the tab only in the mode chosen for Flick only', () => {
         const hidden = spyOnProperty(document, 'hidden').and.returnValue(true);
         service.start();
         document.dispatchEvent(new Event('visibilitychange'));

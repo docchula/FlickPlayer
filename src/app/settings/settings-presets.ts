@@ -45,8 +45,8 @@ function formatHour(hour: number): string {
 export const SESSION_MODE_OPTIONS: SessionModeOption[] = [
     {
         value: 'lecture',
-        label: 'Watching lectures',
-        hint: 'The timer pauses when you leave this tab, so only time spent here counts.',
+        label: 'Flick only',
+        hint: 'The timer pauses when you leave this tab, only time spent on Flick counts.',
     },
     {
         value: 'elsewhere',
