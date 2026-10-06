@@ -362,7 +362,7 @@ export class PomodoroTimerComponent implements OnInit, OnDestroy {
 
     activeNotification: PhaseNotification | null = null;
     private notificationSub: Subscription | null = null;
-    private toastTimer: any = null;
+    private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor() {
         addIcons({play, pause, stop, playSkipForward, chevronDown, chevronUp, informationCircleOutline, notificationsOutline});
@@ -391,8 +391,12 @@ export class PomodoroTimerComponent implements OnInit, OnDestroy {
         }
 
         // Handle Fullscreen Video DOM Overlay (inject directly into active fullscreen element)
+        const prefixedDocument = document as Document & {
+            webkitFullscreenElement?: Element | null;
+            mozFullScreenElement?: Element | null;
+        };
         const fullscreenEl = typeof document !== 'undefined'
-            ? (document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).mozFullScreenElement)
+            ? (document.fullscreenElement || prefixedDocument.webkitFullscreenElement || prefixedDocument.mozFullScreenElement)
             : null;
 
         if (fullscreenEl) {
@@ -423,7 +427,7 @@ export class PomodoroTimerComponent implements OnInit, OnDestroy {
         }
     }
 
-    onDurationChange(key: keyof PomodoroDurations, event: any): void {
+    onDurationChange(key: keyof PomodoroDurations, event: CustomEvent): void {
         const value = parseInt(event.detail.value, 10);
         if (!isNaN(value) && value > 0 && value <= 120) {
             this.currentDurations = {...this.currentDurations, [key]: value};

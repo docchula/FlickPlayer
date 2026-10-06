@@ -1,9 +1,9 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { EMPTY, Observable, Subject, of } from 'rxjs';
-import { debounceTime, distinctUntilChanged, map, switchMap, tap } from 'rxjs/operators';
-import { ManService, SearchVideoResult } from '../../man.service';
-import { colorByFolderName } from '../../../helpers';
+import {Component, inject, OnInit} from '@angular/core';
+import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {EMPTY, Observable, of, Subject} from 'rxjs';
+import {debounceTime, distinctUntilChanged, map, switchMap, tap} from 'rxjs/operators';
+import {ManService, SearchVideoResult} from '../../man.service';
+import {colorByFolderName} from '../../../helpers';
 import {
     IonBackButton,
     IonContent,
@@ -15,9 +15,11 @@ import {
     IonSearchbar,
     IonSpinner,
     IonTitle,
-    IonToolbar
+    IonToolbar,
 } from '@ionic/angular/standalone';
-import { AsyncPipe, NgStyle } from '@angular/common';
+import {AsyncPipe, NgStyle} from '@angular/common';
+import {Analytics, logEvent} from '@angular/fire/analytics';
+import {ConsentService} from '../../consent.service';
 
 export interface EnrichedSearchResult extends SearchVideoResult {
     courseName?: string;
@@ -38,6 +40,8 @@ export class ListPage implements OnInit {
     private route = inject(ActivatedRoute);
     private router = inject(Router);
     private manService = inject(ManService);
+    private analytics = inject(Analytics);
+    private consentService = inject(ConsentService);
 
     year: string;
     groupedList$: Observable<{ year: string, courses: { name: string, is_remote: boolean, id: number, link: string[] }[] }[]>;
@@ -87,6 +91,9 @@ export class ListPage implements OnInit {
                 if (!query.trim()) {
                     this.isSearching = false;
                     return of([]);
+                }
+                if (this.consentService.current === 'granted') {
+                    logEvent(this.analytics, 'search', {search_term: query});
                 }
                 return this.manService.searchVideos(query).pipe(
                     map(results => results.map(r => ({
