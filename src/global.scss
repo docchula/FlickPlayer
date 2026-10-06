@@ -135,12 +135,6 @@ ion-list-header {
   }
 }
 
-/* An item inside a coloured card keeps its own background, so it needs the page's text
-   colour rather than the card's contrast colour, which is meant for the card itself. */
-ion-card.ion-color ion-item {
-  --color: var(--ion-text-color);
-}
-
 /* Fullscreen Pomodoro Notification Toast (Appended inside video fullscreen element) */
 .pomodoro-fullscreen-toast {
   position: absolute;
@@ -148,13 +142,13 @@ ion-card.ion-color ion-item {
   left: 50%;
   transform: translateX(-50%);
   z-index: 2147483647;
-  background: var(--ion-color-dark);
-  color: var(--ion-color-dark-contrast);
+  background: rgba(34, 36, 40, 0.95);
+  color: #ffffff;
   padding: 0.75rem 1.5rem;
   border-radius: 2rem;
   font-size: 1.1rem;
   font-weight: 600;
-  border: 1px solid rgba(var(--ion-color-dark-contrast-rgb), 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
   pointer-events: none;
   opacity: 0;
@@ -195,6 +189,12 @@ ion-card.ion-color ion-item {
   .video-js.vjs-touch-enabled .vjs-control-bar .vjs-playback-rate .vjs-playback-rate-value {
     line-height: 2.9333; /* 1.5em digits x 2.9333 */
   }
+}
+
+/* An item inside a coloured card keeps its own background, so it needs the page's text
+   colour rather than the card's contrast colour, which is meant for the card itself. */
+ion-card.ion-color ion-item {
+  --color: var(--ion-text-color);
 }
 
 /*

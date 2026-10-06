@@ -61,6 +61,7 @@ interface SeekBarPointerHandlers {
         IonHeader,
         IonToolbar,
         IonBackButton,
+        IonButtons,
         IonTitle,
         IonContent,
         IonGrid,
@@ -78,14 +79,13 @@ interface SeekBarPointerHandlers {
         IonItem,
         IonIcon,
         IonSearchbar,
+        ThemeMenuComponent,
         NgClass,
         IonProgressBar,
         AsyncPipe,
         DecimalPipe,
         DatePipe,
         PomodoroTimerComponent,
-        IonButtons,
-        ThemeMenuComponent,
     ]
 })
 export class CoursePage implements OnInit, AfterViewInit, OnDestroy {

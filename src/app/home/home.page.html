@@ -1,10 +1,12 @@
 <ion-header [translucent]="true">
     <ion-toolbar>
+        <ion-buttons slot="end">
+            <app-theme-menu></app-theme-menu>
+        </ion-buttons>
         <ion-title>
             MDCU Recorded Lecture
         </ion-title>
         <ion-buttons slot="end">
-            <app-theme-menu></app-theme-menu>
             <ion-button fill="outline" color="secondary" (click)="logout()">
                 <span class="ion-hide-sm-down text-sign-out">Sign out</span>
                 <ion-icon name="log-out-outline"></ion-icon>

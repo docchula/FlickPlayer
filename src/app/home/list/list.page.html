@@ -1,12 +1,12 @@
 <ion-header>
   <ion-toolbar>
     <ion-back-button slot="start" defaultHref="/home"></ion-back-button>
-    <ion-title>
-      <span [ngStyle]="{'background-color': colorByFolderName(year), 'color': contrastByFolderName(year)}">{{ year || 'Loading'}}</span>
-    </ion-title>
     <ion-buttons slot="end">
       <app-theme-menu></app-theme-menu>
     </ion-buttons>
+    <ion-title>
+      <span [ngStyle]="{'background-color': colorByFolderName(year), 'color': contrastByFolderName(year)}">{{ year || 'Loading'}}</span>
+    </ion-title>
   </ion-toolbar>
   <ion-toolbar>
     <ion-searchbar

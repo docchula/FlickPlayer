@@ -34,8 +34,10 @@ export interface EnrichedSearchResult extends SearchVideoResult {
     styleUrls: ['./list.page.scss'],
     imports: [
         IonHeader, IonToolbar, RouterLink, IonBackButton, IonTitle, NgStyle,
+        IonButtons,
         IonContent, IonList, IonListHeader, IonItem, IonLabel, AsyncPipe,
-        IonSearchbar, IonSpinner, IonButtons, ThemeMenuComponent,
+        ThemeMenuComponent,
+        IonSearchbar, IonSpinner,
     ]
 })
 export class ListPage implements OnInit {

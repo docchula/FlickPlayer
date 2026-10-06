@@ -47,8 +47,8 @@ export interface EnrichedSearchResult extends SearchVideoResult {
         IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon,
         IonContent, IonGrid, IonRow, IonCol, IonCard, RouterLink, NgStyle,
         IonCardHeader, IonCardTitle, AsyncPipe, IonCardContent, IonItem,
-        IonLabel, IonText, IonSpinner, IonSearchbar, IonList,
         ThemeMenuComponent,
+        IonLabel, IonText, IonSpinner, IonSearchbar, IonList,
     ]
 })
 export class HomePage implements OnInit {
