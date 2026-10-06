@@ -5,6 +5,7 @@ import {
     DEFAULT_DURATIONS,
     DEFAULT_SESSIONS_BEFORE_LONG_BREAK
 } from './pomodoro.service';
+import {PomodoroSessionModeService} from './pomodoro-session-mode.service';
 
 describe('PomodoroService', () => {
     let service: PomodoroService;
@@ -26,12 +27,14 @@ describe('PomodoroService', () => {
     beforeEach(() => {
         localStorage.removeItem('pomodoroPrefs_guest');
         localStorage.removeItem('pomodoroTimer_guest');
+        localStorage.removeItem('flickPomodoroSessionMode');
         service = createService();
     });
 
     afterEach(() => {
         localStorage.removeItem('pomodoroPrefs_guest');
         localStorage.removeItem('pomodoroTimer_guest');
+        localStorage.removeItem('flickPomodoroSessionMode');
     });
 
     it('formats the default study duration as HH:MM:SS', () => {
@@ -107,4 +110,22 @@ describe('PomodoroService', () => {
 
         discardPeriodicTasks();
     }));
+
+    it('pauses on leaving the tab only in the mode chosen for watching lectures', () => {
+        const hidden = spyOnProperty(document, 'hidden').and.returnValue(true);
+        service.start();
+        document.dispatchEvent(new Event('visibilitychange'));
+        expect(firstValue(service.timerState$)).toBe('paused');
+
+        hidden.and.returnValue(false);
+        document.dispatchEvent(new Event('visibilitychange'));
+        expect(firstValue(service.timerState$)).toBe('running');
+
+        TestBed.inject(PomodoroSessionModeService).setMode('elsewhere');
+        hidden.and.returnValue(true);
+        document.dispatchEvent(new Event('visibilitychange'));
+        expect(firstValue(service.timerState$)).toBe('running');
+
+        service.reset();
+    });
 });

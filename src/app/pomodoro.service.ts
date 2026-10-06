@@ -3,6 +3,7 @@ import {BehaviorSubject, interval, Observable, Subject, Subscription} from 'rxjs
 import {map} from 'rxjs/operators';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from './consent.service';
+import {PomodoroSessionModeService} from './pomodoro-session-mode.service';
 
 /** Pomodoro timer phase definitions */
 export interface PomodoroPhase {
@@ -78,28 +79,13 @@ export const DURATION_FIELDS: DurationField[] = [
     {label: 'Long Break Duration', key: 'longBreakMinutes', suffix: 'min'},
 ];
 
-/** What the user is studying from, which decides whether leaving the tab pauses the timer. */
-export type SessionMode = 'lecture' | 'elsewhere';
-
-export interface SessionModeOption {
-    key: SessionMode;
-    label: string;
-    hint: string;
-}
-
-export const SESSION_MODES: SessionModeOption[] = [
-    {key: 'lecture', label: 'Watching lectures', hint: 'Timer pauses when you leave this tab.'},
-    {key: 'elsewhere', label: 'Studying elsewhere', hint: 'Timer keeps running while you use other sites.'},
-];
-
-export const DEFAULT_SESSION_MODE: SessionMode = 'lecture';
-
 @Injectable({
     providedIn: 'root',
 })
 export class PomodoroService {
     private analytics = inject(Analytics);
     private consentService = inject(ConsentService);
+    private sessionModes = inject(PomodoroSessionModeService);
 
     private readonly STORAGE_KEY_PREFIX = 'pomodoroPrefs_';
     private readonly TIMER_KEY_PREFIX = 'pomodoroTimer_';
@@ -110,7 +96,6 @@ export class PomodoroService {
     /** Configurable settings */
     private durations: PomodoroDurations = {...DEFAULT_DURATIONS};
     private sessionsBeforeLongBreak = DEFAULT_SESSIONS_BEFORE_LONG_BREAK;
-    private sessionMode = new BehaviorSubject<SessionMode>(DEFAULT_SESSION_MODE);
 
     /** Internal state */
     private timerState = new BehaviorSubject<TimerState>('idle');
@@ -141,7 +126,6 @@ export class PomodoroService {
     timeRemaining$: Observable<number> = this.timeRemaining.asObservable();
     currentPhase$: Observable<PomodoroPhase> = this.currentPhase.asObservable();
     completedSessions$: Observable<number> = this.completedSessions.asObservable();
-    sessionMode$: Observable<SessionMode> = this.sessionMode.asObservable();
     sessionsBeforeLongBreak$: Observable<number> = new BehaviorSubject<number>(this.sessionsBeforeLongBreak).asObservable();
 
     /** Formatted time string observable (HH:MM:SS) */
@@ -153,6 +137,8 @@ export class PomodoroService {
         this.loadPreferences(this.currentUserId);
         this.restoreTimerState(this.currentUserId);
         this.registerVisibilityHandlers();
+        // This timer acts on the choice, so the settings sheet can offer it.
+        this.sessionModes.markSupported();
     }
 
     /** Request browser system notification permissions */
@@ -185,19 +171,6 @@ export class PomodoroService {
     /** Get current durations */
     getDurations(): PomodoroDurations {
         return {...this.durations};
-    }
-
-    getSessionMode(): SessionMode {
-        return this.sessionMode.value;
-    }
-
-    /** Choose whether leaving the tab pauses the timer. Takes effect from the next tab switch. */
-    setSessionMode(mode: SessionMode): void {
-        if (mode === this.sessionMode.value) {
-            return;
-        }
-        this.sessionMode.next(mode);
-        this.savePreferences();
     }
 
     /** Update duration config and save */
@@ -506,9 +479,6 @@ export class PomodoroService {
                 if (typeof parsed.sessionsBeforeLongBreak === 'number' && parsed.sessionsBeforeLongBreak > 0) {
                     this.sessionsBeforeLongBreak = parsed.sessionsBeforeLongBreak;
                 }
-                if (SESSION_MODES.some(mode => mode.key === parsed.sessionMode)) {
-                    this.sessionMode.next(parsed.sessionMode);
-                }
             }
         } catch {
             // Ignore parse errors
@@ -521,7 +491,6 @@ export class PomodoroService {
             JSON.stringify({
                 durations: this.durations,
                 sessionsBeforeLongBreak: this.sessionsBeforeLongBreak,
-                sessionMode: this.sessionMode.value,
             }),
         );
     }
@@ -564,7 +533,7 @@ export class PomodoroService {
         }
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
-                if (this.sessionMode.value === 'lecture' && this.timerState.value === 'running') {
+                if (this.sessionModes.mode === 'lecture' && this.timerState.value === 'running') {
                     this.pause();
                     this.pausedByVisibility = true;
                 } else if (this.timerState.value !== 'idle') {
