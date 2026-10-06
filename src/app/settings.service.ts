@@ -6,6 +6,7 @@ import {findFont, FONT_OPTIONS, fontHref, previewHref, previewRules} from './set
 import {defaultSettings, RESET_HOURS, WIDGETS} from './settings/settings-presets';
 import {sanitizeSettings} from './settings/sanitize';
 import {RestoreDefaultsService} from './restore-defaults.service';
+import {DEFAULT_SESSION_MODE, PomodoroSessionModeService} from './pomodoro-session-mode.service';
 import {AppliedFont, AppSettings, FontOption, WidgetOption} from './settings/settings.model';
 
 /** Settings stay on the device that set them, so the key carries no account id. */
@@ -31,6 +32,8 @@ export class SettingsService {
     readonly widgets = WIDGETS;
     readonly fonts = FONT_OPTIONS;
     readonly resetHours = RESET_HOURS;
+
+    private sessionModes = inject(PomodoroSessionModeService);
 
     private readonly settingsSubject = new BehaviorSubject<AppSettings>(defaultSettings());
 
@@ -143,6 +146,7 @@ export class SettingsService {
     reset(): void {
         // What the app has discovered about itself is not a preference, so it survives.
         this.update({...defaultSettings(), seen: this.settings.seen});
+        this.sessionModes.setMode(DEFAULT_SESSION_MODE);
     }
 
     private update(change: Partial<AppSettings>): void {

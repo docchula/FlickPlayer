@@ -1,4 +1,4 @@
-import {AppSettings, ResetHourOption, WidgetOption} from './settings.model';
+import {AppSettings, ResetHourOption, SessionModeOption, WidgetOption} from './settings.model';
 import {DEFAULT_FONT_ID} from './fonts';
 
 /**
@@ -40,6 +40,20 @@ function formatHour(hour: number): string {
 
     return display + ':00 ' + suffix;
 }
+
+/** Whether the Pomodoro timer pauses when the reader leaves the tab, in the words the sheet uses. */
+export const SESSION_MODE_OPTIONS: SessionModeOption[] = [
+    {
+        value: 'lecture',
+        label: 'Watching lectures',
+        hint: 'The timer pauses when you leave this tab, so only time spent here counts.',
+    },
+    {
+        value: 'elsewhere',
+        label: 'Studying elsewhere',
+        hint: 'The timer keeps running while you use other tabs and apps.',
+    },
+];
 
 export const RESET_HOURS: ResetHourOption[] = Array.from({length: 24}, (unused, hour) => ({
     value: hour,

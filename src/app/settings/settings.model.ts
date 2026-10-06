@@ -1,3 +1,5 @@
+import {SessionMode} from '../pomodoro-session-mode.service';
+
 /** A screen element the user can switch off. */
 export interface WidgetOption {
     key: string;
@@ -22,6 +24,12 @@ export interface FontOption {
 export interface ResetHourOption {
     value: number;
     label: string;
+}
+
+export interface SessionModeOption {
+    value: SessionMode;
+    label: string;
+    hint: string;
 }
 
 /** Everything the settings sheet controls, as kept on this device. */

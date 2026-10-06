@@ -72,6 +72,22 @@
                         </ion-select>
                     </ion-item>
                     <p class="card-note">The session count goes back to zero at this time.</p>
+
+                    @if (sessionModeSupported$ | async) {
+                        <div class="card-block">
+                            <span class="block-label" id="session-type-label">Session type</span>
+                            <ion-segment aria-labelledby="session-type-label"
+                                         [value]="sessionMode$ | async"
+                                         (ionChange)="onSessionModeChange($event)">
+                                @for (option of sessionModeOptions; track option.value) {
+                                    <ion-segment-button [value]="option.value">
+                                        <ion-label>{{ option.label }}</ion-label>
+                                    </ion-segment-button>
+                                }
+                            </ion-segment>
+                            <p class="card-note">{{ sessionModeHint(sessionMode$ | async) }}</p>
+                        </div>
+                    }
                 </ion-list>
             </section>
         }

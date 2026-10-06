@@ -7,7 +7,10 @@ import {
     IonHeader,
     IonIcon,
     IonItem,
+    IonLabel,
     IonList,
+    IonSegment,
+    IonSegmentButton,
     IonSelect,
     IonSelectOption,
     IonTitle,
@@ -24,7 +27,9 @@ import {
 } from 'ionicons/icons';
 import {SettingsService} from '../settings.service';
 import {RestoreDefaultsService} from '../restore-defaults.service';
+import {PomodoroSessionModeService, SessionMode} from '../pomodoro-session-mode.service';
 import {FONT_SAMPLE, fontOptionClass} from '../settings/fonts';
+import {SESSION_MODE_OPTIONS} from '../settings/settings-presets';
 import {AppSettings} from '../settings/settings.model';
 
 /** Ionic hands its payload over in `detail`, which the DOM event types do not describe. */
@@ -50,7 +55,10 @@ function detailChecked(event: Event): boolean {
         IonContent,
         IonList,
         IonItem,
+        IonLabel,
         IonToggle,
+        IonSegment,
+        IonSegmentButton,
         IonSelect,
         IonSelectOption,
         AsyncPipe,
@@ -59,6 +67,7 @@ function detailChecked(event: Event): boolean {
 export class SettingsSheetComponent {
     protected settingsService = inject(SettingsService);
     private restoreDefaults = inject(RestoreDefaultsService);
+    private sessionModes = inject(PomodoroSessionModeService);
     private modalCtrl = inject(ModalController);
 
     protected readonly settings$ = this.settingsService.settings$;
@@ -67,6 +76,9 @@ export class SettingsSheetComponent {
     protected readonly font$ = this.settingsService.font$;
     protected readonly sample = FONT_SAMPLE;
     protected readonly fontOptionClass = fontOptionClass;
+    protected readonly sessionModeOptions = SESSION_MODE_OPTIONS;
+    protected readonly sessionMode$ = this.sessionModes.mode$;
+    protected readonly sessionModeSupported$ = this.sessionModes.supported$;
     /** Menus open from the row's right edge towards the sheet, rather than out over its edge. */
     protected readonly popoverOptions = {side: 'bottom', alignment: 'end'};
 
@@ -97,6 +109,17 @@ export class SettingsSheetComponent {
 
     onResetHourChange(event: Event): void {
         this.settingsService.setPomodoroResetHour(detailValue<number>(event));
+    }
+
+    onSessionModeChange(event: Event): void {
+        const mode = this.sessionModeOptions.find(option => option.value === detailValue<SessionMode>(event));
+        if (mode) {
+            this.sessionModes.setMode(mode.value);
+        }
+    }
+
+    sessionModeHint(mode: SessionMode | null): string {
+        return this.sessionModeOptions.find(option => option.value === mode)?.hint ?? '';
     }
 
     /** Puts back this sheet's settings and anything else that listens, such as the theme. */

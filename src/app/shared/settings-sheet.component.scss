@@ -76,6 +76,28 @@
     opacity: 1;
 }
 
+/* A control that needs the card's full width, with its label above it. */
+.card-block {
+    margin-top: 0.25rem;
+    padding: 0.75rem 1rem 0;
+    border-top: 1px solid var(--ion-color-step-150, rgba(0, 0, 0, 0.1));
+}
+
+.card-block .card-note {
+    padding: 0.45rem 0 0.6rem;
+}
+
+.block-label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.card-block ion-segment-button {
+    min-height: 2.25rem;
+    font-size: 0.85rem;
+    text-transform: none;
+}
+
 .quiet-button {
     margin-top: 0.5rem;
     font-size: 0.85rem;
