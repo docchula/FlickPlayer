@@ -118,9 +118,9 @@ export function shadeForColor(color: string | null): ThemeShade {
 }
 
 /**
- * The page a theme is drawn on when it does not name one. In the shade the colour belongs to,
- * and whenever the page is filled, the colour is used as picked, so choosing that shade shows
- * the colour itself. The other shades adapt it into a page they can carry.
+ * The page a theme is drawn on when it does not name one. Light and dark always adapt the
+ * colour into a page of that lightness, so the choice means the same whatever colour it is
+ * tinted with; only a filled page is the colour itself.
  */
 function derivePage(
     surfaceTint: Rgb,
@@ -129,7 +129,7 @@ function derivePage(
     intensity: number,
     derived: boolean,
 ): Rgb {
-    if (derived && (shade === 'fill' || shade === shadeOf(surfaceTint))) {
+    if (derived && shade === 'fill') {
         return surfaceTint;
     }
     if (shade === 'dark' && derived) {

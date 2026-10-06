@@ -117,6 +117,15 @@ export interface ThemeShadeOption {
     icon: string;
 }
 
+/** The three colours the editor lets the reader set, each with one job. */
+export type ColorRole = 'primary' | 'secondary' | 'background';
+
+export interface ColorRoleOption {
+    value: ColorRole;
+    label: string;
+    hint: string;
+}
+
 /** Neutral palette each theme starts from; the accent is blended into it by intensity. */
 export interface BaseScheme {
     background: string;

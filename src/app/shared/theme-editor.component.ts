@@ -21,23 +21,16 @@ import {
     ModalController,
 } from '@ionic/angular/standalone';
 import {addIcons} from 'ionicons';
-import {
-    add,
-    close,
-    colorFillOutline,
-    colorPaletteOutline,
-    moonOutline,
-    phonePortraitOutline,
-    sunnyOutline,
-} from 'ionicons/icons';
-import {OWN_COLOR_TEMPLATE_ID, ThemeService} from '../theme.service';
-import {ACCENT_SWATCHES} from '../theme/theme-presets';
+import {add, close, moonOutline, sunnyOutline} from 'ionicons/icons';
+import {ThemeService} from '../theme.service';
+import {CssVariables} from '../theme/palette';
+import {ACCENT_SWATCHES, COLOR_ROLES, PAGE_SWATCHES} from '../theme/theme-presets';
 import {
     BackgroundFit,
     BackgroundPictureMode,
-    ThemeMode,
+    ColorRole,
+    CustomTheme,
     ThemeSettings,
-    ThemeShade,
     ThemeTemplate,
 } from '../theme/theme.model';
 
@@ -62,7 +55,9 @@ export class ThemeEditorComponent implements OnDestroy {
 
     @ViewChild('fileInput') fileInput: ElementRef<HTMLInputElement>;
 
-    protected readonly accentSwatches = ACCENT_SWATCHES;
+    protected readonly colorRoles = COLOR_ROLES;
+    /** The colour the palette below sets. */
+    protected role: ColorRole = 'primary';
     protected readonly settings$ = this.themeService.settings$;
     protected readonly backgroundImageUrl$ = this.themeService.backgroundImageUrl$;
     protected readonly shownPictureId$ = this.themeService.shownPictureId$;
@@ -71,16 +66,14 @@ export class ThemeEditorComponent implements OnDestroy {
     /** The folder's pictures with a URL each, for the thumbnails. */
     protected pictures: {id: string, url: string}[] = [];
 
+    private paletteCache: {custom: CustomTheme, variables: CssVariables} | null = null;
     private thumbnailUrls = new Map<string, string>();
     private thumbnailTicket = 0;
     private readonly pictureSubscription = this.themeService.pictureIds$
         .subscribe(ids => void this.loadThumbnails(ids));
 
     constructor() {
-        addIcons({
-            add, close, colorFillOutline, colorPaletteOutline,
-            sunnyOutline, moonOutline, phonePortraitOutline,
-        });
+        addIcons({add, close, sunnyOutline, moonOutline});
     }
 
     ngOnDestroy(): void {
@@ -99,12 +92,73 @@ export class ThemeEditorComponent implements OnDestroy {
         this.themeService.selectTemplate(templateId);
     }
 
-    selectAccent(accent: string): void {
-        this.themeService.setAccent(accent);
+    get roleHint(): string {
+        return this.colorRoles.find(option => option.value === this.role)?.hint ?? '';
+    }
+
+    /** Pages need colours text can sit on; the other two roles take any accent. */
+    get roleSwatches(): string[] {
+        return this.role === 'background' ? PAGE_SWATCHES : ACCENT_SWATCHES;
+    }
+
+    onRoleChange(event: Event): void {
+        const value = detailValue<ColorRole>(event);
+        if (value) {
+            this.role = value;
+        }
+    }
+
+    /** Sets the chosen role's colour and nothing else. */
+    pick(colour: string): void {
+        if (this.role === 'primary') {
+            this.themeService.setAccent(colour);
+        } else if (this.role === 'secondary') {
+            this.themeService.setSecondaryColor(colour);
+        } else {
+            this.themeService.setPage(colour);
+        }
+    }
+
+    onColorInput(event: Event): void {
+        this.pick((event.target as HTMLInputElement).value);
+    }
+
+    useAutoSecondary(): void {
+        this.themeService.setSecondaryColor(null);
+    }
+
+    useDerivedPage(page: 'light' | 'dark'): void {
+        this.themeService.setPage(page);
+    }
+
+    isDerivedPage(settings: ThemeSettings, page: 'light' | 'dark'): boolean {
+        return settings.custom.background.color === null && settings.custom.shade === page;
+    }
+
+    /** The colour a role ends up as, which for Auto and a derived page is the one worked out. */
+    roleColor(role: ColorRole, settings: ThemeSettings): string {
+        const custom = settings.custom;
+        const palette = this.palette(custom);
+        if (role === 'primary') {
+            return custom.seed.accent ?? palette['--ion-color-primary'];
+        }
+        if (role === 'secondary') {
+            return custom.seed.companion ?? palette['--ion-color-secondary'];
+        }
+        return custom.background.color ?? palette['--ion-background-color'];
+    }
+
+    /** Only a colour the reader chose is marked, never one the theme worked out for them. */
+    isChosen(settings: ThemeSettings, swatch: string): boolean {
+        const custom = settings.custom;
+        const chosen = this.role === 'primary' ? custom.seed.accent
+            : this.role === 'secondary' ? custom.seed.companion
+                : custom.background.color;
+        return chosen?.toLowerCase() === swatch.toLowerCase();
     }
 
     saveColour(settings: ThemeSettings): void {
-        this.themeService.saveColor(this.accentValue(settings));
+        this.themeService.saveColor(this.roleColor(this.role, settings));
     }
 
     removeColour(colour: string): void {
@@ -112,14 +166,7 @@ export class ThemeEditorComponent implements OnDestroy {
     }
 
     isSaved(settings: ThemeSettings): boolean {
-        return this.themeService.isColorSaved(this.accentValue(settings));
-    }
-
-    onShadeChange(event: Event): void {
-        const value = detailValue<ThemeShade>(event);
-        if (value) {
-            this.themeService.setCustomShade(value);
-        }
+        return this.themeService.isColorSaved(this.roleColor(this.role, settings));
     }
 
     reset(): void {
@@ -135,28 +182,6 @@ export class ThemeEditorComponent implements OnDestroy {
             '--swatch-from': template.seed.surfaceTint ?? accent,
             '--swatch-to': accent,
         };
-    }
-
-    isAccent(settings: ThemeSettings, swatch: string): boolean {
-        return settings.custom.templateId === OWN_COLOR_TEMPLATE_ID
-            && settings.custom.seed.accent?.toLowerCase() === swatch.toLowerCase();
-    }
-
-    accentValue(settings: ThemeSettings): string {
-        return settings.custom.seed.accent
-            ?? this.themeService.preview(settings.custom.seed)['--ion-color-primary'];
-    }
-
-    backgroundValue(settings: ThemeSettings): string {
-        return this.themeService.customPageColor(settings.custom);
-    }
-
-    /** The plain modes replace the custom theme rather than recolouring it. */
-    onModeChange(event: Event): void {
-        const value = detailValue<ThemeMode>(event);
-        if (value) {
-            this.themeService.setMode(value);
-        }
     }
 
     onFitChange(event: Event): void {
@@ -178,14 +203,6 @@ export class ThemeEditorComponent implements OnDestroy {
         if (typeof value === 'number') {
             this.themeService.setBackgroundBlur(value);
         }
-    }
-
-    onAccentInput(event: Event): void {
-        this.themeService.setAccent((event.target as HTMLInputElement).value);
-    }
-
-    onBackgroundColorInput(event: Event): void {
-        this.themeService.setBackgroundColor((event.target as HTMLInputElement).value);
     }
 
     pickImage(): void {
@@ -244,6 +261,14 @@ export class ThemeEditorComponent implements OnDestroy {
             ],
         });
         await alert.present();
+    }
+
+    /** Worked out once per change of theme, however many times the template asks. */
+    private palette(custom: CustomTheme): CssVariables {
+        if (this.paletteCache?.custom !== custom) {
+            this.paletteCache = {custom, variables: this.themeService.customVariables(custom)};
+        }
+        return this.paletteCache.variables;
     }
 
     /** A later list supersedes one still loading, and each URL is made once and revoked once. */

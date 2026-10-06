@@ -17,10 +17,8 @@ import {
     DEFAULT_CUSTOM_SHADE,
     THEME_SHADES,
     NEUTRAL_SEED,
-    MAX_REMEMBERED_SHADES,
     MAX_SAVED_COLORS,
     OWN_COLOR_INTENSITY,
-    STANDARD_MODES,
     OWN_COLOR_TEMPLATE_ID,
     THEME_MODES,
     THEME_TEMPLATES,
@@ -32,7 +30,6 @@ import {
     BackgroundPictureMode,
     ColorScheme,
     ThemeShade,
-    ThemeTemplate,
     ThemeVariables,
     CustomTheme,
     SchemePreference,
@@ -48,8 +45,6 @@ export const APPLIED_THEME_KEY = 'flickThemeApplied';
 export const THEME_STORAGE_KEY_PREFIX = 'flickTheme_';
 /** Colours the reader has kept. They travel with the theme; the background picture does not. */
 export const SAVED_COLORS_KEY_PREFIX = 'flickThemeColors_';
-/** The shade last chosen for each colour and template. Kept on the device, like the rest. */
-export const SHADE_MEMORY_KEY_PREFIX = 'flickThemeShades_';
 export const BACKGROUND_IMAGE_CLASS = 'flick-has-background-image';
 /** Fades the picture out while the slideshow swaps it, for the length of BACKGROUND_FADE_MS. */
 export const BACKGROUND_FADING_CLASS = 'flick-background-fading';
@@ -258,8 +253,6 @@ export class ThemeService {
 
     readonly modes = THEME_MODES;
     readonly templates = THEME_TEMPLATES;
-    readonly standardModes = STANDARD_MODES;
-    readonly shades = THEME_SHADES;
     readonly backgroundFitOptions = BACKGROUND_FIT_OPTIONS;
     readonly pictureModes = BACKGROUND_PICTURE_MODES;
     readonly slideshowIntervals = SLIDESHOW_INTERVALS;
@@ -288,7 +281,6 @@ export class ThemeService {
     );
 
     private userId = GUEST_ID;
-    private shadeMemory: [string, ThemeShade][] = [];
     private painted = false;
     private animationTimer: number | null = null;
     private tweenFrame: number | null = null;
@@ -325,7 +317,6 @@ export class ThemeService {
 
         this.apply(this.readLocal(GUEST_ID), false);
         this.savedColorsSubject.next(this.readSavedColors(GUEST_ID));
-        this.shadeMemory = this.readShadeMemory(GUEST_ID);
 
         inject(AuthService).user.subscribe(user => {
             if (user?.uid) {
@@ -354,65 +345,53 @@ export class ThemeService {
         this.update({mode});
     }
 
-    /**
-     * A template starts light, the shade it states its own colours for, unless a shade has
-     * since been chosen for it.
-     */
+    /** A template brings its own page, on the light shade its colours are stated for. */
     selectTemplate(templateId: string): void {
         const template = findTemplate(templateId);
         if (!template) {
             return;
         }
-        const shade = this.rememberedShade(templateId) ?? DEFAULT_CUSTOM_SHADE;
         this.updateCustom({
             templateId: template.id,
-            shade,
+            shade: DEFAULT_CUSTOM_SHADE,
             seed: {...template.seed},
-            background: {...this.settings.custom.background, color: this.pageForTemplate(template, shade)},
+            background: {...this.settings.custom.background, color: template.background},
         });
     }
 
-    /**
-     * A colour lands on the shade last chosen for it, or the shade it belongs to when there is
-     * none, so it appears as it was last seen rather than on the previous theme's page.
-     */
+    /** The primary colour: buttons, links and highlights. The page and secondary colour stay put. */
     setAccent(accent: string): void {
         if (!isValidColor(accent)) {
             return;
         }
-        this.updateCustom({
-            templateId: OWN_COLOR_TEMPLATE_ID,
-            shade: this.rememberedShade(normalizeColor(accent)) ?? shadeForColor(accent),
-            seed: {
-                accent,
-                companion: null,
-                tertiary: null,
-                surfaceTint: null,
-                intensity: OWN_COLOR_INTENSITY,
-            },
-            background: {...this.settings.custom.background, color: null},
-        });
+        this.updateSeed({accent});
     }
 
-    /** The page is let go with the shade, so it is derived for the new one. */
-    setCustomShade(shade: ThemeShade): void {
-        const custom = this.settings.custom;
-        this.rememberShade(custom, shade);
-        const template = findTemplate(custom.templateId);
-        this.updateCustom({
-            shade,
-            background: {
-                ...custom.background,
-                color: template ? this.pageForTemplate(template, shade) : null,
-            },
-        });
-    }
-
-    setBackgroundColor(color: string | null): void {
-        if (color !== null && !isValidColor(color)) {
+    /** Null hands the secondary colour back to the primary, which picks one that goes with it. */
+    setSecondaryColor(companion: string | null): void {
+        if (companion !== null && !isValidColor(companion)) {
             return;
         }
-        this.updateCustom({background: {...this.settings.custom.background, color}});
+        this.updateSeed({companion, tertiary: null});
+    }
+
+    /**
+     * 'light' and 'dark' derive the page from the primary colour. Any colour is the page itself,
+     * used exactly, with the cards and toolbars on it drawn from the same colour. Either way the
+     * text is dark or light by what the page needs.
+     */
+    setPage(page: string): void {
+        const custom = this.settings.custom;
+        const derived = page === 'light' || page === 'dark';
+        if (!derived && !isValidColor(page)) {
+            return;
+        }
+        this.updateCustom({
+            templateId: OWN_COLOR_TEMPLATE_ID,
+            shade: derived ? page as ThemeShade : shadeForColor(page),
+            seed: {...custom.seed, surfaceTint: derived ? null : page, intensity: OWN_COLOR_INTENSITY},
+            background: {...custom.background, color: derived ? null : page},
+        });
     }
 
     setBackgroundFit(imageFit: BackgroundFit): void {
@@ -550,28 +529,29 @@ export class ThemeService {
         this.queueSync(settings);
     }
 
-    /** The page the custom theme renders, whether it was named or derived. */
-    customPageColor(custom: CustomTheme): string {
-        return custom.background.color
-            ?? buildThemeVariables(
-                custom.seed,
-                this.schemeFor(custom, custom.background),
-                custom.background,
-                this.templateVariables(custom),
-                custom.shade,
-            )['--ion-background-color'];
+    /** The palette the custom theme renders, so the editor can show the colours it ends up with. */
+    customVariables(custom: CustomTheme): CssVariables {
+        return buildThemeVariables(
+            custom.seed,
+            this.schemeFor(custom, custom.background),
+            custom.background,
+            this.templateVariables(custom),
+            custom.shade,
+        );
     }
 
     /**
-     * Which base palette the theme builds on. Light and dark say so; filled it follows the
-     * page itself, so a colour kept dark keeps dark surfaces and course colours.
+     * Which base palette the theme builds on. A page with a colour of its own decides by how
+     * light it is, so a dark page always gets light text, dark surfaces and course colours
+     * made for it. A page derived from the primary colour follows the shade it was asked for.
      */
     private schemeFor(custom: CustomTheme, background: ThemeBackground): ColorScheme {
-        if (custom.shade !== 'fill') {
-            return custom.shade;
+        const page = background.color
+            ?? (custom.shade === 'fill' ? custom.seed.surfaceTint ?? custom.seed.accent : null);
+        if (!page) {
+            return custom.shade === 'dark' ? 'dark' : 'light';
         }
-        const page = background.color ?? custom.seed.surfaceTint ?? custom.seed.accent;
-        const parsed = page ? parseColor(page) : null;
+        const parsed = parseColor(page);
         return parsed && readableOn(parsed) === BLACK ? 'light' : 'dark';
     }
 
@@ -587,11 +567,13 @@ export class ThemeService {
         this.update({...defaultThemeSettings(), mode: 'light'});
     }
 
-    /** Palette for a seed without applying it, used to preview a template in the picker. */
-    preview(seed: ThemeSeed, shade: ThemeShade = this.settings.custom.shade): CssVariables {
-        const custom = {...this.settings.custom, seed, shade, background: {...DEFAULT_BACKGROUND}};
-        return buildThemeVariables(
-            seed, this.schemeFor(custom, custom.background), custom.background, undefined, shade);
+    /** Every colour change leaves the template behind, so the theme is kept as the reader set it. */
+    private updateSeed(change: Partial<ThemeSeed>): void {
+        const custom = this.settings.custom;
+        this.updateCustom({
+            templateId: OWN_COLOR_TEMPLATE_ID,
+            seed: {...custom.seed, ...change, intensity: OWN_COLOR_INTENSITY},
+        });
     }
 
     private updateCustom(change: Partial<CustomTheme>): void {
@@ -837,7 +819,6 @@ export class ThemeService {
         const stored = this.readLocal(uid);
         const adoptGuest = guestSettings && guestSettings.updatedAt > stored.updatedAt;
         this.savedColorsSubject.next(this.readSavedColors(uid));
-        this.shadeMemory = this.readShadeMemory(uid);
         this.apply(adoptGuest ? guestSettings : stored, adoptGuest);
         void this.pullRemote(uid, !!adoptGuest);
     }
@@ -896,58 +877,6 @@ export class ThemeService {
         this.userId = GUEST_ID;
         this.apply(this.readLocal(GUEST_ID), false);
         this.savedColorsSubject.next(this.readSavedColors(GUEST_ID));
-        this.shadeMemory = this.readShadeMemory(GUEST_ID);
-    }
-
-    /**
-     * A template states its colours for the light shade, so its own page belongs to that shade
-     * alone; any other derives the page from the colour instead.
-     */
-    private pageForTemplate(template: ThemeTemplate, shade: ThemeShade): string | null {
-        return shade === DEFAULT_CUSTOM_SHADE ? template.background : null;
-    }
-
-    /** What a colour or template is remembered under: templates keep their own identity. */
-    private shadeKey(custom: CustomTheme): string | null {
-        return custom.templateId === OWN_COLOR_TEMPLATE_ID
-            ? normalizeColor(custom.seed.accent)
-            : custom.templateId;
-    }
-
-    private rememberedShade(key: string | null): ThemeShade | null {
-        return key ? this.shadeMemory.find(([saved]) => saved === key)?.[1] ?? null : null;
-    }
-
-    private rememberShade(custom: CustomTheme, shade: ThemeShade): void {
-        const key = this.shadeKey(custom);
-        if (!key) {
-            return;
-        }
-        this.shadeMemory = [[key, shade] as [string, ThemeShade],
-            ...this.shadeMemory.filter(([saved]) => saved !== key)]
-            .slice(0, MAX_REMEMBERED_SHADES);
-        try {
-            localStorage.setItem(SHADE_MEMORY_KEY_PREFIX + this.userId, JSON.stringify(this.shadeMemory));
-        } catch {
-            // Storage may be unavailable; the shade still holds for this session.
-        }
-    }
-
-    private readShadeMemory(uid: string): [string, ThemeShade][] {
-        try {
-            const raw = localStorage.getItem(SHADE_MEMORY_KEY_PREFIX + uid);
-            const parsed: unknown = raw ? JSON.parse(raw) : null;
-            if (!Array.isArray(parsed)) {
-                return [];
-            }
-            return parsed
-                .filter((entry): entry is [string, ThemeShade] => Array.isArray(entry)
-                    && typeof entry[0] === 'string'
-                    && THEME_SHADES.some(option => option.value === entry[1]))
-                .slice(0, MAX_REMEMBERED_SHADES);
-        } catch {
-            return [];
-        }
     }
 
     private readSavedColors(uid: string): string[] {

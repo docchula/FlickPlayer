@@ -72,17 +72,6 @@
     box-shadow: 0 0 0 2px var(--ion-background-color), 0 0 0 4px var(--ion-color-primary);
 }
 
-.swatch-picker {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--flick-surface-muted);
-    color: var(--ion-text-color);
-    position: relative;
-    overflow: hidden;
-}
-
-.swatch-picker input,
 .colour-field input {
     position: absolute;
     inset: 0;
@@ -247,7 +236,82 @@ ion-segment-button.ios {
     cursor: default;
 }
 
-.saved-empty {
-    margin: 0;
-    align-self: center;
+.template-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.template-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--flick-muted-text);
+    font: inherit;
+    font-size: 0.72rem;
+    cursor: pointer;
+}
+
+.template-option .swatch {
+    width: 2.5rem;
+    height: 2.5rem;
+}
+
+.template-option.selected {
+    color: var(--ion-text-color);
+    font-weight: 600;
+}
+
+.template-option.selected .swatch {
+    box-shadow: 0 0 0 2px var(--ion-background-color), 0 0 0 4px var(--ion-color-primary);
+}
+
+.role-segment ion-segment-button {
+    text-transform: none;
+}
+
+.role-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.role-dot {
+    width: 0.8rem;
+    height: 0.8rem;
+    border: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+    border-radius: 50%;
+}
+
+.role-hint {
+    margin-top: 0.5rem;
+}
+
+.colour-row {
+    flex-wrap: wrap;
+    margin-bottom: 0.6rem;
+}
+
+.choice-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+    border-radius: 999px;
+    background: none;
+    color: var(--flick-muted-text);
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.choice-chip.selected {
+    border-color: var(--flick-accent-text);
+    color: var(--flick-accent-text);
+    font-weight: 600;
 }

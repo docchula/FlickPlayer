@@ -1,5 +1,6 @@
 import {
     BackgroundFitOption,
+    ColorRoleOption,
     BackgroundPictureModeOption,
     SlideshowIntervalOption,
     ThemeShade,
@@ -173,9 +174,6 @@ export const THEME_MODES: ThemeModeOption[] = [
 ];
 
 export const DEFAULT_MODE = THEME_MODES[2].value;
-
-/** The modes that are not a custom theme, offered inside the editor as the way back out. */
-export const STANDARD_MODES = THEME_MODES.filter(option => option.value !== 'custom');
 
 export const DEFAULT_CUSTOM_SHADE: ThemeShade = 'light';
 
@@ -383,11 +381,38 @@ export const ACCENT_SWATCHES: string[] = [
     '#be123c', '#0369a1', '#4d7c0f', '#475569',
 ];
 
+/**
+ * Pages offered for the background, light ones first. Each reads clearly under black or white
+ * text, so whichever the page calls for clears the contrast rule.
+ */
+export const PAGE_SWATCHES: string[] = [
+    '#ffffff', '#f6f4ef', '#eef4fb', UNIVERSITY_PAGE, FACULTY_PAGE,
+    '#1b1d23', '#172033', '#25182b',
+];
+
+/** What each colour in the editor is for, in the words the editor uses. */
+export const COLOR_ROLES: ColorRoleOption[] = [
+    {
+        value: 'primary',
+        label: 'Primary',
+        hint: 'Buttons, links, switches and the heatmap.',
+    },
+    {
+        value: 'secondary',
+        label: 'Secondary',
+        hint: 'The sign-out button and the video you are watching. Auto picks one that goes with your primary colour.',
+    },
+    {
+        value: 'background',
+        label: 'Background',
+        hint: 'The page behind everything. Light and Dark are tinted with your primary colour; a colour you pick is used exactly.',
+    },
+];
+
 /** A colour picked in the editor tints the page as fully as a template does. */
 export const OWN_COLOR_INTENSITY = 1;
 
 export const MAX_SAVED_COLORS = 12;
-export const MAX_REMEMBERED_SHADES = 60;
 
 export const BACKGROUND_FIT_OPTIONS: BackgroundFitOption[] = [
     {value: 'cover', label: 'Fill'},
