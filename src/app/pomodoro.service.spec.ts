@@ -5,6 +5,7 @@ import {
     DEFAULT_DURATIONS,
     DEFAULT_SESSIONS_BEFORE_LONG_BREAK
 } from './pomodoro.service';
+import {StudyStatsService} from './study-stats.service';
 
 describe('PomodoroService', () => {
     let service: PomodoroService;
@@ -12,7 +13,10 @@ describe('PomodoroService', () => {
     function createService(): PomodoroService {
         TestBed.resetTestingModule();
         TestBed.configureTestingModule({
-            providers: [{provide: Analytics, useValue: {}}]
+            providers: [
+                {provide: Analytics, useValue: {}},
+                {provide: StudyStatsService, useValue: {recordFocusTick: () => undefined, recordFocusSession: () => undefined}},
+            ]
         });
         return TestBed.inject(PomodoroService);
     }

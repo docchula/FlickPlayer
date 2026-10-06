@@ -2,6 +2,7 @@ import {TestBed} from '@angular/core/testing';
 import {of} from 'rxjs';
 
 import {AuthService} from './auth.service';
+import {UserSyncService} from './user-sync.service';
 import {
     addDays,
     computeStudyStats,
@@ -24,7 +25,14 @@ describe('StudyStatsService', () => {
     beforeEach(() => {
         localStorage.clear();
         TestBed.configureTestingModule({
-            providers: [{provide: AuthService, useValue: {user: of(null)}}],
+            providers: [
+                {provide: AuthService, useValue: {user: of(null)}},
+                // Sync is exercised against Firestore itself, which unit tests do not start.
+                {
+                    provide: UserSyncService,
+                    useValue: {attach: () => undefined, detach: () => undefined, read: async () => null, queue: () => undefined},
+                },
+            ],
         });
     });
 
