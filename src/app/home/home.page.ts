@@ -1,5 +1,5 @@
 import {Component, inject, OnInit} from '@angular/core';
-import {Observable, Subject, combineLatest, of} from 'rxjs';
+import {Observable, of, Subject} from 'rxjs';
 import {CourseListResponse, Lecture, ManService, SearchVideoResult} from '../man.service';
 import {Router, RouterLink} from '@angular/router';
 import {AuthService} from '../auth.service';
@@ -30,6 +30,8 @@ import {
     IonToolbar,
 } from '@ionic/angular/standalone';
 import {AsyncPipe, NgStyle} from '@angular/common';
+import {Analytics, logEvent} from '@angular/fire/analytics';
+import {ConsentService} from '../consent.service';
 
 export interface EnrichedSearchResult extends SearchVideoResult {
     courseName?: string;
@@ -51,6 +53,8 @@ export class HomePage implements OnInit {
     private manService = inject(ManService);
     private router = inject(Router);
     private authService = inject(AuthService);
+    private analytics = inject(Analytics);
+    private consentService = inject(ConsentService);
 
     response$: Observable<CourseListResponse>;
     searchQuery = '';
@@ -94,6 +98,9 @@ export class HomePage implements OnInit {
                 if (!query.trim()) {
                     this.isSearching = false;
                     return of([]);
+                }
+                if (this.consentService.current === 'granted') {
+                    logEvent(this.analytics, 'search', {search_term: query});
                 }
                 return this.manService.searchVideos(query).pipe(
                     map(results => results.map(r => ({

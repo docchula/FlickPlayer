@@ -416,7 +416,7 @@ export class PomodoroTimerComponent implements OnInit, OnDestroy {
         }
     }
 
-    onDurationChange(key: keyof PomodoroDurations, event: any): void {
+    onDurationChange(key: keyof PomodoroDurations, event: CustomEvent): void {
         const value = parseInt(event.detail.value, 10);
         if (!isNaN(value) && value > 0 && value <= 120) {
             this.currentDurations = {...this.currentDurations, [key]: value};

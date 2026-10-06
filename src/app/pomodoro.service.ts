@@ -1,6 +1,8 @@
-import {Injectable} from '@angular/core';
-import {BehaviorSubject, Observable, Subject, Subscription, interval} from 'rxjs';
+import {inject, Injectable} from '@angular/core';
+import {BehaviorSubject, interval, Observable, Subject, Subscription} from 'rxjs';
 import {map} from 'rxjs/operators';
+import {Analytics, logEvent} from '@angular/fire/analytics';
+import {ConsentService} from './consent.service';
 
 /** Pomodoro timer phase definitions */
 export interface PomodoroPhase {
@@ -96,6 +98,9 @@ export const DEFAULT_SESSION_MODE: SessionMode = 'lecture';
     providedIn: 'root',
 })
 export class PomodoroService {
+    private analytics = inject(Analytics);
+    private consentService = inject(ConsentService);
+
     private readonly STORAGE_KEY_PREFIX = 'pomodoroPrefs_';
     private readonly TIMER_KEY_PREFIX = 'pomodoroTimer_';
     /** Hour of the local day at which session progress rolls over to a new study day. */
@@ -220,6 +225,9 @@ export class PomodoroService {
         if (this.timerState.value === 'idle') {
             this.timeRemaining.next(this.getCurrentPhaseDuration());
             this.notifyPhase(this.currentPhase.value, true);
+            if (this.consentService.current === 'granted') {
+                logEvent(this.analytics, 'pomodoro_start', {phase: this.currentPhase.value.key});
+            }
         }
 
         this.pausedByVisibility = false;

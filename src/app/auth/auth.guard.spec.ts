@@ -1,24 +1,50 @@
-import {inject, TestBed} from '@angular/core/testing';
-
+import {TestBed} from '@angular/core/testing';
+import {of} from 'rxjs';
+import {take, toArray} from 'rxjs/operators';
 import {AuthGuard} from './auth.guard';
-import {AngularFireAuth} from '@angular/fire/compat/auth';
-import {FireAuthStub} from '../stubs';
-import {ManService, ManServiceStub} from '../man.service';
-import {RouterTestingModule} from '@angular/router/testing';
+import {AuthService} from '../auth.service';
 
 describe('AuthGuard', () => {
-    beforeEach(() => {
+    function createGuard(user: unknown): AuthGuard {
         TestBed.configureTestingModule({
-            imports: [RouterTestingModule],
-            providers: [
-                {provide: AngularFireAuth, useValue: FireAuthStub},
-                AuthGuard,
-                {provide: ManService, useValue: ManServiceStub}
-            ],
+            providers: [{provide: AuthService, useValue: {user: of(user)}}]
+        });
+        return TestBed.inject(AuthGuard);
+    }
+
+    it('isLoggedIn() emits true when a user is present', done => {
+        createGuard({uid: 'abc'}).isLoggedIn().subscribe(result => {
+            expect(result).toBe(true);
+            done();
         });
     });
 
-    it('should ...', inject([AuthGuard], (guard: AuthGuard) => {
-        expect(guard).toBeTruthy();
-    }));
+    it('isLoggedIn() emits false when the user is undefined (signed out, past the initial null)', done => {
+        createGuard(undefined).isLoggedIn().subscribe(result => {
+            expect(result).toBe(false);
+            done();
+        });
+    });
+
+    it('isLoggedIn() never emits while the auth state is still null (initial loading state)', () => {
+        const emissions: boolean[] = [];
+        createGuard(null).isLoggedIn().subscribe(result => emissions.push(result));
+
+        expect(emissions).toEqual([]);
+    });
+
+    it('canActivate() delegates to isLoggedIn()', done => {
+        createGuard({uid: 'abc'}).canActivate().subscribe(result => {
+            expect(result).toBe(true);
+            done();
+        });
+    });
+
+    it('canLoad() delegates to isLoggedIn()', done => {
+        const result$ = createGuard({uid: 'abc'}).canLoad();
+        (result$ as ReturnType<AuthGuard['isLoggedIn']>).pipe(take(1), toArray()).subscribe(([result]) => {
+            expect(result).toBe(true);
+            done();
+        });
+    });
 });
