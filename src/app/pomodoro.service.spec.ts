@@ -5,6 +5,7 @@ import {
     DEFAULT_DURATIONS,
     DEFAULT_SESSIONS_BEFORE_LONG_BREAK
 } from './pomodoro.service';
+import {SETTINGS_STORAGE_KEY, SettingsService} from './settings.service';
 
 describe('PomodoroService', () => {
     let service: PomodoroService;
@@ -112,4 +113,16 @@ describe('PomodoroService', () => {
 
         discardPeriodicTasks();
     }));
+
+    it('pauses a running timer when the Pomodoro is switched off in settings', () => {
+        const settings = TestBed.inject(SettingsService);
+        service.start();
+
+        settings.setVisible('pomodoro', false);
+        expect(firstValue(service.timerState$)).toBe('paused');
+
+        service.reset();
+        settings.setVisible('pomodoro', true);
+        localStorage.removeItem(SETTINGS_STORAGE_KEY);
+    });
 });
