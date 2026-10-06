@@ -67,6 +67,8 @@ export class SettingsSheetComponent {
     protected readonly font$ = this.settingsService.font$;
     protected readonly sample = FONT_SAMPLE;
     protected readonly fontOptionClass = fontOptionClass;
+    /** Menus open from the row's right edge towards the sheet, rather than out over its edge. */
+    protected readonly popoverOptions = {side: 'bottom', alignment: 'end'};
 
     constructor() {
         addIcons({close, timerOutline, calendarOutline, colorPaletteOutline});

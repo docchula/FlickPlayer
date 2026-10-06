@@ -1,5 +1,11 @@
 .settings-section {
-    margin-bottom: 1.75rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Titles and hints start where the rows inside the card below them start. */
+.section-title,
+.section-hint {
+    padding-inline: 1rem;
 }
 
 .section-title {
@@ -11,17 +17,23 @@
 .section-hint {
     margin: 0 0 0.6rem;
     font-size: 0.8rem;
+    line-height: 1.35;
     opacity: 0.7;
 }
 
+/* The rows sit on a card of their own, so they keep clear of the sheet's edge in any theme. */
 .settings-card {
-    padding: 0;
+    margin: 0;
+    padding: 0.25rem 0;
     border-radius: 0.75rem;
+    background: var(--ion-color-step-50, rgba(0, 0, 0, 0.04));
     overflow: hidden;
 }
 
 .settings-card ion-item {
     --background: transparent;
+    --padding-start: 1rem;
+    --inner-padding-end: 1rem;
 }
 
 .settings-card ion-icon[slot='start'] {
@@ -30,10 +42,8 @@
     opacity: 0.7;
 }
 
-/* The switch needs room to sit inside the card rather than on its edge. */
 .widget-toggle {
     width: 100%;
-    padding-inline-end: 0.15rem;
 }
 
 .widget-label {
@@ -46,13 +56,24 @@
     display: block;
     margin-top: 0.1rem;
     font-size: 0.78rem;
+    line-height: 1.35;
     opacity: 0.7;
     white-space: normal;
 }
 
+/* Text on a card that is not a control: the note under the row above it, or the font sample. */
+.card-note {
+    margin: 0;
+    padding: 0 1rem 0.6rem;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    opacity: 0.7;
+}
+
 .font-preview {
-    margin: 0.6rem 0.25rem 0;
+    padding-top: 0.15rem;
     font-size: 1.05rem;
+    opacity: 1;
 }
 
 .quiet-button {

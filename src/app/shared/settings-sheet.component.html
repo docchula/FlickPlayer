@@ -42,6 +42,7 @@
             <ion-list lines="none" class="settings-card">
                 <ion-item>
                     <ion-select label="Typeface" labelPlacement="start" interface="popover"
+                                [interfaceOptions]="popoverOptions"
                                 [value]="settings.fontId"
                                 (ionChange)="onFontChange($event)">
                         @for (font of settingsService.fonts; track font.id) {
@@ -49,19 +50,20 @@
                         }
                     </ion-select>
                 </ion-item>
+                @if (font$ | async; as font) {
+                    <p class="card-note font-preview" [style.font-family]="font.stack || null">{{ sample }}</p>
+                }
             </ion-list>
-            @if (font$ | async; as font) {
-                <p class="font-preview" [style.font-family]="font.stack || null">{{ sample }}</p>
-            }
         </section>
 
         @if (pomodoroAvailable$ | async) {
             <section class="settings-section">
                 <h2 class="section-title">Pomodoro</h2>
-                <p class="section-hint">Where your day starts. The session count goes back to zero at this time.</p>
+                <p class="section-hint">How the focus timer counts your study, on this device only.</p>
                 <ion-list lines="none" class="settings-card">
                     <ion-item>
                         <ion-select label="Day starts at" labelPlacement="start" interface="popover"
+                                    [interfaceOptions]="popoverOptions"
                                     [value]="settings.pomodoroResetHour"
                                     (ionChange)="onResetHourChange($event)">
                             @for (option of settingsService.resetHours; track option.value) {
@@ -69,6 +71,7 @@
                             }
                         </ion-select>
                     </ion-item>
+                    <p class="card-note">The session count goes back to zero at this time.</p>
                 </ion-list>
             </section>
         }
