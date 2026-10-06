@@ -2,6 +2,7 @@ import {TestBed} from '@angular/core/testing';
 import {of} from 'rxjs';
 
 import {AuthService} from './auth.service';
+import {PomodoroService} from './pomodoro.service';
 import {UserSyncService} from './user-sync.service';
 import {
     addDays,
@@ -31,6 +32,15 @@ describe('StudyStatsService', () => {
                 {
                     provide: UserSyncService,
                     useValue: {attach: () => undefined, detach: () => undefined, read: async () => null, queue: () => undefined},
+                },
+                {
+                    provide: PomodoroService,
+                    useValue: {
+                        currentPhase$: of({key: 'study', label: 'Study'}),
+                        timerState$: of('stopped'),
+                        timeRemaining$: of(0),
+                        completedSessions$: of(0),
+                    },
                 },
             ],
         });

@@ -30,9 +30,9 @@ import {
     IonToolbar,
 } from '@ionic/angular/standalone';
 import {AsyncPipe, NgStyle} from '@angular/common';
-import {StudyHeatmapComponent} from '../shared/study-heatmap.component';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../consent.service';
+import {StudyHeatmapComponent} from '../shared/study-heatmap.component';
 
 export interface EnrichedSearchResult extends SearchVideoResult {
     courseName?: string;

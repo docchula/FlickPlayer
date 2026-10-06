@@ -2,6 +2,7 @@ import {inject, Injectable} from '@angular/core';
 import {BehaviorSubject, Observable} from 'rxjs';
 import {AuthService} from './auth.service';
 import {UserSyncService} from './user-sync.service';
+import {PomodoroService} from './pomodoro.service';
 import {ulid} from 'ulid';
 
 /** Aggregated activity for a single calendar day (local time). */
@@ -195,8 +196,8 @@ export function computeStudyStats(days: StudyDayMap, startKey: string, endKey: s
 /**
  * Tracks how much time the user spends studying each day and keeps it in local storage.
  *
- * Video playback and the Pomodoro timer both report activity as they run. Time is credited
- * from the wall clock gap between reports, so two sources running at once are counted once.
+ * Video playback reports activity as it runs, and the Pomodoro timer is followed through its
+ * countdown. Time is credited by the wall clock, so two sources running at once are counted once.
  */
 @Injectable({
     providedIn: 'root',
@@ -227,6 +228,7 @@ export class StudyStatsService {
     constructor() {
         this.days = this.load(this.currentUserId);
         this.publish(false);
+        this.followPomodoro(inject(PomodoroService));
 
         inject(AuthService).user.subscribe(user => {
             if (user?.uid) {
@@ -311,18 +313,6 @@ export class StudyStatsService {
         }
     }
 
-    /** Report that a Pomodoro study phase is running. Called once per second. */
-    recordFocusTick(): void {
-        this.credit();
-    }
-
-    /** Report a finished Pomodoro study phase. */
-    recordFocusSession(): void {
-        const today = this.credit();
-        today.pomodoros++;
-        this.syncDirty = true;
-        this.publish(true);
-    }
 
     /** Every device's record, added together. */
     getDays(): StudyDayMap {
@@ -334,6 +324,73 @@ export class StudyStatsService {
         const days = this.getDays();
         const keys = Object.keys(days).filter(key => days[key].seconds > 0).sort();
         return keys.length ? fromDateKey(keys[0]) : null;
+    }
+
+    /**
+     * Study time counts as the timer counts it down: each drop in the time left while a study
+     * phase runs is credited, however late it arrives. A throttled or frozen tab still adds what
+     * the timer ran, never past the end of the phase, and a paused timer adds nothing. Following
+     * the timer from outside keeps the timer itself free of anything the heatmap needs.
+     */
+    private followPomodoro(pomodoro: PomodoroService): void {
+        let phase = '';
+        let running = false;
+        let latest = 0;
+        let counted: number | null = null;
+        let sessions: number | null = null;
+        pomodoro.currentPhase$.subscribe(current => {
+            phase = current.key;
+            counted = null;
+        });
+        pomodoro.timerState$.subscribe(state => {
+            running = state === 'running';
+            counted = running ? latest : null;
+        });
+        pomodoro.timeRemaining$.subscribe(remaining => {
+            if (running && phase === 'study' && counted !== null && remaining < counted) {
+                const now = Date.now();
+                this.creditSpan(now - (counted - remaining) * 1000, now);
+            }
+            latest = remaining;
+            counted = running ? remaining : null;
+        });
+        pomodoro.completedSessions$.subscribe(count => {
+            if (sessions !== null && count > sessions) {
+                this.countPomodoro();
+            }
+            sessions = count;
+        });
+    }
+
+    /** Credit a stretch of time, split at midnight, leaving out what another source already did. */
+    private creditSpan(from: number, to: number): void {
+        let start = Math.max(from, this.lastActiveAt);
+        this.lastActiveAt = Math.max(this.lastActiveAt, to);
+        if (start >= to) {
+            return;
+        }
+        while (start < to) {
+            const date = new Date(start);
+            const end = Math.min(to, new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).getTime());
+            const key = toDateKey(date);
+            const day = this.days[key] ?? emptyDay();
+            day.seconds += (end - start) / 1000;
+            this.days[key] = day;
+            start = end;
+        }
+        this.syncDirty = true;
+        if (Date.now() - this.lastSavedAt > this.SAVE_INTERVAL_MS) {
+            this.publish(true);
+        }
+    }
+
+    private countPomodoro(): void {
+        const key = toDateKey(new Date());
+        const today = this.days[key] ?? emptyDay();
+        this.days[key] = today;
+        today.pomodoros++;
+        this.syncDirty = true;
+        this.publish(true);
     }
 
     private credit(): StudyDay {
