@@ -88,14 +88,42 @@
     display: inline-block;
 }
 
+.control-card {
+    margin: 0.75rem 0;
+    border-radius: 0.75rem;
+    border: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+    background: var(--flick-surface, var(--ion-color-step-50, rgba(0, 0, 0, 0.04)));
+    overflow: hidden;
+
+    ion-item:not(:last-child) {
+        border-bottom: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+    }
+}
+
 .control-item {
-    --padding-start: 0;
-    --inner-padding-end: 0;
+    --background: transparent;
+    --padding-start: 1rem;
+    --inner-padding-end: 1rem;
+    --min-height: 3rem;
+    font-size: 0.88rem;
+    color: var(--ion-text-color);
+}
+
+.control-label {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--ion-text-color);
+    flex-shrink: 0;
+    min-width: 4.5rem;
 }
 
 .control-range {
-    max-width: 60%;
-    padding-inline-end: 0;
+    max-width: 58%;
+    padding-inline: 0.5rem 0.25rem;
+}
+
+.fit-segment {
+    margin: 0.75rem 0;
 }
 
 .picture-grid {
@@ -173,8 +201,9 @@
 }
 
 .hint {
-    margin: 0.35rem 0 0;
-    font-size: 0.72rem;
+    margin: 0.4rem 0 0.5rem;
+    font-size: 0.78rem;
+    line-height: 1.35;
     color: var(--flick-muted-text);
 }
 

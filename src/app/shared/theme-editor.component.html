@@ -169,23 +169,31 @@
             }
 
             @if (settings.custom.background.pictureMode === 'slideshow') {
-                <ion-item lines="none" class="control-item">
-                    <ion-select label="Change picture every" interface="popover"
-                                [value]="settings.custom.background.slideshowMinutes"
-                                (ionChange)="onIntervalChange($event)">
-                        @for (option of themeService.slideshowIntervals; track option.minutes) {
-                            <ion-select-option [value]="option.minutes">{{ option.label }}</ion-select-option>
-                        }
-                    </ion-select>
-                </ion-item>
-                <ion-item lines="none" class="control-item">
-                    <ion-toggle [checked]="settings.custom.background.slideshowShuffle"
-                                (ionChange)="onShuffleChange($event)">Shuffle</ion-toggle>
-                </ion-item>
+                <div class="control-card">
+                    <ion-item lines="none" class="control-item">
+                        <ion-select label="Change picture every"
+                                    labelPlacement="start"
+                                    justify="space-between"
+                                    interface="popover"
+                                    [interfaceOptions]="popoverOptions"
+                                    [value]="settings.custom.background.slideshowMinutes"
+                                    (ionChange)="onIntervalChange($event)">
+                            @for (option of themeService.slideshowIntervals; track option.minutes) {
+                                <ion-select-option [value]="option.minutes">{{ option.label }}</ion-select-option>
+                            }
+                        </ion-select>
+                    </ion-item>
+                    <ion-item lines="none" class="control-item">
+                        <ion-toggle labelPlacement="start"
+                                    justify="space-between"
+                                    [checked]="settings.custom.background.slideshowShuffle"
+                                    (ionChange)="onShuffleChange($event)">Shuffle</ion-toggle>
+                    </ion-item>
+                </div>
             }
 
             @if (backgroundImageUrl$ | async) {
-                <ion-segment [value]="settings.custom.background.imageFit" (ionChange)="onFitChange($event)">
+                <ion-segment class="fit-segment" [value]="settings.custom.background.imageFit" (ionChange)="onFitChange($event)">
                     @for (option of themeService.backgroundFitOptions; track option.value) {
                         <ion-segment-button [value]="option.value">
                             <ion-label>{{ option.label }}</ion-label>
@@ -193,19 +201,23 @@
                     }
                 </ion-segment>
 
-                <ion-item lines="none" class="control-item">
-                    <ion-label>Visibility</ion-label>
-                    <ion-range slot="end" class="control-range" [min]="0" [max]="1" [step]="0.05"
-                               [value]="settings.custom.background.imageOpacity"
-                               (ionInput)="onOpacityChange($event)"></ion-range>
-                </ion-item>
+                <div class="control-card">
+                    <ion-item lines="none" class="control-item">
+                        <ion-label class="control-label">Visibility</ion-label>
+                        <ion-range slot="end" class="control-range" [min]="0" [max]="1" [step]="0.05"
+                                   aria-label="Visibility"
+                                   [value]="settings.custom.background.imageOpacity"
+                                   (ionInput)="onOpacityChange($event)"></ion-range>
+                    </ion-item>
 
-                <ion-item lines="none" class="control-item">
-                    <ion-label>Blur</ion-label>
-                    <ion-range slot="end" class="control-range" [min]="0" [max]="20" [step]="1"
-                               [value]="settings.custom.background.imageBlur"
-                               (ionInput)="onBlurChange($event)"></ion-range>
-                </ion-item>
+                    <ion-item lines="none" class="control-item">
+                        <ion-label class="control-label">Blur</ion-label>
+                        <ion-range slot="end" class="control-range" [min]="0" [max]="20" [step]="1"
+                                   aria-label="Blur"
+                                   [value]="settings.custom.background.imageBlur"
+                                   (ionInput)="onBlurChange($event)"></ion-range>
+                    </ion-item>
+                </div>
             }
         </section>
 

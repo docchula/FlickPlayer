@@ -66,6 +66,8 @@ export class ThemeEditorComponent implements OnDestroy {
     protected imageError: string | null = null;
     /** The folder's pictures with a URL each, for the thumbnails. */
     protected pictures: {id: string, url: string}[] = [];
+    /** Menus open from the row's right edge towards the sheet, rather than out over its edge. */
+    protected readonly popoverOptions = {side: 'bottom', alignment: 'end'};
 
     private paletteCache: {custom: CustomTheme, variables: CssVariables} | null = null;
     private thumbnailUrls = new Map<string, string>();
