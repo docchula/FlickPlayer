@@ -1,16 +1,17 @@
 import {DestroyRef, inject, Injectable} from '@angular/core';
-import {BehaviorSubject, Observable} from 'rxjs';
-import {doc, Firestore, getDoc, setDoc} from '@angular/fire/firestore';
+import {BehaviorSubject, firstValueFrom, Observable} from 'rxjs';
+import {filter} from 'rxjs/operators';
 import {getValue, RemoteConfig} from '@angular/fire/remote-config';
+import {AuthService} from './auth.service';
+import {ManService} from './man.service';
 
-export const USER_SYNC_COLLECTION = 'userSettings';
 export const SYNC_CACHE_KEY_PREFIX = 'flickSync_';
 /** A remote config flag, so sync can be switched off without a release. */
 export const SYNC_ENABLED_KEY = 'userSyncEnabled';
 
 /**
- * Reads are billed per document, so the whole account lives in one document that is fetched
- * at most once per this interval however many times the app is opened or reloaded.
+ * The whole account lives in one document on FlickMan (`v1/user_settings`), fetched at most
+ * once per this interval however many times the app is opened or reloaded.
  */
 export const SYNC_READ_TTL_MS = 5 * 60 * 1000;
 /**
@@ -29,6 +30,7 @@ export const SYNC_SENT_AT_KEY = 'flickSyncSentAt';
 
 export interface RemoteUserSettings {
     theme?: unknown;
+    pomodoro?: unknown;
     study?: {devices?: Record<string, unknown>};
 }
 
@@ -41,7 +43,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
-/** Deep merge, so a queued patch never discards another part of the document. */
+/** Deep merge, so a queued patch never discards another part of the document. FlickMan merges the same way. */
 function mergePatch(target: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> {
     for (const [key, value] of Object.entries(patch)) {
         const existing = target[key];
@@ -55,15 +57,16 @@ function mergePatch(target: Record<string, unknown>, patch: Record<string, unkno
 /**
  * Keeps one document per account in step across devices, on a budget.
  *
- * There is no live listener: a listener bills a read for every change, and none of this needs
- * to arrive mid-session. Reads come from a cache that survives reloads, writes are merged and
- * sent on a delay, and anything unexpected turns sync off for the session rather than retrying.
+ * There is no live updating: none of this needs to arrive mid-session. Reads come from a cache
+ * that survives reloads, writes are merged and sent on a delay, and anything unexpected turns
+ * sync off for the session rather than retrying.
  */
 @Injectable({
     providedIn: 'root',
 })
 export class UserSyncService {
-    private firestore = inject(Firestore);
+    private authService = inject(AuthService);
+    private manService = inject(ManService);
 
     private readonly activeSubject = new BehaviorSubject<boolean>(false);
     /** True once the account document has actually been reached, so the app can say so. */
@@ -134,6 +137,11 @@ export class UserSyncService {
             this.activeSubject.next(true);
             return cached.data;
         }
+        // Callers read as soon as the user signs in, a moment before ManService has the ID token
+        await firstValueFrom(this.authService.idToken.pipe(filter(Boolean)));
+        if (this.userId !== uid) {
+            return null;
+        }
         this.reading ??= this.fetch(uid, cached).finally(() => {
             this.reading = null;
         });
@@ -142,8 +150,10 @@ export class UserSyncService {
 
     private async fetch(uid: string, cached: CachedSettings | null): Promise<RemoteUserSettings | null> {
         try {
-            const snapshot = await getDoc(doc(this.firestore, USER_SYNC_COLLECTION, uid));
-            const data = (snapshot.data() ?? {}) as RemoteUserSettings;
+            const data = await firstValueFrom(this.manService.getUserSettings()) as RemoteUserSettings | null;
+            if (!data) {
+                throw new Error('No user settings');
+            }
             this.writeCache(uid, data);
             this.activeSubject.next(true);
             return data;
@@ -189,8 +199,7 @@ export class UserSyncService {
         }
         this.writeSentAt(Date.now());
         this.mergeCache(uid, patch);
-        setDoc(doc(this.firestore, USER_SYNC_COLLECTION, uid), patch, {merge: true})
-            .catch(() => this.disable());
+        this.manService.saveUserSettings(patch).subscribe({error: () => this.disable()});
     }
 
     /** A `restart` waits for changes to stop; otherwise the earliest send already due holds. */
