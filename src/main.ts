@@ -1,4 +1,4 @@
-import {enableProdMode, importProvidersFrom} from '@angular/core';
+import {enableProdMode, importProvidersFrom, inject, provideAppInitializer} from '@angular/core';
 
 import {environment} from './environments/environment';
 import {RouteReuseStrategy} from '@angular/router';
@@ -20,6 +20,7 @@ import {AppRoutingModule} from './app/app-routing.module';
 import {WelcomePageModule} from './app/welcome/welcome.module';
 import {ServiceWorkerModule} from '@angular/service-worker';
 import {AppComponent} from './app/app.component';
+import {PomodoroSyncService} from './app/pomodoro-sync.service';
 import Aura from '@primeuix/themes/aura';
 
 if (environment.production) {
@@ -44,6 +45,10 @@ bootstrapApplication(AppComponent, {
         ScreenTrackingService,
         UserTrackingService,
         provideAnimationsAsync(),
+        // Started with the app, so the Pomodoro preferences follow the reader whichever page opens first
+        provideAppInitializer(() => {
+            inject(PomodoroSyncService);
+        }),
         providePrimeNG({
             theme: {
                 preset: Aura,

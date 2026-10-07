@@ -1,5 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {BehaviorSubject, Observable, Subscription, interval} from 'rxjs';
+import {BehaviorSubject, Observable, Subject, Subscription, interval} from 'rxjs';
 import {map} from 'rxjs/operators';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from './consent.service';
@@ -22,6 +22,12 @@ export interface PomodoroDurations {
     studyMinutes: number;
     breakMinutes: number;
     longBreakMinutes: number;
+}
+
+/** The preferences that follow the user across devices (see PomodoroSyncService). */
+export interface PomodoroPreferences {
+    durations: PomodoroDurations;
+    sessionsBeforeLongBreak: number;
 }
 
 /** Timer operational state */
@@ -91,6 +97,9 @@ export class PomodoroService {
     /** Configurable settings */
     private durations: PomodoroDurations = {...DEFAULT_DURATIONS};
     private sessionsBeforeLongBreak = new BehaviorSubject<number>(DEFAULT_SESSIONS_BEFORE_LONG_BREAK);
+    private readonly preferencesChangedSubject = new Subject<PomodoroPreferences>();
+    /** The preferences after each change the reader makes, but not after applyPreferences(). */
+    readonly preferencesChanged$: Observable<PomodoroPreferences> = this.preferencesChangedSubject.asObservable();
 
     /** Internal state */
     private timerState = new BehaviorSubject<TimerState>('idle');
@@ -192,14 +201,29 @@ export class PomodoroService {
         }
         this.sessionsBeforeLongBreak.next(count);
         this.savePreferences();
+        this.preferencesChangedSubject.next(this.getPreferences());
     }
 
     /** Update duration config and save */
     updateDurations(newDurations: Partial<PomodoroDurations>): void {
         this.durations = {...this.durations, ...newDurations};
         this.savePreferences();
+        this.preferencesChangedSubject.next(this.getPreferences());
 
         // If idle, reset timer to reflect new duration
+        if (this.timerState.value === 'idle') {
+            this.timeRemaining.next(this.getCurrentPhaseDuration());
+        }
+    }
+
+    getPreferences(): PomodoroPreferences {
+        return {durations: {...this.durations}, sessionsBeforeLongBreak: this.sessionsBeforeLongBreak.value};
+    }
+
+    /** Take on preferences saved on another device. Invalid values are ignored, as in local storage. */
+    applyPreferences(value: unknown): void {
+        this.readPreferences(value);
+        this.savePreferences();
         if (this.timerState.value === 'idle') {
             this.timeRemaining.next(this.getCurrentPhaseDuration());
         }
@@ -527,20 +551,25 @@ export class PomodoroService {
         try {
             const raw = localStorage.getItem(this.STORAGE_KEY_PREFIX + uid);
             if (raw) {
-                const parsed = JSON.parse(raw);
-                if (parsed.durations) {
-                    for (const field of DURATION_FIELDS) {
-                        if (typeof parsed.durations[field.key] === 'number' && parsed.durations[field.key] > 0) {
-                            this.durations[field.key] = parsed.durations[field.key];
-                        }
-                    }
-                }
-                if (typeof parsed.sessionsBeforeLongBreak === 'number' && parsed.sessionsBeforeLongBreak > 0) {
-                    this.sessionsBeforeLongBreak.next(parsed.sessionsBeforeLongBreak);
-                }
+                this.readPreferences(JSON.parse(raw));
             }
         } catch {
             // Ignore parse errors
+        }
+    }
+
+    private readPreferences(value: unknown): void {
+        const parsed = (value ?? {}) as {durations?: Partial<Record<keyof PomodoroDurations, unknown>>, sessionsBeforeLongBreak?: unknown};
+        if (parsed.durations) {
+            for (const field of DURATION_FIELDS) {
+                const minutes = parsed.durations[field.key];
+                if (typeof minutes === 'number' && minutes > 0) {
+                    this.durations[field.key] = minutes;
+                }
+            }
+        }
+        if (typeof parsed.sessionsBeforeLongBreak === 'number' && parsed.sessionsBeforeLongBreak > 0) {
+            this.sessionsBeforeLongBreak.next(parsed.sessionsBeforeLongBreak);
         }
     }
 

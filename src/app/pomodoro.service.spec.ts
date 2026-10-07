@@ -1,6 +1,7 @@
 import {TestBed, fakeAsync, discardPeriodicTasks} from '@angular/core/testing';
 import {Analytics} from '@angular/fire/analytics';
 import {
+    PomodoroPreferences,
     PomodoroService,
     DEFAULT_DURATIONS,
     DEFAULT_SESSIONS_BEFORE_LONG_BREAK
@@ -140,5 +141,28 @@ describe('PomodoroService', () => {
         service.reset();
         settings.setVisible('pomodoro', true);
         localStorage.removeItem(SETTINGS_STORAGE_KEY);
+    });
+
+    describe('preferences shared across devices', () => {
+        it('reports each change the reader makes, but not preferences applied from another device', () => {
+            const changes: PomodoroPreferences[] = [];
+            service.preferencesChanged$.subscribe(preferences => changes.push(preferences));
+
+            service.updateDurations({studyMinutes: 50});
+            service.setSessionsBeforeLongBreak(3);
+            service.applyPreferences({sessionsBeforeLongBreak: 2});
+
+            expect(changes.length).toBe(2);
+            expect(changes[1]).toEqual({durations: {...DEFAULT_DURATIONS, studyMinutes: 50}, sessionsBeforeLongBreak: 3});
+        });
+
+        it('applies and saves valid preferences from another device, ignoring invalid values', () => {
+            service.applyPreferences({durations: {studyMinutes: 45, breakMinutes: -1, longBreakMinutes: 'x'}, sessionsBeforeLongBreak: 6});
+
+            const expected = {durations: {...DEFAULT_DURATIONS, studyMinutes: 45}, sessionsBeforeLongBreak: 6};
+            expect(service.getPreferences()).toEqual(expected);
+            expect(JSON.parse(localStorage.getItem('pomodoroPrefs_guest') ?? '')).toEqual(expected);
+            expect(firstValue(service.timeRemaining$)).toBe(45 * 60);
+        });
     });
 });
