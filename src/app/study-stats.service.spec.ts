@@ -28,7 +28,7 @@ describe('StudyStatsService', () => {
         TestBed.configureTestingModule({
             providers: [
                 {provide: AuthService, useValue: {user: of(null)}},
-                // Sync is exercised against Firestore itself, which unit tests do not start.
+                // Sync goes through FlickMan, which unit tests do not start.
                 {
                     provide: UserSyncService,
                     useValue: {attach: () => undefined, detach: () => undefined, read: async () => null, queue: () => undefined},
