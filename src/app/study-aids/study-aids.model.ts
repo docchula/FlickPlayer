@@ -6,6 +6,8 @@ export interface StudyAids {
     video_id: number;
     /** Whether this user may edit the summary and the questions. */
     can_edit: boolean;
+    /** Whether this user is an admin, who also chooses who the editors are. */
+    can_manage: boolean;
     generation: GenerationState;
     summary: SummaryPart | null;
     quiz: QuizPart | null;
@@ -60,6 +62,24 @@ export interface QuizQuestion {
 export interface AnswerStats {
     answered: number;
     correct: number;
+}
+
+export type EditorRole = 'editor' | 'admin';
+
+/** Someone allowed to edit study aids, as admins see them in the editors list. */
+export interface StudyAidsEditor {
+    email: string;
+    /** Null until they have signed in to Flick. */
+    name: string | null;
+    role: EditorRole;
+    added_at: string | null;
+}
+
+/** An image uploaded for a summary or a question, to be written into its Markdown. */
+export interface UploadedImage {
+    url: string;
+    width: number;
+    height: number;
 }
 
 /** The co-author box in the editors: whether students see this editor's name, and which name. */
@@ -124,6 +144,10 @@ export const LIMITS = {
     choiceChars: 500,
     explanationChars: 4000,
     creditNameChars: 50,
+    imageBytes: 5_000_000,
+    /** Photos larger than this, or wider or taller than imageMaxSide, are shrunk before upload. */
+    imageShrinkBytes: 2_000_000,
+    imageMaxSide: 2000,
     /** For lectures whose duration is not known. */
     maxTime: 86_400,
 };

@@ -1,5 +1,6 @@
 import {Marked, MarkedExtension} from 'marked';
 import {mathExtension} from '../home/course/markdown-math';
+import {isAllowedImage} from './images';
 
 /*
  * A summary is Markdown written to these conventions (FlickMan's AI follows them too):
@@ -68,12 +69,12 @@ export const studyMarked = new Marked(mathExtension, highlightExtension);
 
 /** Markdown for a block of text, such as a question or an explanation. */
 export function renderBlock(markdown: string): string {
-    return openLinksElsewhere(studyMarked.parse(markdown, {async: false}));
+    return finishHtml(studyMarked.parse(markdown, {async: false}));
 }
 
 /** Markdown for text that sits inside a line, such as a choice. */
 export function renderInline(markdown: string): string {
-    return openLinksElsewhere(studyMarked.parseInline(markdown, {async: false}));
+    return finishHtml(studyMarked.parseInline(markdown, {async: false}));
 }
 
 /** The words of some Markdown without its formatting, for a one-line preview. */
@@ -132,9 +133,36 @@ function hash(value: string): string {
     return (result >>> 0).toString(36);
 }
 
-function openLinksElsewhere(html: string): string {
-    // Following a link from a summary must not take the reader away from the lecture.
-    return html.replace(/<a href=/g, '<a target="_blank" rel="noopener noreferrer" href=');
+function openInNewTab(link: Element): void {
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener noreferrer');
+}
+
+/**
+ * Links open in a new tab, so following one never takes the reader away from the lecture. Images
+ * FlickMan did not store are shown as links instead: loading one would tell a third party who is
+ * reading.
+ */
+function finishHtml(html: string): string {
+    const body = new DOMParser().parseFromString(html, 'text/html').body;
+    body.querySelectorAll('a[href]').forEach(openInNewTab);
+    for (const image of Array.from(body.querySelectorAll('img'))) {
+        const src = image.getAttribute('src') ?? '';
+        if (isAllowedImage(src)) {
+            continue;
+        }
+        if (!src) {
+            image.remove();
+            continue;
+        }
+        const link = body.ownerDocument.createElement('a');
+        link.setAttribute('href', src);
+        link.textContent = image.getAttribute('alt') || 'Image';
+        openInNewTab(link);
+        image.replaceWith(link);
+    }
+
+    return body.innerHTML;
 }
 
 /** Removes the trailing `[HH:MM:SS]` from a heading and returns it in seconds. */

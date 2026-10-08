@@ -51,6 +51,20 @@
                 <ion-textarea label="Question" labelPlacement="stacked" fill="outline" [autoGrow]="true"
                               [maxlength]="limits.promptChars" [value]="form.prompt"
                               (ionInput)="setPrompt(form, $event)"></ion-textarea>
+                <div class="field-tools">
+                    <ion-button fill="clear" size="small" [disabled]="uploadingFor !== null" (click)="pickImage(form, 'prompt')">
+                        @if (uploadingFor === form.key + '-prompt') {
+                            <ion-spinner name="dots" aria-label="Uploading the image"></ion-spinner>
+                        } @else {
+                            <ion-icon slot="start" name="image-outline"></ion-icon>
+                            Add image
+                        }
+                    </ion-button>
+                    <ion-button fill="clear" size="small" (click)="togglePreview(form)" [attr.aria-expanded]="previewing.has(form.key)">
+                        <ion-icon slot="start" name="eye-outline"></ion-icon>
+                        {{ previewing.has(form.key) ? 'Hide preview' : 'Preview' }}
+                    </ion-button>
+                </div>
 
                 <fieldset class="choices">
                     <legend>Choices, with the correct answer selected</legend>
@@ -81,6 +95,33 @@
                 <ion-textarea label="Explanation (optional)" labelPlacement="stacked" fill="outline" [autoGrow]="true"
                               [maxlength]="limits.explanationChars" [value]="form.explanation"
                               (ionInput)="setExplanation(form, $event)"></ion-textarea>
+                <div class="field-tools">
+                    <ion-button fill="clear" size="small" [disabled]="uploadingFor !== null" (click)="pickImage(form, 'explanation')">
+                        @if (uploadingFor === form.key + '-explanation') {
+                            <ion-spinner name="dots" aria-label="Uploading the image"></ion-spinner>
+                        } @else {
+                            <ion-icon slot="start" name="image-outline"></ion-icon>
+                            Add image to the explanation
+                        }
+                    </ion-button>
+                </div>
+
+                @if (previewing.has(form.key)) {
+                    <div class="question-preview" aria-label="Preview">
+                        <app-rich-text class="preview-prompt" [html]="preview(form.prompt)"></app-rich-text>
+                        <ol class="preview-choices">
+                            @for (choice of form.choices; track $index; let c = $index) {
+                                <li [class.is-answer]="form.answer === c">
+                                    <span class="preview-letter">{{ letters[c] }}</span>
+                                    <app-rich-text class="inline" [html]="preview(choice, true)"></app-rich-text>
+                                </li>
+                            }
+                        </ol>
+                        @if (form.explanation.trim()) {
+                            <app-rich-text class="preview-explanation" [html]="preview(form.explanation)"></app-rich-text>
+                        }
+                    </div>
+                }
 
                 <div class="time-row">
                     <ion-input label="Video time (optional)" labelPlacement="stacked" fill="outline" placeholder="e.g. 12:34"
@@ -122,5 +163,6 @@
         </ion-button>
 
         <app-credit-field [(choice)]="credit" part="questions"></app-credit-field>
+        <input #imagePicker type="file" hidden [accept]="imageTypes" (change)="onImagePicked($event)">
     </div>
 </ion-content>

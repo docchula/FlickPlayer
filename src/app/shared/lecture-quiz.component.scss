@@ -1,5 +1,12 @@
 @use 'study-card';
 
+.share-note {
+    margin: -0.4rem 0 0.75rem;
+    color: var(--ion-color-medium);
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
+}
+
 .quiz-start ion-button {
     margin: 0.25rem 0 0;
 }

@@ -27,10 +27,18 @@
                         <div class="byline">
                             <span>{{ byline(view.summary) }}</span>
                             @if (view.aids?.can_edit) {
-                                <ion-button class="small-button" size="small" fill="outline" (click)="edit(view)">
-                                    <ion-icon slot="start" name="create-outline" aria-hidden="true"></ion-icon>
-                                    Edit
-                                </ion-button>
+                                <span class="editor-actions">
+                                    @if (view.aids?.can_manage) {
+                                        <ion-button class="small-button" size="small" fill="clear" (click)="manageEditors(view)">
+                                            <ion-icon slot="start" name="people-outline" aria-hidden="true"></ion-icon>
+                                            Editors
+                                        </ion-button>
+                                    }
+                                    <ion-button class="small-button" size="small" fill="outline" (click)="edit(view)">
+                                        <ion-icon slot="start" name="create-outline" aria-hidden="true"></ion-icon>
+                                        Edit
+                                    </ion-button>
+                                </span>
                             }
                         </div>
                         @if (view.checklist.pointKeys.length) {
@@ -47,7 +55,15 @@
                                             (tickChange)="onTick(view, $event)" (seek)="seek($event)"></app-checklist-view>
                     } @else if (view.aids?.can_edit) {
                         <p class="card-note">{{ emptyNote(view.aids!) }}</p>
-                        <ion-button class="small-button" size="small" (click)="edit(view)">Write a summary</ion-button>
+                        <span class="editor-actions">
+                            <ion-button class="small-button" size="small" (click)="edit(view)">Write a summary</ion-button>
+                            @if (view.aids?.can_manage) {
+                                <ion-button class="small-button" size="small" fill="clear" (click)="manageEditors(view)">
+                                    <ion-icon slot="start" name="people-outline" aria-hidden="true"></ion-icon>
+                                    Editors
+                                </ion-button>
+                            }
+                        </span>
                     } @else {
                         <p class="card-note">The AI is still writing a summary of this lecture. Check back later.</p>
                     }

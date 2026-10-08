@@ -99,6 +99,21 @@ describe('buildChecklist', () => {
     it('opens links in a new tab', () => {
         expect(renderInline('[notes](https://example.com)')).toContain('target="_blank"');
     });
+
+    it('shows images FlickMan stored', () => {
+        const html = renderInline('![ER](https://flick-man-app.docchula.com/v1/study_aids/images/01M4D7B2STKMV08W6Z0ZF3G56N.webp)');
+
+        expect(html).toContain('<img src="https://flick-man-app.docchula.com/v1/study_aids/images/01M4D7B2STKMV08W6Z0ZF3G56N.webp" alt="ER">');
+    });
+
+    it('turns any other image into a link, so nothing loads from elsewhere', () => {
+        const markdown = '![pixel](https://tracker.example/p.gif) <img src="https://docchula.com.example/v1/study_aids/images/x.png" alt="raw">';
+        const html = renderInline(markdown);
+
+        expect(html).not.toContain('<img');
+        expect(html).toContain('<a href="https://tracker.example/p.gif" target="_blank" rel="noopener noreferrer">pixel</a>');
+        expect(html).toContain('>raw</a>');
+    });
 });
 
 describe('timestamps', () => {

@@ -14,6 +14,7 @@ function aids(changes: Partial<StudyAids> = {}): StudyAids {
     return {
         video_id: 7,
         can_edit: false,
+        can_manage: false,
         generation: 'ready',
         summary: {markdown: MARKDOWN, revision: 1, origin: 'ai', edited: false, contributors: [], updated_at: null},
         quiz: null,

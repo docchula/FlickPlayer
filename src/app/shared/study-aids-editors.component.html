@@ -1,0 +1,58 @@
+<ion-header>
+    <ion-toolbar>
+        <ion-title>Editors</ion-title>
+        <ion-buttons slot="end">
+            <ion-button (click)="close()">Close</ion-button>
+        </ion-buttons>
+    </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+    <p class="intro">
+        Editors can rewrite the summary and the questions of every lecture.
+        Admins can also choose who the editors are.
+    </p>
+    @if (problem) {
+        <p class="problem" role="alert">{{ problem }}</p>
+    }
+
+    <form class="add-editor" (submit)="add($event)">
+        <ion-input class="add-email" label="Docchula email" labelPlacement="stacked" fill="outline" type="email"
+                   placeholder="name@docchula.com" [value]="email" (ionInput)="onEmail($event)"></ion-input>
+        <ion-select class="add-role" label="Role" labelPlacement="stacked" fill="outline" interface="popover"
+                    [value]="role" (ionChange)="onRole($event)">
+            <ion-select-option value="editor">Editor</ion-select-option>
+            <ion-select-option value="admin">Admin</ion-select-option>
+        </ion-select>
+        <ion-button type="submit" [disabled]="busy || !email.trim()">Add</ion-button>
+    </form>
+
+    @if (loading) {
+        <div class="loading"><ion-spinner name="dots" aria-label="Loading the editors"></ion-spinner></div>
+    } @else if (editors.length) {
+        <ion-list lines="full" class="editors">
+            @for (editor of editors; track editor.email) {
+                <ion-item>
+                    <ion-label>
+                        <h3>
+                            {{ editor.name ?? editor.email }}
+                            @if (isMe(editor)) {
+                                <span class="you">(you)</span>
+                            }
+                        </h3>
+                        @if (editor.name) {
+                            <p>{{ editor.email }}</p>
+                        }
+                    </ion-label>
+                    <ion-select slot="end" interface="popover" [value]="editor.role" [disabled]="busy"
+                                [attr.aria-label]="'Role of ' + editor.email" (ionChange)="changeRole(editor, $event)">
+                        <ion-select-option value="editor">Editor</ion-select-option>
+                        <ion-select-option value="admin">Admin</ion-select-option>
+                    </ion-select>
+                    <ion-button slot="end" fill="clear" color="danger" [disabled]="busy" (click)="remove(editor)"
+                                [attr.aria-label]="'Remove ' + editor.email">Remove</ion-button>
+                </ion-item>
+            }
+        </ion-list>
+    }
+</ion-content>

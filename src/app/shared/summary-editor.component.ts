@@ -20,7 +20,10 @@ import {ChecklistViewComponent} from './checklist-view.component';
 import {CreditFieldComponent} from './credit-field.component';
 import {buildChecklist, Checklist, formatStamp} from '../study-aids/checklist';
 import {creditFields} from '../study-aids/byline';
+import {describeFailure} from '../study-aids/failures';
+import {IMAGE_TYPES} from '../study-aids/images';
 import {readCreditChoice, writeCreditChoice} from '../study-aids/local-store';
+import {uploadPickedImage} from '../study-aids/upload-image';
 import {CreditChoice, GenerationState, LecturePlayback, LIMITS, SaveFailure, SummaryPart} from '../study-aids/study-aids.model';
 
 /** Editors rewrite the summary's Markdown here, with a live preview of the checklist it makes. */
@@ -60,11 +63,13 @@ export class SummaryEditorComponent implements OnInit, OnDestroy {
     @ViewChild('input') input: ElementRef<HTMLTextAreaElement>;
 
     protected readonly limit = LIMITS.summaryChars;
+    protected readonly imageTypes = IMAGE_TYPES.join(',');
     protected text = '';
     protected mode: 'write' | 'preview' = 'write';
     protected preview: Checklist = buildChecklist('');
     protected credit: CreditChoice = readCreditChoice();
     protected saving = false;
+    protected uploading = false;
     protected problem: string | null = null;
     protected showHelp = false;
 
@@ -124,11 +129,8 @@ export class SummaryEditorComponent implements OnInit, OnDestroy {
         const input = this.input.nativeElement;
         const start = input.selectionStart;
         const selected = input.value.slice(start, input.selectionEnd) || 'text';
-        input.setRangeText(marker + selected + marker, start, input.selectionEnd, 'end');
-        input.focus();
+        this.insert(marker + selected + marker, start, input.selectionEnd);
         input.setSelectionRange(start + marker.length, start + marker.length + selected.length);
-        // Lets ngModel see the change.
-        input.dispatchEvent(new Event('input'));
     }
 
     /** Puts the video's current time at the cursor, for the end of a section heading. */
@@ -139,9 +141,29 @@ export class SummaryEditorComponent implements OnInit, OnDestroy {
         const input = this.input.nativeElement;
         const before = input.value.slice(0, input.selectionStart);
         const stamp = (before && !/\s$/.test(before) ? ' ' : '') + '[' + formatStamp(this.playback.currentTime()) + ']';
-        input.setRangeText(stamp, input.selectionStart, input.selectionEnd, 'end');
-        input.focus();
-        input.dispatchEvent(new Event('input'));
+        this.insert(stamp, input.selectionStart, input.selectionEnd);
+    }
+
+    async onImagePicked(event: Event): Promise<void> {
+        const picker = event.target as HTMLInputElement;
+        const file = picker.files?.[0];
+        // Cleared so that picking the same file again still counts as a change.
+        picker.value = '';
+        if (!file) {
+            return;
+        }
+        // The cursor may move while the image uploads, so the place to put it is taken now.
+        const {selectionStart: start, selectionEnd: end} = this.input.nativeElement;
+        this.uploading = true;
+        this.problem = null;
+        try {
+            const markdown = await uploadPickedImage(this.service, this.videoId, file);
+            this.insert('\n' + markdown + '\n', start, end);
+        } catch (error) {
+            this.problem = (error as Error).message;
+        } finally {
+            this.uploading = false;
+        }
     }
 
     save(): void {
@@ -184,27 +206,21 @@ export class SummaryEditorComponent implements OnInit, OnDestroy {
         await this.modalCtrl.dismiss(null, 'cancel');
     }
 
+    private insert(text: string, start: number, end: number): void {
+        const input = this.input.nativeElement;
+        input.setRangeText(text, start, end, 'end');
+        input.focus();
+        // Lets ngModel see the change.
+        input.dispatchEvent(new Event('input'));
+    }
+
     private async explain(failure: SaveFailure): Promise<void> {
-        switch (failure.kind) {
-            case 'conflict':
-                return this.resolveConflict(failure.current as SummaryPart | null);
-            case 'invalid': {
-                const details = Object.values(failure.errors).flat();
-                this.problem = details.length ? details.join(' ') : failure.message;
-                break;
-            }
-            case 'forbidden':
-                this.problem = 'This account can no longer edit summaries. Copy your text if you want to keep it.';
-                break;
-            case 'rate-limited':
-                this.problem = 'Too many saves in a short time. Wait a minute, then save again.';
-                break;
-            case 'network':
-                this.problem = 'Flick could not reach the server. Check your connection, then save again.';
-                break;
-            default:
-                this.problem = failure.message;
+        if (failure.kind === 'conflict') {
+            return this.resolveConflict(failure.current as SummaryPart | null);
         }
+        this.problem = failure.kind === 'forbidden'
+            ? 'This account can no longer edit summaries. Copy your text if you want to keep it.'
+            : describeFailure(failure);
     }
 
     private async resolveConflict(current: SummaryPart | null): Promise<void> {

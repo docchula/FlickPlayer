@@ -1,4 +1,5 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {ActivatedRoute, convertToParamMap} from '@angular/router';
 import {ModalController} from '@ionic/angular/standalone';
 import {BehaviorSubject, of} from 'rxjs';
 import {LectureQuizComponent} from './lecture-quiz.component';
@@ -25,6 +26,7 @@ function aids(questions: QuizQuestion[], canEdit = false): StudyAids {
     return {
         video_id: 7,
         can_edit: canEdit,
+        can_manage: false,
         generation: 'ready',
         summary: null,
         quiz: {questions, revision: 2, origin: 'ai', edited: true, contributors: [{name: 'Kan & Chain'}], updated_at: null},
@@ -36,6 +38,7 @@ describe('LectureQuizComponent', () => {
     let state$: BehaviorSubject<StudyAidsState>;
     let service: jasmine.SpyObj<Pick<StudyAidsService, 'watch' | 'answer' | 'refresh'>>;
     let seek: jasmine.Spy;
+    let query: Record<string, string>;
 
     const element = () => fixture.nativeElement as HTMLElement;
     const text = () => element().textContent?.replace(/\s+/g, ' ') ?? '';
@@ -62,10 +65,14 @@ describe('LectureQuizComponent', () => {
         service = jasmine.createSpyObj('StudyAidsService', ['watch', 'answer', 'refresh']);
         service.answer.and.returnValue(of({answered: 13, correct: 11}));
         seek = jasmine.createSpy('seek');
+        query = {};
         TestBed.configureTestingModule({
             imports: [LectureQuizComponent],
             providers: [
                 {provide: StudyAidsService, useValue: service},
+                {provide: ActivatedRoute, useValue: {snapshot: {get queryParamMap() {
+                    return convertToParamMap(query);
+                }}}},
                 {provide: ModalController, useValue: jasmine.createSpyObj('ModalController', ['create'])},
             ],
         });
@@ -156,5 +163,30 @@ describe('LectureQuizComponent', () => {
 
         expect(text()).toContain('There are no questions for this lecture yet.');
         expect(text()).toContain('Add questions');
+    });
+
+    it('builds a link that opens this lecture\'s quiz', () => {
+        create(aids([question('a', 2)]));
+        const link = new URL((fixture.componentInstance as unknown as {shareLink(view: {videoId: number}): string}).shareLink({videoId: 7}));
+
+        expect(link.searchParams.get('video')).toBe('7');
+        expect(link.searchParams.get('quiz')).toBe('1');
+    });
+
+    it('opens the quiz when the page was reached through its link', () => {
+        localStorage.setItem('flickStudyAidsCollapsed', JSON.stringify({quiz: true}));
+        query = {video: '7', quiz: '1'};
+        create(aids([question('a', 2)]));
+
+        expect(text()).toContain('Start quiz');
+        expect(JSON.parse(localStorage.getItem('flickStudyAidsCollapsed') ?? '{}').quiz).toBeTrue();
+    });
+
+    it('stays folded away for a link to another lecture', () => {
+        localStorage.setItem('flickStudyAidsCollapsed', JSON.stringify({quiz: true}));
+        query = {video: '8', quiz: '1'};
+        create(aids([question('a', 2)]));
+
+        expect(text()).not.toContain('Start quiz');
     });
 });

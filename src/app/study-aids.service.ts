@@ -3,17 +3,31 @@ import {HttpErrorResponse} from '@angular/common/http';
 import {BehaviorSubject, Observable, of, Subscription, throwError} from 'rxjs';
 import {catchError, map, tap} from 'rxjs/operators';
 import {JSend, ManService} from './man.service';
-import {isObject, parseErrors, parseQuiz, parseStats, parseStudyAids, parseSummary, text} from './study-aids/parse';
+import {
+    isObject,
+    parseEditor,
+    parseEditors,
+    parseErrors,
+    parseImage,
+    parseQuiz,
+    parseStats,
+    parseStudyAids,
+    parseSummary,
+    text,
+} from './study-aids/parse';
 import {
     AnswerStats,
+    EditorRole,
     QuizChange,
     QuizPart,
     QuizQuestion,
     SaveFailure,
     StudyAids,
+    StudyAidsEditor,
     StudyAidsState,
     SummaryChange,
     SummaryPart,
+    UploadedImage,
 } from './study-aids/study-aids.model';
 
 /** A lecture's study aids are fetched again when a card shows them after this long. */
@@ -24,6 +38,8 @@ interface Entry {
     fetchedAt: number;
     request: Subscription | null;
 }
+
+const EDITORS_PATH = 'v1/study_aids/editors';
 
 function path(videoId: number): string {
     return 'v1/study_aids/' + videoId;
@@ -86,6 +102,45 @@ export class StudyAidsService {
 
                 return of(null);
             }),
+        );
+    }
+
+    /** Everyone allowed to edit study aids. Admins only. */
+    editors(): Observable<StudyAidsEditor[]> {
+        return this.send(this.man.get<JSend<unknown>>(EDITORS_PATH), parseEditors);
+    }
+
+    /** Adds an editor, or changes their role. Admins only. */
+    saveEditor(email: string, role: EditorRole): Observable<StudyAidsEditor> {
+        return this.send(this.man.post<JSend<unknown>>(EDITORS_PATH, {email, role}), parseEditor);
+    }
+
+    removeEditor(email: string): Observable<true> {
+        return this.send(this.man.post<JSend<unknown>>(EDITORS_PATH + '/remove', {email}), () => true);
+    }
+
+    /** Stores an image on FlickMan and returns the address to write into the Markdown. */
+    uploadImage(videoId: number, image: Blob, fileName: string): Observable<UploadedImage> {
+        const form = new FormData();
+        form.append('image', image, fileName);
+
+        return this.send(this.man.post<JSend<unknown>>(path(videoId) + '/images', form), parseImage);
+    }
+
+    private send<T>(request: Observable<JSend<unknown> | null>, parse: (value: unknown) => T | null): Observable<T> {
+        return request.pipe(
+            map(response => {
+                if (!response) {
+                    throw {kind: 'network'} satisfies SaveFailure;
+                }
+                const result = parse(response.data);
+                if (result === null) {
+                    throw {kind: 'failed', message: 'FlickMan sent back something unexpected.'} satisfies SaveFailure;
+                }
+
+                return result;
+            }),
+            catchError((error: unknown) => throwError(() => this.saveFailure(error, () => null))),
         );
     }
 

@@ -2,13 +2,14 @@ import {Component, ElementRef, inject, Input, NgZone} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
 import {IonButton, IonCard, IonIcon, IonSpinner, ModalController} from '@ionic/angular/standalone';
 import {addIcons} from 'ionicons';
-import {chevronDown, chevronUp, createOutline} from 'ionicons/icons';
+import {chevronDown, chevronUp, createOutline, peopleOutline} from 'ionicons/icons';
 import {BehaviorSubject, combineLatest, Observable, of} from 'rxjs';
 import {map, switchMap} from 'rxjs/operators';
 import {Lecture} from '../man.service';
 import {StudyAidsService} from '../study-aids.service';
 import {ChecklistViewComponent, TickChange} from './checklist-view.component';
 import {SummaryEditorComponent} from './summary-editor.component';
+import {openEditorsList} from './study-aids-editors.component';
 import {buildChecklist, Checklist} from '../study-aids/checklist';
 import {byline, isAiDraft} from '../study-aids/byline';
 import {displayed} from '../study-aids/displayed';
@@ -64,7 +65,7 @@ export class LectureSummaryComponent {
     );
 
     constructor() {
-        addIcons({chevronDown, chevronUp, createOutline});
+        addIcons({chevronDown, chevronUp, createOutline, peopleOutline});
     }
 
     shows(view: SummaryView): boolean {
@@ -117,6 +118,10 @@ export class LectureSummaryComponent {
 
     retry(view: SummaryView): void {
         this.service.refresh(view.videoId);
+    }
+
+    manageEditors(view: SummaryView): void {
+        void openEditorsList(this.modalCtrl, view.videoId);
     }
 
     async edit(view: SummaryView): Promise<void> {

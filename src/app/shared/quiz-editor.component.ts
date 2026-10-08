@@ -1,4 +1,4 @@
-import {afterNextRender, Component, inject, Injector, Input, OnInit, ViewEncapsulation} from '@angular/core';
+import {afterNextRender, Component, ElementRef, inject, Injector, Input, OnInit, ViewChild, ViewEncapsulation} from '@angular/core';
 import {
     AlertController,
     IonButton,
@@ -14,12 +14,16 @@ import {
     ModalController,
 } from '@ionic/angular/standalone';
 import {addIcons} from 'ionicons';
-import {addOutline, arrowDown, arrowUp, closeOutline, timeOutline, trashOutline} from 'ionicons/icons';
+import {addOutline, arrowDown, arrowUp, closeOutline, eyeOutline, imageOutline, timeOutline, trashOutline} from 'ionicons/icons';
 import {StudyAidsService} from '../study-aids.service';
 import {CreditFieldComponent} from './credit-field.component';
-import {formatStamp} from '../study-aids/checklist';
+import {RichTextComponent} from './rich-text.component';
+import {formatStamp, renderBlock, renderInline} from '../study-aids/checklist';
 import {creditFields, joinNames} from '../study-aids/byline';
+import {describeFailure} from '../study-aids/failures';
+import {IMAGE_TYPES} from '../study-aids/images';
 import {readCreditChoice, writeCreditChoice} from '../study-aids/local-store';
+import {uploadPickedImage} from '../study-aids/upload-image';
 import {
     blankQuestionForm,
     CHOICE_LETTERS,
@@ -58,6 +62,7 @@ function inputValue(event: Event): string {
         IonTextarea,
         IonSpinner,
         CreditFieldComponent,
+        RichTextComponent,
     ],
 })
 export class QuizEditorComponent implements OnInit {
@@ -73,6 +78,8 @@ export class QuizEditorComponent implements OnInit {
     @Input() duration: number | null = null;
     @Input() playback: LecturePlayback | null = null;
 
+    @ViewChild('imagePicker') imagePicker: ElementRef<HTMLInputElement>;
+
     protected forms: QuestionForm[] = [];
     protected credit: CreditChoice = readCreditChoice();
     protected saving = false;
@@ -80,18 +87,24 @@ export class QuizEditorComponent implements OnInit {
     /** Problems are pointed out once the editor first tries to save, not while typing. */
     protected checked = false;
     protected removed: {form: QuestionForm; index: number} | null = null;
+    /** Which field an image is uploading into, as `key-field`. */
+    protected uploadingFor: string | null = null;
+    protected previewing = new Set<number>();
+    protected readonly imageTypes = IMAGE_TYPES.join(',');
     protected readonly letters = CHOICE_LETTERS;
     protected readonly limits = LIMITS;
     protected readonly resetsStats = resetsStats;
 
     private serverProblems = new Map<number, string[]>();
+    private pickTarget: {form: QuestionForm; field: 'prompt' | 'explanation'} | null = null;
+    private previews = new Map<string, string>();
     private nextKey = 0;
     private baseRevision = 0;
     private savedSnapshot = '';
     private readonly savedCredit = this.credit;
 
     constructor() {
-        addIcons({addOutline, arrowDown, arrowUp, closeOutline, timeOutline, trashOutline});
+        addIcons({addOutline, arrowDown, arrowUp, closeOutline, eyeOutline, imageOutline, timeOutline, trashOutline});
     }
 
     ngOnInit(): void {
@@ -206,6 +219,57 @@ export class QuizEditorComponent implements OnInit {
         this.edited();
     }
 
+    pickImage(form: QuestionForm, field: 'prompt' | 'explanation'): void {
+        this.pickTarget = {form, field};
+        this.imagePicker.nativeElement.click();
+    }
+
+    async onImagePicked(event: Event): Promise<void> {
+        const picker = event.target as HTMLInputElement;
+        const file = picker.files?.[0];
+        // Cleared so that picking the same file again still counts as a change.
+        picker.value = '';
+        const target = this.pickTarget;
+        this.pickTarget = null;
+        if (!file || !target) {
+            return;
+        }
+        this.uploadingFor = target.form.key + '-' + target.field;
+        this.problem = null;
+        try {
+            const markdown = await uploadPickedImage(this.service, this.videoId, file);
+            const current = target.form[target.field].trimEnd();
+            target.form[target.field] = (current ? current + '\n\n' : '') + markdown;
+            this.previewing.add(target.form.key);
+            this.edited();
+        } catch (error) {
+            this.problem = (error as Error).message;
+        } finally {
+            this.uploadingFor = null;
+        }
+    }
+
+    togglePreview(form: QuestionForm): void {
+        if (!this.previewing.delete(form.key)) {
+            this.previewing.add(form.key);
+        }
+    }
+
+    /** Rendered Markdown for the previews, kept so typing elsewhere does not redo it. */
+    preview(markdown: string, inline = false): string {
+        const key = (inline ? 'i:' : 'b:') + markdown;
+        let html = this.previews.get(key);
+        if (html === undefined) {
+            if (this.previews.size > 300) {
+                this.previews.clear();
+            }
+            html = inline ? renderInline(markdown) : renderBlock(markdown);
+            this.previews.set(key, html);
+        }
+
+        return html;
+    }
+
     useCurrentTime(form: QuestionForm): void {
         if (this.playback) {
             form.time = formatStamp(this.playback.currentTime());
@@ -311,27 +375,17 @@ export class QuizEditorComponent implements OnInit {
     }
 
     private async explain(failure: SaveFailure): Promise<void> {
-        switch (failure.kind) {
-            case 'conflict':
-                return this.resolveConflict(failure.current as QuizPart | null);
-            case 'invalid': {
-                const {byQuestion, general} = errorsByQuestion(failure.errors);
-                this.serverProblems = byQuestion;
-                this.problem = general.length ? general.join(' ') : failure.message;
-                break;
-            }
-            case 'forbidden':
-                this.problem = 'This account can no longer edit questions.';
-                break;
-            case 'rate-limited':
-                this.problem = 'Too many saves in a short time. Wait a minute, then save again.';
-                break;
-            case 'network':
-                this.problem = 'Flick could not reach the server. Check your connection, then save again.';
-                break;
-            default:
-                this.problem = failure.message;
+        if (failure.kind === 'conflict') {
+            return this.resolveConflict(failure.current as QuizPart | null);
         }
+        if (failure.kind === 'invalid') {
+            const {byQuestion, general} = errorsByQuestion(failure.errors);
+            this.serverProblems = byQuestion;
+            this.problem = general.length ? general.join(' ') : failure.message;
+
+            return;
+        }
+        this.problem = failure.kind === 'forbidden' ? 'This account can no longer edit questions.' : describeFailure(failure);
     }
 
     private async resolveConflict(current: QuizPart | null): Promise<void> {

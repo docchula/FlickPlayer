@@ -1,4 +1,15 @@
-import {AnswerStats, Contributor, GenerationState, PartMeta, QuizPart, QuizQuestion, StudyAids, SummaryPart} from './study-aids.model';
+import {
+    AnswerStats,
+    Contributor,
+    GenerationState,
+    PartMeta,
+    QuizPart,
+    QuizQuestion,
+    StudyAids,
+    StudyAidsEditor,
+    SummaryPart,
+    UploadedImage,
+} from './study-aids.model';
 
 /*
  * FlickMan's answers are checked field by field rather than trusted, so a malformed question is
@@ -115,10 +126,42 @@ export function parseStudyAids(value: unknown): StudyAids | null {
     return {
         video_id: videoId,
         can_edit: value['can_edit'] === true,
+        can_manage: value['can_manage'] === true,
         generation: GENERATION_STATES.find(state => state === value['generation']) ?? 'none',
         summary: parseSummary(value['summary']),
         quiz: parseQuiz(value['quiz']),
     };
+}
+
+export function parseEditor(value: unknown): StudyAidsEditor | null {
+    if (!isObject(value)) {
+        return null;
+    }
+    const email = text(value['email']);
+
+    return email ? {
+        email,
+        name: text(value['name']) || null,
+        role: value['role'] === 'admin' ? 'admin' : 'editor',
+        added_at: text(value['added_at']),
+    } : null;
+}
+
+export function parseEditors(value: unknown): StudyAidsEditor[] | null {
+    if (!isObject(value) || !Array.isArray(value['editors'])) {
+        return null;
+    }
+
+    return value['editors'].map(parseEditor).filter((editor): editor is StudyAidsEditor => editor !== null);
+}
+
+export function parseImage(value: unknown): UploadedImage | null {
+    if (!isObject(value)) {
+        return null;
+    }
+    const url = text(value['url']);
+
+    return url ? {url, width: count(value['width']) ?? 0, height: count(value['height']) ?? 0} : null;
 }
 
 /** Laravel's validation errors: field path to messages. */

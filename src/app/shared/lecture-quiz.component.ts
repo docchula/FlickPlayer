@@ -1,14 +1,26 @@
-import {Component, ElementRef, inject, Input, NgZone} from '@angular/core';
+import {afterNextRender, Component, ElementRef, inject, Injector, Input, NgZone} from '@angular/core';
+import {ActivatedRoute} from '@angular/router';
 import {AsyncPipe} from '@angular/common';
 import {IonButton, IonCard, IonIcon, IonSpinner, ModalController} from '@ionic/angular/standalone';
 import {addIcons} from 'ionicons';
-import {checkmarkCircle, chevronDown, chevronUp, closeCircle, createOutline, playCircleOutline, refreshOutline} from 'ionicons/icons';
+import {
+    checkmarkCircle,
+    chevronDown,
+    chevronUp,
+    closeCircle,
+    createOutline,
+    peopleOutline,
+    playCircleOutline,
+    refreshOutline,
+    shareSocialOutline,
+} from 'ionicons/icons';
 import {BehaviorSubject, combineLatest, Observable, of} from 'rxjs';
 import {map, switchMap} from 'rxjs/operators';
 import {Lecture} from '../man.service';
 import {StudyAidsService} from '../study-aids.service';
 import {RichTextComponent} from './rich-text.component';
 import {QuizEditorComponent} from './quiz-editor.component';
+import {openEditorsList} from './study-aids-editors.component';
 import {formatClock, plainText, renderBlock, renderInline} from '../study-aids/checklist';
 import {byline, isAiDraft} from '../study-aids/byline';
 import {displayed} from '../study-aids/displayed';
@@ -18,6 +30,9 @@ import {LecturePlayback, QuizPart, QuizQuestion, StudyAids, StudyAidsState} from
 
 /** Fewer answers than this say nothing about how hard a question is. */
 const MIN_ANSWERS_FOR_STATS = 5;
+
+/** `?video=…&quiz=1` opens the lecture with its quiz ready, which is what a shared link sends. */
+const QUIZ_LINK_PARAM = 'quiz';
 
 interface QuizItem {
     question: QuizQuestion;
@@ -29,6 +44,7 @@ interface QuizItem {
 
 interface QuizView {
     videoId: number;
+    title: string;
     duration: number | null;
     status: StudyAidsState['status'];
     aids: StudyAids | null;
@@ -51,6 +67,8 @@ type ChoiceState = 'correct' | 'wrong' | 'muted' | null;
 export class LectureQuizComponent {
     private service = inject(StudyAidsService);
     private modalCtrl = inject(ModalController);
+    private host = inject<ElementRef<HTMLElement>>(ElementRef);
+    private injector = inject(Injector);
 
     private readonly video$ = new BehaviorSubject<Lecture | null>(null);
 
@@ -67,6 +85,8 @@ export class LectureQuizComponent {
     protected current: number | null = null;
     /** Read out by screen readers when an answer is checked. */
     protected announcement = '';
+    /** What happened to the last shared link. */
+    protected shareNote = '';
     protected readonly byline = byline;
     protected readonly isAiDraft = isAiDraft;
     protected readonly formatClock = formatClock;
@@ -76,10 +96,12 @@ export class LectureQuizComponent {
     private sent = new Set<string>();
     private renderedFrom: QuizQuestion[] | null = null;
     private rendered: QuizItem[] = [];
+    /** The lecture a shared quiz link points at, until its quiz has been opened. */
+    private linkedVideo: string | null = null;
 
     protected readonly view$: Observable<QuizView | null> = combineLatest([
         this.video$,
-        displayed(inject<ElementRef<HTMLElement>>(ElementRef).nativeElement, inject(NgZone)),
+        displayed(this.host.nativeElement, inject(NgZone)),
     ]).pipe(
         switchMap(([video, shown]) => video?.id && shown
             ? this.service.watch(video.id).pipe(map(state => this.toView(video, state)))
@@ -87,7 +109,11 @@ export class LectureQuizComponent {
     );
 
     constructor() {
-        addIcons({checkmarkCircle, chevronDown, chevronUp, closeCircle, createOutline, playCircleOutline, refreshOutline});
+        addIcons({checkmarkCircle, chevronDown, chevronUp, closeCircle, createOutline, peopleOutline, playCircleOutline, refreshOutline, shareSocialOutline});
+        const query = inject(ActivatedRoute, {optional: true})?.snapshot.queryParamMap;
+        if (query?.has(QUIZ_LINK_PARAM)) {
+            this.linkedVideo = query.get('video');
+        }
     }
 
     shows(view: QuizView): boolean {
@@ -225,6 +251,42 @@ export class LectureQuizComponent {
         this.service.refresh(view.videoId);
     }
 
+    manageEditors(view: QuizView): void {
+        void openEditorsList(this.modalCtrl, view.videoId);
+    }
+
+    /** A link that opens this lecture with its quiz ready, for sending to the class. */
+    shareLink(view: QuizView): string {
+        const url = new URL(location.href);
+        url.search = '';
+        url.hash = '';
+        url.searchParams.set('video', String(view.videoId));
+        url.searchParams.set(QUIZ_LINK_PARAM, '1');
+
+        return url.toString();
+    }
+
+    async share(view: QuizView): Promise<void> {
+        const url = this.shareLink(view);
+        if (typeof navigator.share === 'function') {
+            try {
+                await navigator.share({title: 'Quiz: ' + view.title, url});
+
+                return;
+            } catch (error) {
+                if ((error as DOMException).name === 'AbortError') {
+                    return;
+                }
+            }
+        }
+        try {
+            await navigator.clipboard.writeText(url);
+            this.shareNote = 'Link copied. Anyone who signs in to Flick can open the quiz with it.';
+        } catch {
+            this.shareNote = 'Copy this link to share the quiz: ' + url;
+        }
+    }
+
     async edit(view: QuizView): Promise<void> {
         if (!view.aids) {
             return;
@@ -252,6 +314,7 @@ export class LectureQuizComponent {
             this.answers = {};
             this.current = null;
             this.announcement = '';
+            this.shareNote = '';
             this.sent.clear();
         }
         const aids = state.status === 'ready' ? state.aids : null;
@@ -267,8 +330,13 @@ export class LectureQuizComponent {
         if (this.current !== null && this.current >= items.length) {
             this.current = null;
         }
+        if (this.linkedVideo === String(videoId) && items.length) {
+            this.linkedVideo = null;
+            this.collapsed = false;
+            afterNextRender(() => this.host.nativeElement.scrollIntoView({behavior: 'smooth', block: 'start'}), {injector: this.injector});
+        }
 
-        return {videoId, duration: video.duration ?? null, status: state.status, aids, quiz, items};
+        return {videoId, title: video.title, duration: video.duration ?? null, status: state.status, aids, quiz, items};
     }
 
     private itemsFor(questions: QuizQuestion[]): QuizItem[] {

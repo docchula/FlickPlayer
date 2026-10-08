@@ -31,6 +31,7 @@ function aidsResponse(changes: object = {}) {
         data: {
             video_id: 7,
             can_edit: true,
+            can_manage: true,
             generation: 'ready',
             summary: SUMMARY,
             quiz: {questions: [QUESTION], revision: 2, origin: 'ai', edited: true, contributors: [{name: 'Kan & Chain'}], updated_at: null},
@@ -71,6 +72,7 @@ describe('StudyAidsService', () => {
             expect(state.status).toBe('ready');
             if (state.status === 'ready') {
                 expect(state.aids.can_edit).toBeTrue();
+                expect(state.aids.can_manage).toBeTrue();
                 expect(state.aids.summary?.markdown).toBe(SUMMARY.markdown);
                 expect(state.aids.quiz?.questions[0].time).toBe(465);
                 expect(state.aids.quiz?.contributors).toEqual([{name: 'Kan & Chain'}]);
@@ -184,6 +186,53 @@ describe('StudyAidsService', () => {
             service.answer(7, QUESTION.id, 2).subscribe();
 
             expect(man.get).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('editors', () => {
+        const editor = {email: 'kan@docchula.com', name: 'Kan', role: 'admin', added_at: '2026-10-08T14:41:13+07:00'};
+
+        it('lists the editors', () => {
+            man.get.and.returnValue(of({status: 'success', data: {editors: [editor, {email: 'new@docchula.com', name: null, role: 'editor', added_at: null}]}}));
+            let editors: unknown;
+            service.editors().subscribe(list => editors = list);
+
+            expect(man.get).toHaveBeenCalledWith('v1/study_aids/editors');
+            expect(editors).toEqual([editor, {email: 'new@docchula.com', name: null, role: 'editor', added_at: null}]);
+        });
+
+        it('adds, changes and removes an editor', () => {
+            man.post.and.returnValue(of({status: 'success', data: editor}));
+            service.saveEditor('kan@docchula.com', 'admin').subscribe();
+            man.post.and.returnValue(of({status: 'success', data: null}));
+            let removed = false;
+            service.removeEditor('kan@docchula.com').subscribe(() => removed = true);
+
+            expect(man.post).toHaveBeenCalledWith('v1/study_aids/editors', {email: 'kan@docchula.com', role: 'admin'});
+            expect(man.post).toHaveBeenCalledWith('v1/study_aids/editors/remove', {email: 'kan@docchula.com'});
+            expect(removed).toBeTrue();
+        });
+
+        it('passes on why FlickMan refused', () => {
+            man.post.and.returnValue(httpError(422, {status: 'error', message: 'Invalid', errors: {email: ['This would leave no admin.']}}));
+            let failure: SaveFailure | undefined;
+            service.removeEditor('kan@docchula.com').subscribe({error: error => failure = error});
+
+            expect(failure).toEqual({kind: 'invalid', message: 'Invalid', errors: {email: ['This would leave no admin.']}});
+        });
+    });
+
+    describe('uploadImage', () => {
+        it('posts the image as a form and returns where it is stored', () => {
+            const url = 'https://flick-man-app.docchula.com/v1/study_aids/images/01M4D7B2STKMV08W6Z0ZF3G56N.webp';
+            man.post.and.returnValue(of({status: 'success', data: {url, width: 800, height: 600}}));
+            let uploaded: unknown;
+            service.uploadImage(7, new Blob(['x'], {type: 'image/webp'}), 'er.webp').subscribe(image => uploaded = image);
+
+            const [path, body] = man.post.calls.mostRecent().args;
+            expect(path).toBe('v1/study_aids/7/images');
+            expect(body instanceof FormData && (body.get('image') as File).name).toBe('er.webp');
+            expect(uploaded).toEqual({url, width: 800, height: 600});
         });
     });
 });

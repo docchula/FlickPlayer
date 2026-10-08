@@ -32,13 +32,28 @@
                     } @else if (view.quiz && view.items.length) {
                         <div class="byline">
                             <span>{{ byline(view.quiz) }}</span>
-                            @if (view.aids?.can_edit) {
-                                <ion-button class="small-button" size="small" fill="outline" (click)="edit(view)">
-                                    <ion-icon slot="start" name="create-outline" aria-hidden="true"></ion-icon>
-                                    Edit questions
+                            <span class="editor-actions">
+                                <ion-button class="small-button" size="small" fill="clear" (click)="share(view)">
+                                    <ion-icon slot="start" name="share-social-outline" aria-hidden="true"></ion-icon>
+                                    Share
                                 </ion-button>
-                            }
+                                @if (view.aids?.can_manage) {
+                                    <ion-button class="small-button" size="small" fill="clear" (click)="manageEditors(view)">
+                                        <ion-icon slot="start" name="people-outline" aria-hidden="true"></ion-icon>
+                                        Editors
+                                    </ion-button>
+                                }
+                                @if (view.aids?.can_edit) {
+                                    <ion-button class="small-button" size="small" fill="outline" (click)="edit(view)">
+                                        <ion-icon slot="start" name="create-outline" aria-hidden="true"></ion-icon>
+                                        Edit questions
+                                    </ion-button>
+                                }
+                            </span>
                         </div>
+                        @if (shareNote) {
+                            <p class="share-note" role="status">{{ shareNote }}</p>
+                        }
 
                         @switch (phase(view)) {
                             @case ('start') {
@@ -144,7 +159,15 @@
                         }
                     } @else if (view.aids?.can_edit) {
                         <p class="card-note">{{ emptyNote(view.aids!) }}</p>
-                        <ion-button class="small-button" size="small" (click)="edit(view)">Add questions</ion-button>
+                        <span class="editor-actions">
+                            <ion-button class="small-button" size="small" (click)="edit(view)">Add questions</ion-button>
+                            @if (view.aids?.can_manage) {
+                                <ion-button class="small-button" size="small" fill="clear" (click)="manageEditors(view)">
+                                    <ion-icon slot="start" name="people-outline" aria-hidden="true"></ion-icon>
+                                    Editors
+                                </ion-button>
+                            }
+                        </span>
                     } @else {
                         <p class="card-note">The AI is still writing questions on this lecture. Check back later.</p>
                     }
