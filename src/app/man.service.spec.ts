@@ -176,6 +176,40 @@ describe('ManService', () => {
         });
     });
 
+    describe('searchDocuments', () => {
+        beforeEach(() => service.setIdToken(VALID_TOKEN));
+
+        it('returns [] without a request for queries under 2 characters', done => {
+            service.searchDocuments(' a ').subscribe(result => {
+                expect(result).toEqual([]);
+                done();
+            });
+            httpMock.expectNone(() => true);
+        });
+
+        it('sends the trimmed query and returns the hits', done => {
+            const hit = {video_id: '1', course_id: '2', title: 't', heading_path: 't', snippet: 's', score: 1, lecturer: [], date: null};
+            service.searchDocuments('  mitral valve ').subscribe(result => {
+                expect(result).toEqual([hit]);
+                done();
+            });
+
+            const req = httpMock.expectOne(APP_ENDPOINT + 'graphql');
+            expect(req.request.body.variables).toEqual({query: 'mitral valve', first: 20});
+            req.flush({data: {searchDocuments: {hits: [hit]}}});
+        });
+
+        it('errors when the GraphQL response has errors and no data', done => {
+            service.searchDocuments('mitral').subscribe({
+                error: (e: Error) => {
+                    expect(e.message).toBe('Too Many Attempts.');
+                    done();
+                },
+            });
+            httpMock.expectOne(APP_ENDPOINT + 'graphql').flush({data: null, errors: [{message: 'Too Many Attempts.'}]});
+        });
+    });
+
     describe('checkAuthorization', () => {
         beforeEach(() => service.setIdToken(VALID_TOKEN));
 
