@@ -70,12 +70,42 @@ app-checklist-view {
         grid-template-columns: 1.1rem 2.4em minmax(0, 1fr);
     }
 
+    /* Drawn from the theme: a native box follows the system's light or dark scheme, not the theme. */
     .point-tick {
+        appearance: none;
+        display: grid;
+        place-content: center;
         width: 1rem;
         height: 1rem;
         margin: 0.22em 0 0;
-        accent-color: var(--ion-color-primary);
+        border: 1.5px solid rgba(var(--ion-text-color-rgb, 0, 0, 0), 0.45);
+        border-radius: 0.25rem;
+        background: transparent;
         cursor: pointer;
+
+        &::after {
+            content: '';
+            width: 0.28rem;
+            height: 0.55rem;
+            margin-top: -0.12rem;
+            border: solid var(--ion-color-primary-contrast);
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg) scale(0);
+        }
+
+        &:checked {
+            border-color: var(--ion-color-primary);
+            background: var(--ion-color-primary);
+        }
+
+        &:checked::after {
+            transform: rotate(45deg) scale(1);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--ion-color-primary);
+            outline-offset: 2px;
+        }
     }
 
     .point-number {

@@ -78,12 +78,40 @@
         gap: 0.35rem;
         cursor: pointer;
 
+        // Drawn from the theme, like the summary's tick boxes.
         input {
+            appearance: none;
+            display: grid;
+            place-content: center;
             width: 1.05rem;
             height: 1.05rem;
             margin: 0;
-            accent-color: var(--ion-color-success);
+            border: 1.5px solid rgba(var(--ion-text-color-rgb, 0, 0, 0), 0.45);
+            border-radius: 50%;
+            background: transparent;
             cursor: pointer;
+
+            &::after {
+                content: '';
+                width: 0.5rem;
+                height: 0.5rem;
+                border-radius: 50%;
+                background: var(--ion-color-success);
+                transform: scale(0);
+            }
+
+            &:checked {
+                border-color: var(--ion-color-success);
+            }
+
+            &:checked::after {
+                transform: scale(1);
+            }
+
+            &:focus-visible {
+                outline: 2px solid var(--ion-color-primary);
+                outline-offset: 2px;
+            }
         }
     }
 
