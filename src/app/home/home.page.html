@@ -11,12 +11,27 @@
         </ion-buttons>
     </ion-toolbar>
     <ion-toolbar>
-        <ion-searchbar
-            placeholder="Search videos across all courses by title or lecturer..."
-            debounce="0"
-            (ionInput)="onSearchChange($event)"
-            class="global-search"
-        ></ion-searchbar>
+        <div class="search-bar-row">
+            <ion-searchbar
+                [placeholder]="searchMode === 'content'
+                    ? 'Search lecture content (AI transcripts)...'
+                    : 'Search videos by title, lecturer, or date (YYYY-MM-DD)...'"
+                debounce="0"
+                (ionInput)="onSearchChange($event)"
+                class="global-search"
+            ></ion-searchbar>
+            <ion-segment [value]="searchMode" (ionChange)="onSearchModeChange($any($event.detail.value))"
+                         class="search-mode" aria-label="Search mode">
+                <ion-segment-button value="title" layout="icon-start" title="Search by title, lecturer, or date">
+                    <ion-icon name="film-outline"></ion-icon>
+                    <ion-label>Title</ion-label>
+                </ion-segment-button>
+                <ion-segment-button value="content" layout="icon-start" title="Search by content in transcripts">
+                    <ion-icon name="document-text-outline"></ion-icon>
+                    <ion-label>Content</ion-label>
+                </ion-segment-button>
+            </ion-segment>
+        </div>
     </ion-toolbar>
 </ion-header>
 
@@ -31,14 +46,55 @@
                         <span>Searching...</span>
                     </div>
                 } @else if (searchResults$ | async; as results) {
-                    @if (results.length === 0) {
+                    @if (results.error) {
                         <div class="search-status">
-                            <p>No videos found for &ldquo;{{ searchQuery }}&rdquo;</p>
+                            <p>Search failed. Please wait a moment and try again.</p>
                         </div>
-                    } @else {
-                        <p class="result-count">{{ results.length }} result{{ results.length !== 1 ? 's' : '' }} for &ldquo;{{ searchQuery }}&rdquo;</p>
+                    } @else if (results.items.length === 0) {
+                        <div class="search-status">
+                            <p>No {{ results.mode === 'content' ? 'content' : 'videos' }} found for &ldquo;{{ searchQuery }}&rdquo;</p>
+                        </div>
+                    } @else if (results.mode === 'content') {
+                        <p class="result-count">
+                            {{ results.items.length }} video{{ results.items.length !== 1 ? 's' : '' }} mentioning &ldquo;{{ searchQuery }}&rdquo;
+                            &middot; from AI-generated transcripts, which may contain errors
+                        </p>
                         <ion-list lines="full" class="search-list">
-                            @for (result of results; track result.id) {
+                            @for (hit of results.items; track hit.video_id) {
+                                <ion-item button (click)="openDocument(hit)" [detail]="false">
+                                    <ion-label class="ion-text-wrap">
+                                        <h2 class="video-title">{{ hit.title }}</h2>
+                                        @if (hit.heading_path && hit.heading_path !== hit.title) {
+                                            <p class="heading-path">{{ hit.heading_path }}</p>
+                                        }
+                                        <p class="snippet" [innerHTML]="hit.snippetHtml"></p>
+                                        <p class="video-meta">
+                                            @if (hit.lecturer.length) {
+                                                <span class="lecturer">{{ hit.lecturer.join(', ') }}</span>
+                                            }
+                                            @if (hit.courseName) {
+                                                <span class="course-name-label">{{ hit.courseName }}</span>
+                                            }
+                                            @if (hit.date) {
+                                                <span class="duration-badge">{{ hit.date }}</span>
+                                            }
+                                            @if (hit.courseYear) {
+                                                <span class="course-year-badge" [ngStyle]="{'background-color': colorByFolderName(hit.courseYear)}">{{ hit.courseYear }}</span>
+                                            }
+                                        </p>
+                                    </ion-label>
+                                    <ion-button slot="end" fill="outline" size="small" class="watch-button"
+                                                (click)="$event.stopPropagation(); goToVideo(hit)">
+                                        <ion-icon slot="start" name="play-outline"></ion-icon>
+                                        <span class="ion-hide-sm-down">Watch</span>
+                                    </ion-button>
+                                </ion-item>
+                            }
+                        </ion-list>
+                    } @else {
+                        <p class="result-count">{{ results.items.length }} result{{ results.items.length !== 1 ? 's' : '' }} for &ldquo;{{ searchQuery }}&rdquo;</p>
+                        <ion-list lines="full" class="search-list">
+                            @for (result of results.items; track result.id) {
                                 <ion-item button (click)="goToVideo(result)" detail="true">
                                     <ion-label class="ion-text-wrap">
                                         <h2 class="video-title">{{ result.title }}</h2>

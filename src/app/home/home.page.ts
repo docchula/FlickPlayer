@@ -1,13 +1,14 @@
 import {Component, inject, OnInit} from '@angular/core';
-import {Observable, of, Subject} from 'rxjs';
-import {CourseListResponse, Lecture, ManService, SearchVideoResult} from '../man.service';
+import {Observable, of, Subject, timer} from 'rxjs';
+import {CourseListResponse, DocumentSearchHit, Lecture, ManService, SearchVideoResult} from '../man.service';
 import {Router, RouterLink} from '@angular/router';
 import {AuthService} from '../auth.service';
-import {colorByFolderName} from '../../helpers';
+import {colorByFolderName, snippetToHtml} from '../../helpers';
 import {addIcons} from "ionicons";
-import {logOutOutline, searchOutline} from "ionicons/icons";
-import {debounceTime, distinctUntilChanged, map, switchMap, tap} from 'rxjs/operators';
+import {documentTextOutline, filmOutline, logOutOutline, playOutline, searchOutline} from "ionicons/icons";
+import {catchError, debounce, distinctUntilChanged, map, switchMap, tap} from 'rxjs/operators';
 import {
+    AlertController,
     IonButton,
     IonButtons,
     IonCard,
@@ -24,19 +25,36 @@ import {
     IonList,
     IonRow,
     IonSearchbar,
+    IonSegment,
+    IonSegmentButton,
     IonSpinner,
     IonText,
     IonTitle,
     IonToolbar,
+    ModalController,
 } from '@ionic/angular/standalone';
 import {AsyncPipe, NgStyle} from '@angular/common';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../consent.service';
+import {confirmAiDisclaimer, ModalDocumentComponent} from './course/modal-document.component';
+
+// `title` searches videos by title, lecturer or date; `content` searches the AI-generated transcript documents.
+export type SearchMode = 'title' | 'content';
 
 export interface EnrichedSearchResult extends SearchVideoResult {
     courseName?: string;
     courseYear?: string;
 }
+
+export interface EnrichedDocumentHit extends DocumentSearchHit {
+    courseName?: string;
+    courseYear?: string;
+    snippetHtml: string;
+}
+
+export type SearchResults =
+    | { mode: 'title', items: EnrichedSearchResult[], error?: boolean }
+    | { mode: 'content', items: EnrichedDocumentHit[], error?: boolean };
 
 @Component({
     selector: 'app-home',
@@ -46,7 +64,7 @@ export interface EnrichedSearchResult extends SearchVideoResult {
         IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon,
         IonContent, IonGrid, IonRow, IonCol, IonCard, RouterLink, NgStyle,
         IonCardHeader, IonCardTitle, AsyncPipe, IonCardContent, IonItem,
-        IonLabel, IonText, IonSpinner, IonSearchbar, IonList,
+        IonLabel, IonText, IonSpinner, IonSearchbar, IonList, IonSegment, IonSegmentButton,
     ]
 })
 export class HomePage implements OnInit {
@@ -55,19 +73,22 @@ export class HomePage implements OnInit {
     private authService = inject(AuthService);
     private analytics = inject(Analytics);
     private consentService = inject(ConsentService);
+    private modalCtrl = inject(ModalController);
+    private alertController = inject(AlertController);
 
     response$: Observable<CourseListResponse>;
     searchQuery = '';
-    searchResults$: Observable<EnrichedSearchResult[]> = of([]);
+    searchMode: SearchMode = 'title';
+    searchResults$: Observable<SearchResults | null> = of(null);
     isSearching = false;
 
     /** Map of course_id (string) → { name, year } built from video list */
     private courseLookup = new Map<string, { name: string; year: string }>();
 
-    private searchInput$ = new Subject<string>();
+    private searchInput$ = new Subject<{ query: string, mode: SearchMode }>();
 
     constructor() {
-        addIcons({logOutOutline, searchOutline});
+        addIcons({documentTextOutline, filmOutline, logOutOutline, playOutline, searchOutline});
     }
 
     logout() {
@@ -91,39 +112,79 @@ export class HomePage implements OnInit {
         });
 
         this.searchResults$ = this.searchInput$.pipe(
-            debounceTime(300),
-            distinctUntilChanged(),
+            // Content search is slower and rate-limited, so wait a little longer for the user to stop typing
+            debounce(({mode}) => timer(mode === 'content' ? 600 : 300)),
+            distinctUntilChanged((a, b) => a.query === b.query && a.mode === b.mode),
             tap(() => this.isSearching = true),
-            switchMap(query => {
+            switchMap(({query, mode}): Observable<SearchResults | null> => {
                 if (!query.trim()) {
                     this.isSearching = false;
-                    return of([]);
+                    return of(null);
                 }
                 if (this.consentService.current === 'granted') {
-                    logEvent(this.analytics, 'search', {search_term: query});
+                    logEvent(this.analytics, 'search', {search_term: query, search_mode: mode});
+                }
+                if (mode === 'content') {
+                    return this.manService.searchDocuments(query).pipe(
+                        map(hits => ({
+                            mode,
+                            items: hits.map(h => ({...h, ...this.courseInfo(h.course_id), snippetHtml: snippetToHtml(h.snippet)})),
+                        })),
+                        catchError(() => of({mode, items: [], error: true} as SearchResults)),
+                    );
                 }
                 return this.manService.searchVideos(query).pipe(
-                    map(results => results.map(r => ({
-                        ...r,
-                        courseName: this.courseLookup.get(r.course_id)?.name,
-                        courseYear: this.courseLookup.get(r.course_id)?.year,
-                    })))
+                    map(results => ({mode, items: results.map(r => ({...r, ...this.courseInfo(r.course_id)}))})),
+                    catchError(() => of({mode, items: [], error: true} as SearchResults)),
                 );
             }),
             tap(() => this.isSearching = false),
         );
     }
 
+    private courseInfo(courseId: string): { courseName?: string, courseYear?: string } {
+        const course = this.courseLookup.get(String(courseId));
+        return {courseName: course?.name, courseYear: course?.year};
+    }
+
     onSearchChange(event: Event) {
         const target = event.target as HTMLIonSearchbarElement;
         this.searchQuery = target.value ?? '';
-        this.searchInput$.next(this.searchQuery);
+        this.searchInput$.next({query: this.searchQuery, mode: this.searchMode});
     }
 
-    goToVideo(result: SearchVideoResult) {
-        this.router.navigate(['home', 'course', result.course_id], {
-            queryParams: {video: result.id}
+    onSearchModeChange(mode: SearchMode) {
+        this.searchMode = mode;
+        this.searchInput$.next({query: this.searchQuery, mode});
+    }
+
+    goToVideo(result: SearchVideoResult | Pick<DocumentSearchHit, 'video_id' | 'course_id'>) {
+        return this.router.navigate(['home', 'course', result.course_id], {
+            queryParams: {video: 'video_id' in result ? result.video_id : result.id}
         });
+    }
+
+    async openDocument(hit: DocumentSearchHit) {
+        if (!await confirmAiDisclaimer(this.alertController)) {
+            return;
+        }
+        const modal = await this.modalCtrl.create({
+            component: ModalDocumentComponent,
+            cssClass: 'modal-document',
+            componentProps: {
+                video: {id: Number(hit.video_id), title: hit.title, lecturer: hit.lecturer.join(', ')},
+                headingPath: hit.heading_path,
+                showWatchButton: true,
+            },
+        });
+        await modal.present();
+        if (this.consentService.current === 'granted') {
+            logEvent(this.analytics, 'view_transcript', {video_id: hit.video_id, video_title: hit.title, source: 'search'});
+        }
+        const {role} = await modal.onDidDismiss();
+        if (role === 'watch') {
+            await this.goToVideo(hit);
+        }
     }
 
     protected readonly colorByFolderName = colorByFolderName;

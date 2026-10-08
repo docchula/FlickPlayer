@@ -2,6 +2,12 @@
     <ion-toolbar>
         <ion-title>Transcript</ion-title>
         <ion-buttons slot="end">
+            @if (showWatchButton) {
+                <ion-button (click)="watch()" fill="solid" color="primary">
+                    <ion-icon slot="start" name="play-outline"></ion-icon>
+                    Watch video
+                </ion-button>
+            }
             <ion-button (click)="close()" [strong]="true">Close</ion-button>
         </ion-buttons>
     </ion-toolbar>
