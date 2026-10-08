@@ -23,13 +23,18 @@
   <script>
     (function () {
       var root = document.documentElement;
+      // Matches DEFAULT_HIDDEN in settings-presets.ts.
+      var hidden = ['pomodoro', 'heatmap'];
       try {
         var saved = JSON.parse(localStorage.getItem('flickSettings') || 'null');
-        if (saved && saved.hidden && saved.hidden.length) {
-          root.setAttribute('data-hidden', saved.hidden.join(' '));
+        if (saved && Array.isArray(saved.hidden)) {
+          hidden = saved.hidden;
         }
       } catch (error) {
-        // No usable saved settings; everything stays visible.
+        // No usable saved settings; the defaults apply.
+      }
+      if (hidden.length) {
+        root.setAttribute('data-hidden', hidden.join(' '));
       }
       try {
         var font = JSON.parse(localStorage.getItem('flickFontApplied') || 'null');

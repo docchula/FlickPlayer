@@ -16,7 +16,7 @@ export function sanitizeSettings(raw: unknown): AppSettings {
     const hour = Number(value.pomodoroResetHour);
 
     return {
-        hidden: sanitizeKeys(value.hidden),
+        hidden: sanitizeKeys(Array.isArray(value.hidden) ? value.hidden : fallback.hidden),
         seen: sanitizeKeys(value.seen),
         fontId: FONT_OPTIONS.some(font => font.id === value.fontId)
             ? value.fontId as string

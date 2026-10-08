@@ -31,6 +31,9 @@ export const WIDGETS: WidgetOption[] = [
     },
 ];
 
+/** Switched off until the reader turns them on. Keep in step with the boot script in index.html. */
+export const DEFAULT_HIDDEN = ['pomodoro', 'heatmap'];
+
 /** A Pomodoro day starts here rather than at midnight, so a late night counts as one sitting. */
 export const DEFAULT_RESET_HOUR = 4;
 
@@ -62,7 +65,7 @@ export const RESET_HOURS: ResetHourOption[] = Array.from({length: 24}, (unused, 
 
 export function defaultSettings(): AppSettings {
     return {
-        hidden: [],
+        hidden: [...DEFAULT_HIDDEN],
         seen: [],
         fontId: DEFAULT_FONT_ID,
         pomodoroResetHour: DEFAULT_RESET_HOUR,

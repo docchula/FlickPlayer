@@ -1,5 +1,5 @@
 import {sanitizeSettings} from './sanitize';
-import {defaultSettings, DEFAULT_RESET_HOUR} from './settings-presets';
+import {defaultSettings, DEFAULT_HIDDEN, DEFAULT_RESET_HOUR} from './settings-presets';
 import {nextResetAt, studyDayKey, toDateKey} from './day';
 
 describe('sanitizeSettings', () => {
@@ -13,6 +13,12 @@ describe('sanitizeSettings', () => {
 
         expect(settings.hidden).toEqual(['heatmap']);
         expect(settings.seen).toEqual([]);
+    });
+
+    it('switches off the Pomodoro and heatmap when nothing was saved', () => {
+        expect(sanitizeSettings(null).hidden).toEqual(DEFAULT_HIDDEN);
+        expect(sanitizeSettings({fontId: 'mali'}).hidden).toEqual(DEFAULT_HIDDEN);
+        expect(sanitizeSettings({hidden: []}).hidden).toEqual([]);
     });
 
     it('treats a widget missing from `hidden` as visible', () => {

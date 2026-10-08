@@ -133,6 +133,7 @@ describe('PomodoroService', () => {
 
     it('pauses a running timer when the Pomodoro is switched off in settings', () => {
         const settings = TestBed.inject(SettingsService);
+        settings.setVisible('pomodoro', true);
         service.start();
 
         settings.setVisible('pomodoro', false);

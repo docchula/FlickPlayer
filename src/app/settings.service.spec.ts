@@ -37,10 +37,20 @@ describe('SettingsService widget switches', () => {
         }
     }
 
+    it('starts a new device with the Pomodoro and heatmap switched off', () => {
+        const service = TestBed.inject(SettingsService);
+
+        expect(service.isVisible('pomodoro')).toBeFalse();
+        expect(service.isVisible('heatmap')).toBeFalse();
+        expect(service.isVisible('appearance')).toBeTrue();
+        expect(document.documentElement.getAttribute('data-hidden')).toBe('pomodoro heatmap');
+    });
+
     it('hides only the widget that was switched off', () => {
         const service = TestBed.inject(SettingsService);
         const elements = WIDGETS.map(widget => document.body.appendChild(document.createElement(widget.selectors[0])));
         try {
+            WIDGETS.forEach(widget => service.setVisible(widget.key, true));
             service.setVisible(WIDGETS[0].key, false);
             elements.forEach((element, index) => {
                 expect(getComputedStyle(element).display === 'none').toBe(index === 0);

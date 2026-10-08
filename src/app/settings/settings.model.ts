@@ -35,8 +35,8 @@ export interface SessionModeOption {
 /** Everything the settings sheet controls, as kept on this device. */
 export interface AppSettings {
     /**
-     * Widget keys the user switched off. Absent means visible, so a widget added by a later
-     * release is on by default and needs no migration.
+     * Widget keys switched off, starting from DEFAULT_HIDDEN. Absent means visible, so a widget
+     * added by a later release is on by default and needs no migration.
      */
     hidden: string[];
     /** Widget keys whose element has been seen at least once on this device. */
