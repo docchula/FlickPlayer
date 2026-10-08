@@ -140,13 +140,15 @@ export class ModalDocumentComponent implements OnInit {
                     ({html: this.html, headings: this.headings} = this.addHeadingIds(
                         markedWithMath.parse(stripFrontmatter(document), {async: false}),
                     ));
-                    this.activeHeading = this.headings.length ? 0 : -1;
                     const target = this.findHeading(this.headingPath);
+                    // Set before rendering: changing it in the render callback below would trip Angular's
+                    // ExpressionChangedAfterItHasBeenChecked check.
+                    this.activeHeading = target ?? (this.headings.length ? 0 : -1);
                     // The math placeholders only exist in the DOM once the sanitized HTML has been rendered.
                     afterNextRender(() => {
                         renderMath(this.host.nativeElement);
                         if (target !== null) {
-                            this.scrollTo(target);
+                            this.renderedHeadings()[target]?.scrollIntoView({block: 'start'});
                         }
                     }, {injector: this.injector});
                 }
