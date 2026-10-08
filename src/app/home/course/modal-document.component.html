@@ -1,6 +1,8 @@
 <ion-header>
     <ion-toolbar>
-        <ion-title>Transcript</ion-title>
+        <ion-title [title]="video?.title ? 'Transcript: ' + video.title : 'Transcript'">
+            Transcript@if (video?.title) {: {{ video.title }}}
+        </ion-title>
         <ion-buttons slot="end">
             @if (showWatchButton) {
                 <ion-button (click)="watch()" fill="solid" color="primary">
