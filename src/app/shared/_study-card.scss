@@ -1,0 +1,113 @@
+// The look the summary and quiz cards share with the Pomodoro card above them.
+
+:host {
+    // A block, so the settings sheet can tell when it hides the card (see study-aids/displayed.ts).
+    display: block;
+    width: 100%;
+}
+
+.study-card {
+    margin: 0.75rem 0 0 0;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: var(--flick-welcome-card-shadow, 0 4px 16px rgba(0, 0, 0, 0.08));
+}
+
+.card-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 0;
+    background: transparent;
+    color: var(--ion-text-color);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:focus-visible {
+        outline: 2px solid var(--ion-color-primary);
+        outline-offset: -2px;
+    }
+}
+
+.card-heading {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    min-width: 0;
+}
+
+.card-title {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.card-badge {
+    padding: 0.1rem 0.5rem;
+    border-radius: 1rem;
+    background: rgba(var(--ion-color-warning-rgb), 0.25);
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.card-meta {
+    color: var(--ion-color-medium);
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.collapse-icon {
+    flex: none;
+    color: var(--ion-color-medium);
+    font-size: 1.2rem;
+}
+
+.card-body {
+    padding: 0 1rem 1rem;
+    color: var(--ion-text-color);
+}
+
+.byline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem 0.75rem;
+    margin-bottom: 0.75rem;
+    color: var(--ion-color-medium);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.card-note {
+    margin: 0 0 0.5rem;
+    color: var(--ion-color-medium);
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
+.card-loading {
+    display: flex;
+    justify-content: center;
+    padding: 0.5rem 0;
+}
+
+.small-button {
+    margin: 0;
+    --padding-start: 0.6rem;
+    --padding-end: 0.6rem;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}

@@ -1,0 +1,126 @@
+<ion-header>
+    <ion-toolbar>
+        <ion-buttons slot="start">
+            <ion-button (click)="cancel()" [disabled]="saving">Cancel</ion-button>
+        </ion-buttons>
+        <ion-title>{{ quiz?.questions?.length ? 'Edit questions' : 'Add questions' }}</ion-title>
+        <ion-buttons slot="end">
+            <ion-button [strong]="true" (click)="save()" [disabled]="saving || !changed">
+                @if (saving) {
+                    <ion-spinner name="dots" aria-label="Saving"></ion-spinner>
+                } @else {
+                    Save
+                }
+            </ion-button>
+        </ion-buttons>
+    </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+    <div class="study-editor quiz-editor">
+        @if (notice) {
+            <p class="editor-note">{{ notice }}</p>
+        }
+        @if (problem) {
+            <p class="editor-problem" role="alert">{{ problem }}</p>
+        }
+        @if (removed) {
+            <p class="undo-bar">
+                Question removed.
+                <ion-button size="small" fill="clear" (click)="undoRemove()">Undo</ion-button>
+            </p>
+        }
+
+        @for (form of forms; track form.key; let index = $index, first = $first, last = $last) {
+            <article class="question-form" [id]="'question-' + form.key">
+                <header class="question-head">
+                    <h2>Question {{ index + 1 }}</h2>
+                    <span class="question-tools">
+                        <ion-button fill="clear" size="small" [disabled]="first" (click)="move(index, -1)" aria-label="Move up">
+                            <ion-icon slot="icon-only" name="arrow-up"></ion-icon>
+                        </ion-button>
+                        <ion-button fill="clear" size="small" [disabled]="last" (click)="move(index, 1)" aria-label="Move down">
+                            <ion-icon slot="icon-only" name="arrow-down"></ion-icon>
+                        </ion-button>
+                        <ion-button fill="clear" size="small" color="danger" (click)="remove(index)" aria-label="Remove question">
+                            <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                        </ion-button>
+                    </span>
+                </header>
+
+                <ion-textarea label="Question" labelPlacement="stacked" fill="outline" [autoGrow]="true"
+                              [maxlength]="limits.promptChars" [value]="form.prompt"
+                              (ionInput)="setPrompt(form, $event)"></ion-textarea>
+
+                <fieldset class="choices">
+                    <legend>Choices, with the correct answer selected</legend>
+                    @for (choice of form.choices; track $index; let c = $index) {
+                        <div class="choice-row" [class.is-answer]="form.answer === c">
+                            <label class="answer-pick">
+                                <input type="radio" [name]="'answer-' + form.key" [checked]="form.answer === c"
+                                       (change)="setAnswer(form, c)">
+                                <span class="answer-letter">{{ letters[c] }}</span>
+                            </label>
+                            <ion-input fill="outline" [maxlength]="limits.choiceChars" [value]="choice"
+                                       [attr.aria-label]="'Choice ' + letters[c]"
+                                       (ionInput)="setChoice(form, c, $event)"></ion-input>
+                            <ion-button fill="clear" size="small" [disabled]="form.choices.length <= limits.minChoices"
+                                        (click)="removeChoice(form, c)" [attr.aria-label]="'Remove choice ' + letters[c]">
+                                <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+                            </ion-button>
+                        </div>
+                    }
+                    @if (form.choices.length < limits.maxChoices) {
+                        <ion-button fill="clear" size="small" (click)="addChoice(form)">
+                            <ion-icon slot="start" name="add-outline"></ion-icon>
+                            Add a choice
+                        </ion-button>
+                    }
+                </fieldset>
+
+                <ion-textarea label="Explanation (optional)" labelPlacement="stacked" fill="outline" [autoGrow]="true"
+                              [maxlength]="limits.explanationChars" [value]="form.explanation"
+                              (ionInput)="setExplanation(form, $event)"></ion-textarea>
+
+                <div class="time-row">
+                    <ion-input label="Video time (optional)" labelPlacement="stacked" fill="outline" placeholder="e.g. 12:34"
+                               [value]="form.time" (ionInput)="setTime(form, $event)"></ion-input>
+                    @if (playback) {
+                        <ion-button size="small" fill="outline" (click)="useCurrentTime(form)">
+                            <ion-icon slot="start" name="time-outline"></ion-icon>
+                            Use current time
+                        </ion-button>
+                    }
+                </div>
+                <p class="field-hint">Readers who answer wrongly can jump to this part of the lecture.</p>
+
+                @if (form.stats && form.stats.answered) {
+                    <p class="stats-note" [class.resets]="resetsStats(form)">
+                        {{ form.stats.correct }} of {{ form.stats.answered }} students got this right.
+                        @if (resetsStats(form)) {
+                            Saving starts these numbers again, because the question, its choices or its answer changed.
+                        }
+                    </p>
+                }
+
+                @let problems = problemsOf(form, index);
+                @if (problems.length) {
+                    <ul class="question-problems" role="alert">
+                        @for (problem of problems; track $index) {
+                            <li>{{ problem }}</li>
+                        }
+                    </ul>
+                }
+            </article>
+        } @empty {
+            <p class="editor-note">There are no questions yet.</p>
+        }
+
+        <ion-button class="add-question" expand="block" fill="outline" (click)="add()" [disabled]="forms.length >= limits.questions">
+            <ion-icon slot="start" name="add-outline"></ion-icon>
+            Add a question
+        </ion-button>
+
+        <app-credit-field [(choice)]="credit" part="questions"></app-credit-field>
+    </div>
+</ion-content>

@@ -1,0 +1,38 @@
+// Shared by the summary and quiz editors, whose styles are unscoped (see their components).
+
+// Ionic attaches modals to the app root, so their size can only be set from unscoped styles.
+// Phones keep Ionic's full-screen modal.
+@media (min-width: 768px) and (min-height: 600px) {
+    ion-modal.study-editor-modal {
+        --width: min(1100px, 95vw);
+        --height: 92vh;
+        --max-width: 100%;
+        --max-height: 100%;
+    }
+}
+
+.study-editor {
+    .editor-note {
+        margin: 0 0 0.75rem;
+        color: var(--ion-color-medium);
+        font-size: 0.85rem;
+        line-height: 1.45;
+    }
+
+    .editor-problem {
+        margin: 0 0 0.75rem;
+        padding: 0.6rem 0.85rem;
+        border-radius: 0.5rem;
+        background: rgba(var(--ion-color-danger-rgb), 0.12);
+        color: var(--ion-text-color);
+        font-size: 0.85rem;
+        line-height: 1.45;
+    }
+
+    .field-hint {
+        margin: 0.35rem 0 0;
+        color: var(--ion-color-medium);
+        font-size: 0.78rem;
+        line-height: 1.4;
+    }
+}

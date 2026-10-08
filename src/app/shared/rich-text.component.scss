@@ -1,0 +1,66 @@
+@import 'katex/dist/katex.min.css';
+
+app-rich-text {
+    display: block;
+    overflow-wrap: anywhere;
+
+    &.inline,
+    &.inline > .rich-text-body {
+        display: inline;
+    }
+
+    p {
+        margin: 0 0 0.5em;
+    }
+
+    p:last-child {
+        margin-bottom: 0;
+    }
+
+    mark {
+        padding: 0 0.15em;
+        border-radius: 0.2em;
+        background: rgba(var(--ion-color-warning-rgb), 0.35);
+        color: inherit;
+    }
+
+    a {
+        color: var(--ion-color-primary);
+    }
+
+    code {
+        padding: 0.1em 0.3em;
+        border-radius: 0.25em;
+        background: rgba(var(--ion-text-color-rgb, 0, 0, 0), 0.07);
+        font-size: 0.9em;
+    }
+
+    .math-display {
+        overflow-x: auto;
+        overflow-y: hidden;
+        margin: 0.5em 0;
+    }
+
+    .table-scroll {
+        overflow-x: auto;
+        margin: 0.5em 0;
+    }
+
+    table {
+        border-collapse: collapse;
+        font-size: 0.9em;
+    }
+
+    th,
+    td {
+        padding: 0.35em 0.6em;
+        border: 1px solid rgba(var(--ion-text-color-rgb, 0, 0, 0), 0.15);
+        text-align: left;
+        vertical-align: top;
+    }
+
+    th {
+        background: rgba(var(--ion-color-primary-rgb), 0.12);
+        font-weight: 700;
+    }
+}

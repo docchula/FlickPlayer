@@ -110,6 +110,8 @@
                 }
                 <!-- Pomodoro Timer Widget -->
                 <app-pomodoro-timer></app-pomodoro-timer>
+                <app-lecture-summary [video]="currentVideo" [playback]="playback"></app-lecture-summary>
+                <app-lecture-quiz [video]="currentVideo" [playback]="playback"></app-lecture-quiz>
             </ion-col>
             <ion-col size="12" size-lg [ngClass]="currentVideo ? 'scroll-area' : ''">
                 <ion-searchbar (ionInput)="onSearchChange($event)" placeholder="Search videos by title or lecturer..."

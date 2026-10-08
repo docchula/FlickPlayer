@@ -1,0 +1,14 @@
+<section class="credit-field">
+    <ion-checkbox labelPlacement="end" justify="start" [checked]="choice.credit" (ionChange)="onCredit($event)">
+        Show my name as a co-author
+    </ion-checkbox>
+    @if (choice.credit) {
+        <ion-input class="credit-name" label="Name to show" labelPlacement="stacked" fill="outline"
+                   [maxlength]="maxName" [value]="choice.name"
+                   [placeholder]="(accountName$ | async) || 'Your name'"
+                   (ionInput)="onName($event)"></ion-input>
+        <p class="credit-hint">Readers see this name with the {{ part }}. Leave it empty to use your account name.</p>
+    } @else {
+        <p class="credit-hint">Readers will not see your name. If it was shown before, saving removes it.</p>
+    }
+</section>

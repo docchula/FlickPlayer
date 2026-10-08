@@ -1,0 +1,25 @@
+:host {
+    display: block;
+}
+
+.credit-field {
+    margin-top: 1.25rem;
+    padding: 0.85rem 1rem;
+    border-radius: 0.75rem;
+    background: rgba(var(--ion-text-color-rgb, 0, 0, 0), 0.04);
+}
+
+ion-checkbox {
+    font-weight: 600;
+}
+
+.credit-name {
+    margin-top: 0.75rem;
+}
+
+.credit-hint {
+    margin: 0.5rem 0 0;
+    color: var(--ion-color-medium);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}

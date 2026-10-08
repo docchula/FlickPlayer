@@ -1,0 +1,41 @@
+@if (checklist.title) {
+    <h3 class="checklist-title">{{ checklist.title }}</h3>
+}
+@for (section of checklist.sections; track $index) {
+    <section class="checklist-section">
+        @if (section.headingHtml || section.time !== null) {
+            <h4 class="checklist-heading">
+                @if (section.headingHtml) {
+                    <app-rich-text class="inline heading-text" [html]="section.headingHtml"></app-rich-text>
+                }
+                @if (section.time !== null) {
+                    @if (seekable) {
+                        <button type="button" class="time-chip" (click)="seek.emit(section.time)"
+                                [attr.aria-label]="'Play the lecture from ' + formatClock(section.time)">
+                            <ion-icon name="play" aria-hidden="true"></ion-icon>{{ formatClock(section.time) }}
+                        </button>
+                    } @else {
+                        <span class="time-chip">{{ formatClock(section.time) }}</span>
+                    }
+                }
+            </h4>
+        }
+        @for (block of section.blocks; track block.key) {
+            @if (block.kind === 'point') {
+                <div class="checklist-point" [class.is-ticked]="ticked?.has(block.key)">
+                    @if (ticked) {
+                        <input type="checkbox" class="point-tick" [checked]="ticked.has(block.key)"
+                               (change)="onTick(block.key, $event)"
+                               [attr.aria-label]="'Reviewed point ' + block.number">
+                    }
+                    <span class="point-number">{{ block.number }}.</span>
+                    <app-rich-text class="point-body" [html]="block.html"></app-rich-text>
+                </div>
+            } @else if (block.kind === 'label') {
+                <app-rich-text class="checklist-label" [html]="block.html"></app-rich-text>
+            } @else {
+                <app-rich-text class="checklist-block" [html]="block.html"></app-rich-text>
+            }
+        }
+    </section>
+}
