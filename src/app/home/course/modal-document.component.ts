@@ -148,7 +148,7 @@ export class ModalDocumentComponent implements OnInit {
                     afterNextRender(() => {
                         renderMath(this.host.nativeElement);
                         if (target !== null) {
-                            this.renderedHeadings()[target]?.scrollIntoView({block: 'start'});
+                            this.scrollWhenShown(target);
                         }
                     }, {injector: this.injector});
                 }
@@ -181,6 +181,18 @@ export class ModalDocumentComponent implements OnInit {
             }
         }
         return null;
+    }
+
+    // A fast response renders the document while the modal is still hidden, before it is presented, and scrolling
+    // a hidden element does nothing. In that case scroll once the modal has been presented.
+    private scrollWhenShown(index: number) {
+        const scroll = () => this.renderedHeadings()[index]?.scrollIntoView({block: 'start'});
+        const modal = this.host.nativeElement.closest('ion-modal');
+        if (modal && !this.host.nativeElement.getClientRects().length) {
+            modal.addEventListener('ionModalDidPresent', scroll, {once: true});
+        } else {
+            scroll();
+        }
     }
 
     private renderedHeadings(): HTMLElement[] {
