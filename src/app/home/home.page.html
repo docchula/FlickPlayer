@@ -18,19 +18,25 @@
                     : 'Search videos by title, lecturer, or date (YYYY-MM-DD)...'"
                 debounce="0"
                 (ionInput)="onSearchChange($event)"
+                (ionFocus)="searchFocused = true"
+                (ionBlur)="searchFocused = false"
                 class="global-search"
             ></ion-searchbar>
-            <ion-segment [value]="searchMode" (ionChange)="onSearchModeChange($any($event.detail.value))"
-                         class="search-mode" aria-label="Search mode">
-                <ion-segment-button value="title" layout="icon-start" title="Search by title, lecturer, or date">
-                    <ion-icon name="film-outline"></ion-icon>
-                    <ion-label>Title</ion-label>
-                </ion-segment-button>
-                <ion-segment-button value="content" layout="icon-start" title="Search by content in transcripts">
-                    <ion-icon name="document-text-outline"></ion-icon>
-                    <ion-label>Content</ion-label>
-                </ion-segment-button>
-            </ion-segment>
+            @if (searchFocused || searchQuery.trim()) {
+                <!-- preventDefault keeps the focus in the search box, so the switch doesn't vanish before the tap lands -->
+                <ion-segment [value]="searchMode" (ionChange)="onSearchModeChange($any($event.detail.value))"
+                             (mousedown)="$event.preventDefault()"
+                             class="search-mode" aria-label="Search mode">
+                    <ion-segment-button value="title" layout="icon-start" title="Search by title, lecturer, or date">
+                        <ion-icon name="film-outline"></ion-icon>
+                        <ion-label>Title</ion-label>
+                    </ion-segment-button>
+                    <ion-segment-button value="content" layout="icon-start" title="Search by content in transcripts">
+                        <ion-icon name="document-text-outline"></ion-icon>
+                        <ion-label>Content</ion-label>
+                    </ion-segment-button>
+                </ion-segment>
+            }
         </div>
     </ion-toolbar>
 </ion-header>

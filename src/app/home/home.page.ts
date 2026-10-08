@@ -79,6 +79,8 @@ export class HomePage implements OnInit {
     response$: Observable<CourseListResponse>;
     searchQuery = '';
     searchMode: SearchMode = 'title';
+    // The mode switch is only shown while the search box is focused or holds a query
+    searchFocused = false;
     searchResults$: Observable<SearchResults | null> = of(null);
     isSearching = false;
 
