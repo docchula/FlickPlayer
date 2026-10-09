@@ -1,10 +1,10 @@
 import {Component, inject, Input} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 
-import {IonButton, IonButtons, IonContent, IonHeader, IonItem, IonLabel, IonTitle, IonToolbar, ModalController} from '@ionic/angular/standalone';
+import {IonButton, IonButtons, IonContent, IonHeader, IonItem, IonLabel, IonTitle, IonToolbar, ModalController} from '@ionic/angular';
 import {Lecture, ManService} from '../../man.service';
 import {Rating} from 'primeng/rating';
-import {ToastController} from '@ionic/angular';
+import {ToastController} from '@ionic/angular/lazy';
 
 @Component({
     selector: 'app-modal-evaluation',
