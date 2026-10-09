@@ -1,5 +1,5 @@
 import {TestBed} from '@angular/core/testing';
-import {PopoverController} from '@ionic/angular/standalone';
+import {PopoverController} from '@ionic/angular';
 import {of} from 'rxjs';
 import {PomodoroTimerComponent} from './pomodoro-timer.component';
 import {PomodoroService, DEFAULT_DURATIONS} from '../pomodoro.service';

@@ -1,5 +1,5 @@
 import {Component, inject} from '@angular/core';
-import {IonButton} from '@ionic/angular/standalone';
+import {IonButton} from '@ionic/angular';
 import {AsyncPipe} from '@angular/common';
 import {RouterLink} from '@angular/router';
 import {ConsentService} from '../consent.service';
