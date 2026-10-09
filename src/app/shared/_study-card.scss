@@ -1,4 +1,5 @@
 // The look the summary and quiz cards share with the Pomodoro card above them.
+@use 'study-shared';
 
 :host {
     // A block, so the settings sheet can tell when it hides the card (see study-aids/displayed.ts).
@@ -13,12 +14,18 @@
     box-shadow: var(--flick-welcome-card-shadow, 0 4px 16px rgba(0, 0, 0, 0.08));
 }
 
-.card-toggle {
+.card-head {
     display: flex;
     align-items: center;
+}
+
+.card-toggle {
+    display: flex;
+    flex: 1;
+    align-items: center;
     gap: 0.5rem;
-    width: 100%;
-    padding: 0.75rem 1rem;
+    min-width: 0;
+    padding: 0.75rem 0.5rem 0.75rem 1rem;
     border: 0;
     background: transparent;
     color: var(--ion-text-color);
@@ -67,53 +74,34 @@
     font-size: 1.2rem;
 }
 
+// Opens the reading window; outside the toggle, since a button cannot hold another.
+.card-expand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin-right: 0.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ion-color-medium);
+    font-size: 1.15rem;
+    cursor: pointer;
+
+    &:hover {
+        background: rgba(var(--ion-color-primary-rgb), 0.1);
+        color: var(--ion-color-primary);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--ion-color-primary);
+    }
+}
+
 .card-body {
     padding: 0 1rem 1rem;
     color: var(--ion-text-color);
-}
-
-.byline {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.25rem 0.75rem;
-    margin-bottom: 0.75rem;
-    color: var(--ion-color-medium);
-    font-size: 0.8rem;
-    line-height: 1.4;
-}
-
-.editor-actions {
-    display: inline-flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-}
-
-.card-note {
-    margin: 0 0 0.5rem;
-    color: var(--ion-color-medium);
-    font-size: 0.85rem;
-    line-height: 1.45;
-}
-
-.card-loading {
-    display: flex;
-    justify-content: center;
-    padding: 0.5rem 0;
-}
-
-.small-button {
-    margin: 0;
-    --padding-start: 0.6rem;
-    --padding-end: 0.6rem;
-}
-
-.visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
 }

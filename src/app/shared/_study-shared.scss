@@ -1,0 +1,47 @@
+// What the summary and quiz show the same way on the card and in the reading window.
+
+.byline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem 0.75rem;
+    margin-bottom: 0.75rem;
+    color: var(--ion-color-medium);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.editor-actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.card-note {
+    margin: 0 0 0.5rem;
+    color: var(--ion-color-medium);
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
+.card-loading {
+    display: flex;
+    justify-content: center;
+    padding: 0.5rem 0;
+}
+
+.small-button {
+    margin: 0;
+    --padding-start: 0.6rem;
+    --padding-end: 0.6rem;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}

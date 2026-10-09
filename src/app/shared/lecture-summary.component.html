@@ -1,18 +1,26 @@
 @if (view$ | async; as view) {
     @if (shows(view)) {
         <ion-card class="study-card">
-            <button type="button" class="card-toggle" (click)="toggle()" [attr.aria-expanded]="!collapsed">
-                <span class="card-heading">
-                    <span class="card-title">Summary</span>
-                    @if (view.summary && isAiDraft(view.summary)) {
-                        <span class="card-badge">AI draft</span>
+            <div class="card-head">
+                <button type="button" class="card-toggle" (click)="toggle()" [attr.aria-expanded]="!collapsed">
+                    <span class="card-heading">
+                        <span class="card-title">Summary</span>
+                        @if (view.summary && isAiDraft(view.summary)) {
+                            <span class="card-badge">AI draft</span>
+                        }
+                    </span>
+                    @if (view.points) {
+                        <span class="card-meta">{{ view.reviewed }}/{{ view.points }} ticked</span>
                     }
-                </span>
-                @if (view.checklist?.pointKeys?.length) {
-                    <span class="card-meta">{{ reviewed(view.checklist!) }}/{{ view.checklist!.pointKeys.length }} ticked</span>
+                    <ion-icon class="collapse-icon" [name]="collapsed ? 'chevron-down' : 'chevron-up'" aria-hidden="true"></ion-icon>
+                </button>
+                @if (view.aids) {
+                    <button type="button" class="card-expand" (click)="read(view)" title="Reading mode"
+                            aria-label="Open the summary and quiz in a large window">
+                        <ion-icon name="expand-outline" aria-hidden="true"></ion-icon>
+                    </button>
                 }
-                <ion-icon class="collapse-icon" [name]="collapsed ? 'chevron-down' : 'chevron-up'" aria-hidden="true"></ion-icon>
-            </button>
+            </div>
 
             @if (!collapsed) {
                 <div class="card-body">
@@ -23,49 +31,8 @@
                     } @else if (view.status === 'error') {
                         <p class="card-note">The summary could not be loaded.</p>
                         <ion-button class="small-button" size="small" fill="outline" (click)="retry(view)">Try again</ion-button>
-                    } @else if (view.summary && view.checklist) {
-                        <div class="byline">
-                            <span>{{ byline(view.summary) }}</span>
-                            @if (view.aids?.can_edit) {
-                                <span class="editor-actions">
-                                    @if (view.aids?.can_manage) {
-                                        <ion-button class="small-button" size="small" fill="clear" (click)="manageEditors(view)">
-                                            <ion-icon slot="start" name="people-outline" aria-hidden="true"></ion-icon>
-                                            Editors
-                                        </ion-button>
-                                    }
-                                    <ion-button class="small-button" size="small" fill="outline" (click)="edit(view)">
-                                        <ion-icon slot="start" name="create-outline" aria-hidden="true"></ion-icon>
-                                        Edit
-                                    </ion-button>
-                                </span>
-                            }
-                        </div>
-                        @if (view.checklist.pointKeys.length) {
-                            <p class="review-progress">
-                                @if (reviewed(view.checklist); as count) {
-                                    {{ count }} of {{ view.checklist.pointKeys.length }} points ticked.
-                                    <button type="button" class="link-button" (click)="clearTicks(view)">Clear ticks</button>
-                                } @else {
-                                    Tick each point once you know it.
-                                }
-                            </p>
-                        }
-                        <app-checklist-view [checklist]="view.checklist" [ticked]="ticked" [seekable]="!!playback"
-                                            (tickChange)="onTick(view, $event)" (seek)="seek($event)"></app-checklist-view>
-                    } @else if (view.aids?.can_edit) {
-                        <p class="card-note">{{ emptyNote(view.aids!) }}</p>
-                        <span class="editor-actions">
-                            <ion-button class="small-button" size="small" (click)="edit(view)">Write a summary</ion-button>
-                            @if (view.aids?.can_manage) {
-                                <ion-button class="small-button" size="small" fill="clear" (click)="manageEditors(view)">
-                                    <ion-icon slot="start" name="people-outline" aria-hidden="true"></ion-icon>
-                                    Editors
-                                </ion-button>
-                            }
-                        </span>
-                    } @else {
-                        <p class="card-note">The AI is still writing a summary of this lecture. Check back later.</p>
+                    } @else if (view.aids) {
+                        <app-summary-body [aids]="view.aids" [playback]="playback" (seek)="seek($event)"></app-summary-body>
                     }
                 </div>
             }

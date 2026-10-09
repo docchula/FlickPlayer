@@ -1,0 +1,47 @@
+@if (aids.summary && checklist) {
+    @let ticked = (ticked$ | async) ?? noTicks;
+    <div class="byline">
+        <span>{{ byline(aids.summary) }}</span>
+        @if (aids.can_edit) {
+            <span class="editor-actions">
+                @if (aids.can_manage) {
+                    <ion-button class="small-button" size="small" fill="clear" (click)="manageEditors()">
+                        <ion-icon slot="start" name="people-outline" aria-hidden="true"></ion-icon>
+                        Editors
+                    </ion-button>
+                }
+                <ion-button class="small-button" size="small" fill="outline" (click)="edit()">
+                    <ion-icon slot="start" name="create-outline" aria-hidden="true"></ion-icon>
+                    Edit
+                </ion-button>
+            </span>
+        }
+    </div>
+    @if (checklist.pointKeys.length) {
+        <p class="review-progress">
+            @if (reviewed(checklist, ticked); as count) {
+                {{ count }} of {{ checklist.pointKeys.length }} points ticked.
+                <button type="button" class="link-button" (click)="clearTicks()">Clear ticks</button>
+            } @else {
+                Tick each point once you know it.
+            }
+        </p>
+    }
+    <app-checklist-view [checklist]="checklist" [ticked]="ticked" [seekable]="!!playback"
+                        (tickChange)="onTick($event)" (seek)="seek.emit($event)"></app-checklist-view>
+} @else if (aids.can_edit) {
+    <p class="card-note">{{ emptyNote() }}</p>
+    <span class="editor-actions">
+        <ion-button class="small-button" size="small" (click)="edit()">Write a summary</ion-button>
+        @if (aids.can_manage) {
+            <ion-button class="small-button" size="small" fill="clear" (click)="manageEditors()">
+                <ion-icon slot="start" name="people-outline" aria-hidden="true"></ion-icon>
+                Editors
+            </ion-button>
+        }
+    </span>
+} @else if (aids.generation === 'pending') {
+    <p class="card-note">The AI is still writing a summary of this lecture. Check back later.</p>
+} @else {
+    <p class="card-note">There is no summary of this lecture.</p>
+}

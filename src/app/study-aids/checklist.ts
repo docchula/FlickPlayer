@@ -27,6 +27,8 @@ export interface ChecklistBlock {
 
 export interface ChecklistSection {
     headingHtml: string | null;
+    /** The heading as plain text, for the outline in the reading window. */
+    headingText: string | null;
     /** Seconds into the lecture where this section starts. */
     time: number | null;
     blocks: ChecklistBlock[];
@@ -195,7 +197,7 @@ export function buildChecklist(markdown: string): Checklist {
 
     const currentSection = (): ChecklistSection => {
         if (!section) {
-            section = {headingHtml: null, time: null, blocks: []};
+            section = {headingHtml: null, headingText: null, time: null, blocks: []};
             checklist.sections.push(section);
         }
 
@@ -211,7 +213,7 @@ export function buildChecklist(markdown: string): Checklist {
             checklist.title = element.textContent?.trim() || null;
         } else if (tag === 'H1' || tag === 'H2') {
             const time = takeHeadingTime(element);
-            section = {headingHtml: element.innerHTML.trim(), time, blocks: []};
+            section = {headingHtml: element.innerHTML.trim(), headingText: element.textContent?.trim() || null, time, blocks: []};
             checklist.sections.push(section);
         } else if (/^H[3-6]$/.test(tag)) {
             addBlock('label', element.innerHTML.trim());
@@ -229,6 +231,22 @@ export function buildChecklist(markdown: string): Checklist {
         } else {
             addBlock('html', element.outerHTML);
         }
+    }
+
+    return checklist;
+}
+
+const recent = new Map<string, Checklist>();
+
+/** buildChecklist, remembered for the last few summaries, since the card and the reading window both show one. */
+export function checklistFor(markdown: string): Checklist {
+    let checklist = recent.get(markdown);
+    if (!checklist) {
+        checklist = buildChecklist(markdown);
+        if (recent.size >= 4) {
+            recent.delete(recent.keys().next().value as string);
+        }
+        recent.set(markdown, checklist);
     }
 
     return checklist;

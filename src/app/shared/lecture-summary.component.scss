@@ -1,18 +1,1 @@
 @use 'study-card';
-
-.review-progress {
-    margin: -0.25rem 0 0.75rem;
-    color: var(--ion-color-medium);
-    font-size: 0.8rem;
-}
-
-.link-button {
-    margin-left: 0.25rem;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--ion-color-primary);
-    font: inherit;
-    text-decoration: underline;
-    cursor: pointer;
-}

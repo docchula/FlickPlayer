@@ -1,0 +1,57 @@
+<ion-header>
+    <ion-toolbar>
+        <ion-title>{{ video.title }}</ion-title>
+        <ion-buttons slot="end">
+            <ion-button (click)="close()" aria-label="Close">
+                <ion-icon slot="icon-only" name="close"></ion-icon>
+            </ion-button>
+        </ion-buttons>
+    </ion-toolbar>
+    <ion-toolbar class="reader-tabs">
+        <ion-segment [value]="tab" (ionChange)="onTab($event)">
+            <ion-segment-button value="summary"><ion-label>Summary</ion-label></ion-segment-button>
+            <ion-segment-button value="quiz"><ion-label>Quiz</ion-label></ion-segment-button>
+        </ion-segment>
+    </ion-toolbar>
+</ion-header>
+
+<ion-content [scrollEvents]="tab === 'summary'" (ionScroll)="onScroll()">
+    <div class="study-reader">
+        @if (state$ | async; as state) {
+            @if (state.status === 'loading') {
+                <div class="reader-loading">
+                    <ion-spinner name="dots" aria-label="Loading"></ion-spinner>
+                </div>
+            } @else if (state.status === 'error') {
+                <p class="reader-note">The summary and quiz could not be loaded.</p>
+            } @else if (aidsOf(state); as aids) {
+                @if (tab === 'summary') {
+                    @let outlineEntries = outline(aids);
+                    <div class="reader-summary" [class.with-outline]="outlineEntries.length">
+                        @if (outlineEntries.length) {
+                            <nav class="reader-outline" aria-label="Sections">
+                                <p class="outline-title">Sections</p>
+                                @for (entry of outlineEntries; track entry.index) {
+                                    <button type="button" class="outline-entry" [class.active]="entry.index === activeSection"
+                                            (click)="scrollToSection(entry.index)">
+                                        <span class="outline-text">{{ entry.text }}</span>
+                                        @if (entry.time !== null) {
+                                            <span class="outline-time">{{ formatClock(entry.time) }}</span>
+                                        }
+                                    </button>
+                                }
+                            </nav>
+                        }
+                        <app-summary-body class="reader-column" [aids]="aids" [playback]="playback" [reader]="true"
+                                          (seek)="watch($event)"></app-summary-body>
+                    </div>
+                } @else {
+                    <app-quiz-body class="reader-column quiz-column" [aids]="aids" [video]="video" [playback]="playback"
+                                   [reader]="true" (seek)="watch($event)"></app-quiz-body>
+                }
+            } @else {
+                <p class="reader-note">There is no summary or quiz for this lecture.</p>
+            }
+        }
+    </div>
+</ion-content>

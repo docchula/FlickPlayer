@@ -1,8 +1,10 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {By} from '@angular/platform-browser';
 import {ActivatedRoute, convertToParamMap} from '@angular/router';
 import {ModalController} from '@ionic/angular/standalone';
 import {BehaviorSubject, of} from 'rxjs';
 import {LectureQuizComponent} from './lecture-quiz.component';
+import {QuizBodyComponent} from './quiz-body.component';
 import {StudyAidsService} from '../study-aids.service';
 import {Lecture} from '../man.service';
 import {QuizQuestion, StudyAids, StudyAidsState} from '../study-aids/study-aids.model';
@@ -167,7 +169,8 @@ describe('LectureQuizComponent', () => {
 
     it('builds a link that opens this lecture\'s quiz', () => {
         create(aids([question('a', 2)]));
-        const link = new URL((fixture.componentInstance as unknown as {shareLink(view: {videoId: number}): string}).shareLink({videoId: 7}));
+        const body = fixture.debugElement.query(By.directive(QuizBodyComponent)).componentInstance as QuizBodyComponent;
+        const link = new URL(body.shareLink());
 
         expect(link.searchParams.get('video')).toBe('7');
         expect(link.searchParams.get('quiz')).toBe('1');

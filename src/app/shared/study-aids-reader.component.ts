@@ -1,0 +1,145 @@
+import {Component, ElementRef, inject, Input, OnInit, ViewEncapsulation} from '@angular/core';
+import {AsyncPipe} from '@angular/common';
+import {
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonIcon,
+    IonLabel,
+    IonSegment,
+    IonSegmentButton,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
+    ModalController,
+} from '@ionic/angular/standalone';
+import {addIcons} from 'ionicons';
+import {close} from 'ionicons/icons';
+import {Observable} from 'rxjs';
+import {Lecture} from '../man.service';
+import {StudyAidsService} from '../study-aids.service';
+import {SummaryBodyComponent} from './summary-body.component';
+import {QuizBodyComponent} from './quiz-body.component';
+import {Checklist, checklistFor, formatClock} from '../study-aids/checklist';
+import {LecturePlayback, StudyAids, StudyAidsState} from '../study-aids/study-aids.model';
+
+export type ReaderTab = 'summary' | 'quiz';
+
+interface OutlineEntry {
+    /** The section's position in the checklist, which is also its place in the page. */
+    index: number;
+    text: string;
+    time: number | null;
+}
+
+export async function openReader(modalCtrl: ModalController, video: Lecture, playback: LecturePlayback | null, tab: ReaderTab): Promise<void> {
+    const modal = await modalCtrl.create({
+        component: StudyAidsReaderComponent,
+        cssClass: 'study-reader-modal',
+        componentProps: {video, playback, tab},
+    });
+    await modal.present();
+}
+
+/** The summary and the quiz in a large window, like the transcript, with room to read and practise. */
+@Component({
+    selector: 'app-study-aids-reader',
+    templateUrl: './study-aids-reader.component.html',
+    styleUrls: ['./study-aids-reader.component.scss'],
+    // Sizes the ion-modal, which sits outside this component
+    encapsulation: ViewEncapsulation.None,
+    imports: [
+        AsyncPipe,
+        IonHeader,
+        IonToolbar,
+        IonTitle,
+        IonButtons,
+        IonButton,
+        IonIcon,
+        IonContent,
+        IonSegment,
+        IonSegmentButton,
+        IonLabel,
+        IonSpinner,
+        SummaryBodyComponent,
+        QuizBodyComponent,
+    ],
+})
+export class StudyAidsReaderComponent implements OnInit {
+    private service = inject(StudyAidsService);
+    private modalCtrl = inject(ModalController);
+    private host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+    @Input() video: Lecture;
+    @Input() playback: LecturePlayback | null = null;
+    @Input() tab: ReaderTab = 'summary';
+
+    protected state$: Observable<StudyAidsState>;
+    protected activeSection = 0;
+    protected readonly formatClock = formatClock;
+
+    private outlineFrom: Checklist | null = null;
+    private outlineEntries: OutlineEntry[] = [];
+
+    constructor() {
+        addIcons({close});
+    }
+
+    ngOnInit(): void {
+        this.state$ = this.service.watch(this.video.id as number);
+    }
+
+    aidsOf(state: StudyAidsState): StudyAids | null {
+        return state.status === 'ready' ? state.aids : null;
+    }
+
+    /** The sections worth listing beside a summary, or none when there is only one. */
+    outline(aids: StudyAids): OutlineEntry[] {
+        const checklist = aids.summary ? checklistFor(aids.summary.markdown) : null;
+        if (checklist !== this.outlineFrom) {
+            this.outlineFrom = checklist;
+            const entries = (checklist?.sections ?? [])
+                .map((section, index) => ({index, text: section.headingText ?? '', time: section.time}))
+                .filter(entry => entry.text);
+            this.outlineEntries = entries.length > 1 ? entries : [];
+        }
+
+        return this.outlineEntries;
+    }
+
+    onTab(event: Event): void {
+        this.tab = (event as CustomEvent<{value: string}>).detail.value === 'quiz' ? 'quiz' : 'summary';
+    }
+
+    /** Jumps the lecture from inside the window, which closes first so the video can be seen. */
+    async watch(seconds: number): Promise<void> {
+        await this.modalCtrl.dismiss();
+        this.playback?.seek(seconds);
+    }
+
+    scrollToSection(index: number): void {
+        this.sections()[index]?.scrollIntoView({behavior: 'smooth', block: 'start'});
+        this.activeSection = index;
+    }
+
+    /** Marks the section whose heading was last scrolled past, as the transcript's outline does. */
+    onScroll(): void {
+        const top = (this.host.nativeElement.querySelector('ion-content')?.getBoundingClientRect().top ?? 0) + 80;
+        let active = 0;
+        this.sections().forEach((section, index) => {
+            if (section.getBoundingClientRect().top <= top) {
+                active = index;
+            }
+        });
+        this.activeSection = active;
+    }
+
+    close(): void {
+        void this.modalCtrl.dismiss();
+    }
+
+    private sections(): HTMLElement[] {
+        return Array.from(this.host.nativeElement.querySelectorAll<HTMLElement>('app-checklist-view .checklist-section'));
+    }
+}
