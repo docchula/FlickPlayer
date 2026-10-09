@@ -33,7 +33,7 @@ import {
     IonToolbar,
     ModalController,
 } from '@ionic/angular';
-import {AsyncPipe, NgStyle} from '@angular/common';
+import {AsyncPipe, DatePipe, NgStyle} from '@angular/common';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../consent.service';
 import {confirmAiDisclaimer, ModalDocumentComponent} from './course/modal-document.component';
@@ -63,7 +63,7 @@ export type SearchResults =
     imports: [
         IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon,
         IonContent, IonGrid, IonRow, IonCol, IonCard, RouterLink, NgStyle,
-        IonCardHeader, IonCardTitle, AsyncPipe, IonCardContent, IonItem,
+        IonCardHeader, IonCardTitle, AsyncPipe, DatePipe, IonCardContent, IonItem,
         IonLabel, IonText, IonSpinner, IonSearchbar, IonList, IonSegment, IonSegmentButton,
     ]
 })

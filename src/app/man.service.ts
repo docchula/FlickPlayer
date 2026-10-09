@@ -1,7 +1,7 @@
 import {inject, Injectable} from '@angular/core';
-import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
+import {HttpClient, HttpHeaders} from '@angular/common/http';
 import {combineLatestWith, Observable, of, startWith, takeUntil, timer} from 'rxjs';
-import {map, shareReplay, switchMap, timeout} from 'rxjs/operators';
+import {map, shareReplay, switchMap, take, timeout} from 'rxjs/operators';
 import {PlayHistory, PlayHistoryValue, PlayTrackerService} from './play-tracker.service';
 import {AuthService} from './auth.service';
 
@@ -44,8 +44,8 @@ export class ManService {
 
     getVideoList(): Observable<CourseListResponse> {
         if (!this.videoList) {
-            this.videoList = this.get<JSend<CourseListResponse>>('v1/video').pipe(
-                map(response => response?.data),
+            this.videoList = this.graphql<HomeQueryData>(HOME_QUERY).pipe(
+                map(data => data ? toCourseListResponse(data) : null),
                 shareReplay(1),
             );
         }
@@ -53,19 +53,19 @@ export class ManService {
     }
 
     getVideosInCourse(year: string | null, course: string | null, courseId: string | null) {
-        return this.get<JSend<{
-            lectures: CourseMembers,
-            key: string,
-            server?: string,
-            category: string,
-            name: string,
-        }>>('v1/video/' + (courseId ?? (year + '/' + course)))
-            .pipe(map(response => {
-                if (!response || !response.data) {
+        return this.resolveCourseId(year, course, courseId).pipe(
+            switchMap(id => id ? this.graphql<CourseQueryData>(COURSE_QUERY, {id}) : of(null)),
+            map(result => result?.course ? {
+                category: result.course.category,
+                name: result.course.name,
+                key: result.streamKey,
+                lectures: toCourseMembers(result.course.videos),
+            } : null),
+            map(data => {
+                if (!data) {
                     return null;
                 }
-                const data = response.data;
-                let server = data.server ?? (this.getEndpointLocation() + 'stream');
+                let server = this.getEndpointLocation() + 'stream';
                 if (!server.endsWith('/')) {
                     server += '/';
                 }
@@ -100,7 +100,8 @@ export class ManService {
                     data.lectures[courseKey] = thisLecture;
                 }
                 return data;
-            }));
+            }),
+        );
     }
 
     getVideo(videoId: string): Observable<LectureDocInfo | null> {
@@ -128,12 +129,11 @@ export class ManService {
         records: PlayHistory,
         evaluations: { [key: number]: EvaluationRecord },
     }> {
-        const params = courseId ? new HttpParams().set("course_id", courseId ?? '') : new HttpParams().set("year", year).set("course", course);
         return timer(1, 60000).pipe(
-            switchMap(() => this.get<JSend<{
-                records: PlayHistory,
-                evaluations: { [key: number]: EvaluationRecord },
-            }>>('v1/play_records', {params}).pipe(map(response => response?.data))),
+            switchMap(() => this.resolveCourseId(year, course, courseId).pipe(
+                switchMap(id => id ? this.graphql<ProgressQueryData>(PROGRESS_QUERY, {id}) : of(null)),
+                map(data => data?.course ? toProgress(data.course.videos) : null),
+            )),
             // Replace value with update from play tracker if available
             combineLatestWith(this.playTracker.retrieve().pipe(startWith(null))),
             map(([data, update]) => {
@@ -153,18 +153,26 @@ export class ManService {
         );
     }
 
-    updatePlayRecord(uid: string, video_id: string | number, progress: number, speed: number, log: object[]) {
-        return this.post<JSend<null>>('v1/play_records', {
+    updatePlayRecord(uid: string, video_id: string | number, progress: number, speed: number, log: object[]): Observable<JSend<null>> {
+        return this.graphql<{ updatePlayRecord: { video_id: string } }>(UPDATE_PLAY_RECORD, {
             uid,
-            video_id,
+            video_id: String(video_id),
             progress,
             speed,
             log,
-        });
+        }).pipe(map(data => data ? {status: 'success'} : null));
     }
 
-    sendEvaluation(type: string, video: string | number, result: { delivery: number | null, material: number | null, video: number | null }) {
-        return this.post<JSend<null>>('v1/evaluations', {type, video, result});
+    sendEvaluation(type: string, video: string | number, result: {
+        delivery: number | null,
+        material: number | null,
+        video: number | null
+    }): Observable<JSend<null>> {
+        return this.graphql<{ updateVideoEvaluation: { video_id: string } }>(UPDATE_VIDEO_EVALUATION, {
+            video_id: String(video),
+            type,
+            result,
+        }).pipe(map(data => data ? {status: 'success'} : null));
     }
 
     checkAuthorization(): Observable<boolean> {
@@ -186,15 +194,40 @@ export class ManService {
         return of(null);
     }
 
-    post<T>(path: string, body: object): Observable<T> {
+    /**
+     * Runs a GraphQL operation. Emits null when no ID token is set, and errors when the response has errors and no data.
+     */
+    private graphql<T>(query: string, variables: object = {}): Observable<T | null> {
         if (this.httpOptions.headers.get('Authorization').length < 30) {
             console.error('ManService ID token is not set.');
-        } else if (!this.getEndpointLocation()) {
-            console.error('ManService endpoint is not set.');
-        } else {
-            return this.http.post<T>(this.getEndpointLocation() + path, body, this.httpOptions);
+            return of(null);
         }
-        return of(null);
+        return this.http.post<{ data?: T | null, errors?: { message: string }[] }>(
+            this.getEndpointLocation() + 'graphql',
+            {query, variables},
+            this.httpOptions,
+        ).pipe(map(response => {
+            if (!response?.data && response?.errors?.length) {
+                throw new Error(response.errors[0].message);
+            }
+            return response?.data ?? null;
+        }));
+    }
+
+    /**
+     * The course query takes an ID only, so a course given by year and name is looked up in the video list.
+     */
+    private resolveCourseId(year: string | null, course: string | null, courseId: string | null): Observable<string | null> {
+        if (courseId) {
+            return of(courseId);
+        }
+        return this.getVideoList().pipe(
+            take(1),
+            map(list => {
+                const found = list?.years?.[year]?.find(c => c.name === course);
+                return found ? String(found.id) : null;
+            }),
+        );
     }
 
     searchVideos(query: string): Observable<SearchVideoResult[]> {
@@ -292,6 +325,164 @@ export const ManServiceStub: Partial<ManService> = {
     setIdToken: () => {},
 };
 
+const HOME_QUERY = `query Home {
+    categories { name courses { id name is_remote } }
+    lastFetchedAt
+    me {
+        lastPlayed {
+            video_id end_time speed played_at
+            video { id title lecturer duration course { id category name } }
+        }
+    }
+}`;
+
+const COURSE_QUERY = `query Course($id: ID!) {
+    course(id: $id) {
+        id category name
+        videos {
+            id title lecturer record_date duration thumbnail has_document
+            sources { server path src type }
+            attachments { server path name }
+        }
+    }
+    streamKey
+}`;
+
+// Polled while watching a course, so it leaves out everything that does not change.
+const PROGRESS_QUERY = `query CourseProgress($id: ID!) {
+    course(id: $id) {
+        videos {
+            id
+            myPlayRecord { video_id end_time played_at }
+            myEvaluation { id video_id type }
+        }
+    }
+}`;
+
+const UPDATE_PLAY_RECORD = `mutation UpdatePlayRecord($uid: String!, $video_id: ID!, $progress: Float!, $speed: Float!, $log: [PlayLogEntryInput!]) {
+    updatePlayRecord(uid: $uid, video_id: $video_id, progress: $progress, speed: $speed, log: $log) { video_id }
+}`;
+
+const UPDATE_VIDEO_EVALUATION = `mutation UpdateVideoEvaluation($video_id: ID!, $type: String!, $result: Mixed) {
+    updateVideoEvaluation(video_id: $video_id, type: $type, result: $result) { video_id }
+}`;
+
+interface HomeQueryData {
+    categories: { name: string, courses: { id: string, name: string, is_remote: boolean }[] }[];
+    lastFetchedAt: string | null;
+    me: {
+        lastPlayed: {
+            video_id: string,
+            end_time: number,
+            played_at: string,
+            video: {
+                id: string,
+                title: string,
+                lecturer: string | null,
+                duration: number | null,
+                course: { id: string, category: string | null, name: string },
+            },
+        } | null,
+    } | null;
+}
+
+interface CourseQueryData {
+    course: {
+        id: string,
+        category: string,
+        name: string,
+        videos: {
+            id: string,
+            title: string,
+            lecturer: string | null,
+            record_date: string | null,
+            duration: number | null,
+            has_document: boolean,
+            sources: Lecture['sources'],
+            attachments: Lecture['attachments'],
+        }[],
+    } | null;
+    streamKey: string;
+}
+
+interface ProgressQueryData {
+    course: {
+        videos: {
+            id: string,
+            myPlayRecord: { video_id: string, end_time: number, played_at: string } | null,
+            myEvaluation: { id: string, video_id: string, type: string } | null,
+        }[],
+    } | null;
+}
+
+function toCourseListResponse(data: HomeQueryData): CourseListResponse {
+    const lastPlayed = data.me?.lastPlayed;
+    return {
+        years: Object.fromEntries(data.categories.map(category => [
+            category.name,
+            category.courses.map(course => ({id: Number(course.id), name: course.name, is_remote: course.is_remote})),
+        ])),
+        last_fetched_at: data.lastFetchedAt,
+        last_played: lastPlayed ? {
+            video: {
+                id: Number(lastPlayed.video.id),
+                title: lastPlayed.video.title,
+                lecturer: lastPlayed.video.lecturer,
+                date: null,
+                duration: lastPlayed.video.duration ?? undefined,
+                sources: [],
+                attachments: [],
+                course: {
+                    id: Number(lastPlayed.video.course.id),
+                    name: lastPlayed.video.course.name,
+                    category: lastPlayed.video.course.category,
+                },
+            },
+            played_at: lastPlayed.played_at,
+            end_time: lastPlayed.end_time,
+        } : null,
+    };
+}
+
+function toCourseMembers(videos: CourseQueryData['course']['videos']): CourseMembers {
+    const members: CourseMembers = {};
+    for (const video of videos) {
+        members[video.id] = {
+            id: Number(video.id),
+            title: video.title,
+            lecturer: video.lecturer,
+            date: video.record_date,
+            duration: video.duration ?? undefined,
+            has_document: video.has_document,
+            sources: video.sources,
+            attachments: video.attachments,
+        };
+    }
+    return members;
+}
+
+function toProgress(videos: ProgressQueryData['course']['videos']): { records: PlayHistory, evaluations: { [key: number]: EvaluationRecord } } {
+    const records: PlayHistory = {};
+    const evaluations: { [key: number]: EvaluationRecord } = {};
+    for (const video of videos) {
+        if (video.myPlayRecord) {
+            records[video.id] = {
+                video_id: Number(video.myPlayRecord.video_id),
+                end_time: video.myPlayRecord.end_time,
+                played_at: video.myPlayRecord.played_at,
+            };
+        }
+        if (video.myEvaluation) {
+            evaluations[Number(video.id)] = {
+                id: Number(video.myEvaluation.id),
+                type: video.myEvaluation.type,
+                video_id: Number(video.myEvaluation.video_id),
+            };
+        }
+    }
+    return {records, evaluations};
+}
+
 export interface CourseMembers {
     [key: string]: Lecture;
 }
@@ -304,7 +495,7 @@ export interface CourseListResponse {
             is_remote: boolean;
         }[];
     };
-    last_fetched_at: string;
+    last_fetched_at: string | null; // ISO 8601 with UTC offset
     last_played: { video: Lecture, played_at: string, end_time: number } | null;
 }
 
