@@ -52,9 +52,9 @@
                               [maxlength]="limits.promptChars" [value]="form.prompt"
                               (ionInput)="setPrompt(form, $event)"></ion-textarea>
                 <div class="field-tools">
-                    <ion-button fill="clear" size="small" [disabled]="uploadingFor !== null" (click)="pickImage(form, 'prompt')">
-                        @if (uploadingFor === form.key + '-prompt') {
-                            <ion-spinner name="dots" aria-label="Uploading the image"></ion-spinner>
+                    <ion-button fill="clear" size="small" [disabled]="checkingImageFor !== null" (click)="addImage(form, 'prompt')">
+                        @if (checkingImageFor === form.key + '-prompt') {
+                            <ion-spinner name="dots" aria-label="Checking the image"></ion-spinner>
                         } @else {
                             <ion-icon slot="start" name="image-outline"></ion-icon>
                             Add image
@@ -96,9 +96,9 @@
                               [maxlength]="limits.explanationChars" [value]="form.explanation"
                               (ionInput)="setExplanation(form, $event)"></ion-textarea>
                 <div class="field-tools">
-                    <ion-button fill="clear" size="small" [disabled]="uploadingFor !== null" (click)="pickImage(form, 'explanation')">
-                        @if (uploadingFor === form.key + '-explanation') {
-                            <ion-spinner name="dots" aria-label="Uploading the image"></ion-spinner>
+                    <ion-button fill="clear" size="small" [disabled]="checkingImageFor !== null" (click)="addImage(form, 'explanation')">
+                        @if (checkingImageFor === form.key + '-explanation') {
+                            <ion-spinner name="dots" aria-label="Checking the image"></ion-spinner>
                         } @else {
                             <ion-icon slot="start" name="image-outline"></ion-icon>
                             Add image to the explanation
@@ -163,6 +163,5 @@
         </ion-button>
 
         <app-credit-field [(credit)]="credit" part="questions"></app-credit-field>
-        <input #imagePicker type="file" hidden [accept]="imageTypes" (change)="onImagePicked($event)">
     </div>
 </ion-content>

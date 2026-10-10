@@ -17,6 +17,7 @@ const AIDS: StudyAids = {
     can_manage: false,
     generation: 'ready',
     has_transcript: true,
+    my_ticks: null,
     summary: {markdown: MARKDOWN, revision: 1, origin: 'ai', edited: false, contributors: [], updated_at: null, verified: null},
     quiz: {
         questions: [{id: 'a', prompt: 'Which cell?', choices: ['Plasma cell', 'Leydig cell'], answer: 1, explanation: null, time: 465, stats: null, mine: null}],
@@ -60,6 +61,7 @@ describe('StudyAidsReaderComponent', () => {
                     watch: () => new BehaviorSubject<StudyAidsState>({status: 'loading'}),
                     transcript: () => of(TRANSCRIPT),
                     profile: () => of(null),
+                    saveTicks: (videoId: number, ticks: string[]) => of(ticks),
                 }},
                 {provide: ModalController, useValue: modalCtrl},
             ],

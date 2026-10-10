@@ -38,14 +38,13 @@
                     @if (playback) {
                         <ion-button size="small" fill="outline" (click)="insertTime()">Insert video time</ion-button>
                     }
-                    <ion-button size="small" fill="outline" [disabled]="uploading || saving" (click)="imagePicker.click()">
-                        @if (uploading) {
-                            <ion-spinner name="dots" aria-label="Uploading the image"></ion-spinner>
+                    <ion-button size="small" fill="outline" [disabled]="checkingImage || saving" (click)="addImage()">
+                        @if (checkingImage) {
+                            <ion-spinner name="dots" aria-label="Checking the image"></ion-spinner>
                         } @else {
                             Add image
                         }
                     </ion-button>
-                    <input #imagePicker type="file" hidden [accept]="imageTypes" (change)="onImagePicked($event)">
                     <ion-button size="small" fill="clear" (click)="showHelp = !showHelp" [attr.aria-expanded]="showHelp">
                         Formatting help
                     </ion-button>
@@ -68,8 +67,8 @@
                         <dd>A table: a header row, then <code>|---|---|</code>, then one row per line.</dd>
                         <dt><code>$x^2$</code></dt>
                         <dd>Maths.</dd>
-                        <dt><code>![description](address)</code></dt>
-                        <dd>An image. Use Add image to upload one; it is placed at the cursor.</dd>
+                        <dt><code>![description](Google Drive link)</code></dt>
+                        <dd>A picture from Google Drive, shared as "Anyone with the link". Use Add image to put one at the cursor.</dd>
                     </dl>
                 }
                 <textarea #input class="markdown-input" [(ngModel)]="text" (ngModelChange)="onTextChange()"

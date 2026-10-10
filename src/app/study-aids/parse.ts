@@ -15,7 +15,6 @@ import {
     SummaryPart,
     SummaryRevision,
     TranscriptParagraph,
-    UploadedImage,
     Verification,
 } from './study-aids.model';
 
@@ -157,6 +156,7 @@ export function parseStudyAids(value: unknown): StudyAids | null {
         can_manage: value['can_manage'] === true,
         generation: GENERATION_STATES.find(state => state === value['generation']) ?? 'none',
         has_transcript: value['has_transcript'] === true,
+        my_ticks: Array.isArray(value['my_ticks']) ? value['my_ticks'].filter((key): key is string => typeof key === 'string') : null,
         summary: parseSummary(value['summary']),
         quiz: parseQuiz(value['quiz']),
     };
@@ -182,15 +182,6 @@ export function parseEditors(value: unknown): StudyAidsEditor[] | null {
     }
 
     return value['editors'].map(parseEditor).filter((editor): editor is StudyAidsEditor => editor !== null);
-}
-
-export function parseImage(value: unknown): UploadedImage | null {
-    if (!isObject(value)) {
-        return null;
-    }
-    const url = text(value['url']);
-
-    return url ? {url, width: count(value['width']) ?? 0, height: count(value['height']) ?? 0} : null;
 }
 
 function author(value: unknown): RevisionAuthor | null {

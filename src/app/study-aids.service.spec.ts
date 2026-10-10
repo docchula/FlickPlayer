@@ -438,18 +438,24 @@ describe('StudyAidsService', () => {
         });
     });
 
-    describe('uploadImage', () => {
-        it('sends the image as a GraphQL multipart request and returns where it is stored', () => {
-            const url = 'https://flick-man-app.docchula.com/v1/study_aids/images/01m4hxp2t0g66v2xzfmjsjb827.webp';
-            handlers['UploadStudyAidImage'] = () => data({uploadStudyAidImage: {url, width: 800, height: 600}});
-            let uploaded: unknown;
-            service.uploadImage(7, new Blob(['x'], {type: 'image/webp'}), 'er.webp').subscribe(image => uploaded = image);
+    describe('ticks', () => {
+        it('reads the ticks kept for this reader', () => {
+            handlers['StudyAids'] = () => lecture({my_ticks: ['k3x9', 'a1-b2']});
+            const state = latest(7);
 
-            const form = man.post.calls.mostRecent().args[1] as FormData;
-            expect(JSON.parse(form.get('operations') as string).variables).toEqual({video_id: '7', image: null});
-            expect(JSON.parse(form.get('map') as string)).toEqual({0: ['variables.image']});
-            expect((form.get('0') as File).name).toBe('er.webp');
-            expect(uploaded).toEqual({url, width: 800, height: 600});
+            expect(state.status === 'ready' && state.aids.my_ticks).toEqual(['k3x9', 'a1-b2']);
+            handlers['StudyAids'] = () => lecture({my_ticks: null});
+            const fresh = latest(8);
+            expect(fresh.status === 'ready' && fresh.aids.my_ticks).toBeNull();
+        });
+
+        it('keeps a lecture\'s ticks on FlickMan', () => {
+            handlers['SaveStudyTicks'] = () => data({saveStudyTicks: ['k3x9', 'a1-b2']});
+            let saved: string[] | undefined;
+            service.saveTicks(7, ['k3x9', 'a1-b2', 'k3x9']).subscribe(ticks => saved = ticks);
+
+            expect(variablesOf('SaveStudyTicks')).toEqual({video_id: '7', ticks: ['k3x9', 'a1-b2', 'k3x9']});
+            expect(saved).toEqual(['k3x9', 'a1-b2']);
         });
     });
 });

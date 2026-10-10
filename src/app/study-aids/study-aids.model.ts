@@ -11,6 +11,8 @@ export interface StudyAids {
     generation: GenerationState;
     /** Whether FlickMan has the AI's word-for-word transcript of the lecture. */
     has_transcript: boolean;
+    /** The summary points this reader has ticked, from any device; null until they first save some. */
+    my_ticks: string[] | null;
     summary: SummaryPart | null;
     quiz: QuizPart | null;
 }
@@ -84,13 +86,6 @@ export interface StudyAidsEditor {
     name: string | null;
     role: EditorRole;
     added_at: string | null;
-}
-
-/** An image uploaded for a summary or a question, to be written into its Markdown. */
-export interface UploadedImage {
-    url: string;
-    width: number;
-    height: number;
 }
 
 /** The name students see for an editor, which can only be changed once every 30 days. */
@@ -193,10 +188,6 @@ export const LIMITS = {
     choiceChars: 500,
     explanationChars: 4000,
     displayNameChars: 50,
-    imageBytes: 5_000_000,
-    /** Photos larger than this, or wider or taller than imageMaxSide, are shrunk before upload. */
-    imageShrinkBytes: 2_000_000,
-    imageMaxSide: 2000,
     /** For lectures whose duration is not known. */
     maxTime: 86_400,
 };

@@ -36,8 +36,8 @@
             }
         </div>
         <ol class="transcript">
-            @for (paragraph of state.paragraphs; track $index; let i = $index) {
-                <li class="transcript-paragraph" [class.is-current]="i === current" [attr.aria-current]="i === current ? 'time' : null">
+            @for (paragraph of reading; track $index) {
+                <li class="transcript-paragraph" [class.is-current]="holdsCurrent(paragraph)">
                     @if (playback) {
                         <button type="button" class="time-chip" (click)="seek.emit(paragraph.time)"
                                 [attr.aria-label]="'Play the lecture from ' + formatClock(paragraph.time)">
@@ -46,7 +46,17 @@
                     } @else {
                         <span class="time-chip">{{ formatClock(paragraph.time) }}</span>
                     }
-                    <p class="paragraph-text">{{ paragraph.text }}</p>
+                    <p class="paragraph-text">
+                        @for (line of paragraph.lines; track line.index) {
+                            @if (playback && paragraph.lines.length > 1) {
+                                <button type="button" class="transcript-line" [class.is-current]="line.index === current"
+                                        [attr.aria-label]="'Play from ' + formatClock(line.time) + ': ' + line.text"
+                                        (click)="seek.emit(line.time)">{{ line.text + ' ' }}</button>
+                            } @else {
+                                <span class="transcript-line" [class.is-current]="line.index === current">{{ line.text + ' ' }}</span>
+                            }
+                        }
+                    </p>
                 </li>
             }
         </ol>

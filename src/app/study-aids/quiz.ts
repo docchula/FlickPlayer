@@ -1,4 +1,5 @@
 import {formatStamp, parseTimestamp} from './checklist';
+import {normalizeImageLinks} from './images';
 import {AnswerStats, LIMITS, QuestionChange, QuizQuestion} from './study-aids.model';
 
 export const CHOICE_LETTERS = 'ABCDEFGH';
@@ -96,10 +97,10 @@ export function questionProblems(form: QuestionForm, maxTime: number): string[] 
 export function questionChange(form: QuestionForm): QuestionChange {
     return {
         id: form.id,
-        prompt: form.prompt.trim(),
-        choices: form.choices.map(choice => choice.trim()),
+        prompt: normalizeImageLinks(form.prompt.trim()),
+        choices: form.choices.map(choice => normalizeImageLinks(choice.trim())),
         answer: form.answer ?? 0,
-        explanation: form.explanation.trim() || null,
+        explanation: normalizeImageLinks(form.explanation.trim()) || null,
         time: form.time.trim() ? parseTimestamp(form.time) : null,
     };
 }

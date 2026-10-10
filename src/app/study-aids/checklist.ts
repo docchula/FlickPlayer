@@ -1,6 +1,6 @@
 import {Marked, MarkedExtension} from 'marked';
 import {mathExtension} from '../home/course/markdown-math';
-import {isAllowedImage} from './images';
+import {DRIVE_IMAGE_CLASS, driveLink, savedDriveId} from './images';
 
 /*
  * A summary is Markdown written to these conventions (FlickMan's AI follows them too):
@@ -141,28 +141,29 @@ function openInNewTab(link: Element): void {
 }
 
 /**
- * Links open in a new tab, so following one never takes the reader away from the lecture. Images
- * FlickMan did not store are shown as links instead: loading one would tell a third party who is
- * reading.
+ * Links open in a new tab, so following one never takes the reader away from the lecture. A Drive
+ * picture becomes a link to it, which the page turns into the picture once it is shown (Angular's
+ * sanitizer would drop the lazy loading an <img> needs). Any other image is only a link: loading
+ * it would tell a third party who is reading.
  */
 function finishHtml(html: string): string {
     const body = new DOMParser().parseFromString(html, 'text/html').body;
-    body.querySelectorAll('a[href]').forEach(openInNewTab);
     for (const image of Array.from(body.querySelectorAll('img'))) {
         const src = image.getAttribute('src') ?? '';
-        if (isAllowedImage(src)) {
-            continue;
-        }
         if (!src) {
             image.remove();
             continue;
         }
+        const driveId = savedDriveId(src);
         const link = body.ownerDocument.createElement('a');
-        link.setAttribute('href', src);
+        link.setAttribute('href', driveId ? driveLink(driveId) : src);
         link.textContent = image.getAttribute('alt') || 'Image';
-        openInNewTab(link);
+        if (driveId) {
+            link.className = DRIVE_IMAGE_CLASS;
+        }
         image.replaceWith(link);
     }
+    body.querySelectorAll('a[href]').forEach(openInNewTab);
 
     return body.innerHTML;
 }

@@ -81,3 +81,35 @@ button.time-chip {
         outline-offset: 2px;
     }
 }
+
+// One stamped line inside a paragraph, which plays the lecture from where it is said.
+.transcript-line {
+    display: inline;
+    padding: 0;
+    border: 0;
+    border-radius: 0.2em;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: inherit;
+    text-align: inherit;
+    white-space: inherit;
+
+    &.is-current {
+        background: rgba(var(--ion-color-primary-rgb), 0.16);
+    }
+}
+
+button.transcript-line {
+    cursor: pointer;
+
+    &:hover {
+        text-decoration: underline;
+        text-decoration-color: rgba(var(--ion-color-primary-rgb), 0.6);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--ion-color-primary);
+        outline-offset: 1px;
+    }
+}

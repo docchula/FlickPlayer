@@ -21,6 +21,7 @@ function aids(): StudyAids {
         can_manage: false,
         generation: 'ready',
         has_transcript: false,
+        my_ticks: null,
         summary: {markdown: EDITED, revision: 3, origin: 'ai', edited: true, contributors: [{name: 'Kan'}], updated_at: null, verified: null},
         quiz: null,
     };
@@ -28,7 +29,7 @@ function aids(): StudyAids {
 
 describe('SummaryBodyComponent', () => {
     let fixture: ComponentFixture<SummaryBodyComponent>;
-    let service: jasmine.SpyObj<Pick<StudyAidsService, 'summaryRevisions' | 'profile'>>;
+    let service: jasmine.SpyObj<Pick<StudyAidsService, 'summaryRevisions' | 'profile' | 'watch' | 'saveTicks'>>;
 
     const element = () => fixture.nativeElement as HTMLElement;
     const text = () => element().textContent?.replace(/\s+/g, ' ') ?? '';
@@ -40,7 +41,8 @@ describe('SummaryBodyComponent', () => {
 
     beforeEach(() => {
         localStorage.removeItem('flickSummaryTicks:7');
-        service = jasmine.createSpyObj('StudyAidsService', ['summaryRevisions', 'profile']);
+        service = jasmine.createSpyObj('StudyAidsService', ['summaryRevisions', 'profile', 'watch', 'saveTicks']);
+        service.watch.and.returnValue(of({status: 'loading'}));
         service.summaryRevisions.and.returnValue(of(REVISIONS));
         service.profile.and.returnValue(of(null));
         TestBed.configureTestingModule({

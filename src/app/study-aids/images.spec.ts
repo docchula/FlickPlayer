@@ -1,52 +1,67 @@
-import {imageMarkdown, imageProblem, isAllowedImage, prepareImage, uploadName} from './images';
+import {drawDriveImages, driveFileId, imageMarkdown, normalizeImageLinks, savedDriveId} from './images';
 
-function canvasImage(width: number, height: number, type: string): Promise<File> {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    canvas.getContext('2d')?.fillRect(0, 0, width, height);
-
-    return new Promise(resolve => canvas.toBlob(blob => resolve(new File([blob as Blob], 'Cell diagram.png', {type})), type));
-}
+const ID = '1AbCdEfGhIjKlMnOpQrStUvWxYz012345';
+const SAVED = `https://drive.google.com/file/d/${ID}/view`;
 
 describe('images', () => {
-    it('allows FlickMan images and local previews only', () => {
-        expect(isAllowedImage('https://flick-man-cdn.docchula.com/v1/study_aids/images/01M4D7B2STKMV08W6Z0ZF3G56N.png')).toBeTrue();
-        expect(isAllowedImage('data:image/png;base64,AAAA')).toBeTrue();
-        expect(isAllowedImage('blob:http://localhost:4200/1234')).toBeTrue();
-        expect(isAllowedImage('https://example.com/v1/study_aids/images/x.png')).toBeFalse();
-        expect(isAllowedImage('https://docchula.com.example.com/v1/study_aids/images/x.png')).toBeFalse();
-        expect(isAllowedImage('http://flick-man-app.docchula.com/v1/study_aids/images/x.png')).toBeFalse();
-        expect(isAllowedImage('https://flick-man-app.docchula.com/v1/video')).toBeFalse();
+    it('reads the file from any link Google Drive gives out', () => {
+        for (const link of [
+            `https://drive.google.com/file/d/${ID}/view?usp=sharing`,
+            `https://drive.google.com/file/d/${ID}/view?usp=drive_link`,
+            `https://drive.google.com/file/u/1/d/${ID}/edit`,
+            `https://drive.google.com/file/d/${ID}`,
+            `https://drive.google.com/open?id=${ID}`,
+            `https://drive.google.com/uc?export=view&id=${ID}`,
+            `https://drive.google.com/thumbnail?id=${ID}&sz=w1000`,
+            `https://lh3.googleusercontent.com/d/${ID}=w800`,
+            `  ${SAVED}  `,
+        ]) {
+            expect(driveFileId(link)).withContext(link).toBe(ID);
+        }
     });
 
-    it('accepts the image types FlickMan stores', () => {
-        expect(imageProblem(new File(['x'], 'a.png', {type: 'image/png'}))).toBeNull();
-        expect(imageProblem(new File(['x'], 'a.heic', {type: 'image/heic'}))).toBe('Choose a PNG, JPEG, WebP or GIF image.');
+    it('refuses links that only look like Drive', () => {
+        for (const link of [
+            `http://drive.google.com/file/d/${ID}/view`,
+            `https://drive.google.com.example.com/file/d/${ID}/view`,
+            `https://example.com/?u=https://drive.google.com/file/d/${ID}/view`,
+            'https://drive.google.com/file/d/short/view',
+            'https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUvWxYz012345',
+        ]) {
+            expect(driveFileId(link)).withContext(link).toBeNull();
+        }
     });
 
-    it('sends a small image as it is', async () => {
-        const file = await canvasImage(40, 30, 'image/png');
-
-        expect(await prepareImage(file)).toBe(file);
+    it('only draws the saved form, the one FlickMan accepts', () => {
+        expect(savedDriveId(SAVED)).toBe(ID);
+        expect(savedDriveId(SAVED + '?usp=sharing')).toBeNull();
+        expect(savedDriveId(`https://drive.google.com/open?id=${ID}`)).toBeNull();
     });
 
-    it('draws an image wider than 2000 px smaller', async () => {
-        const file = await canvasImage(2400, 600, 'image/png');
-        const prepared = await prepareImage(file);
-        const bitmap = await createImageBitmap(prepared as Blob);
-
-        expect(bitmap.width).toBe(2000);
-        expect(bitmap.height).toBe(500);
-        bitmap.close();
+    it('writes pasted Drive links in the saved form', () => {
+        expect(normalizeImageLinks(`Before ![ER](https://drive.google.com/open?id=${ID}) after [notes](https://example.com)`))
+            .toBe(`Before ![ER](${SAVED}) after [notes](https://example.com)`);
+        expect(normalizeImageLinks('![pixel](https://tracker.example/p.gif)')).toBe('![pixel](https://tracker.example/p.gif)');
     });
 
-    it('names the upload after what was prepared', () => {
-        expect(uploadName(new File(['x'], 'Cell diagram.png'), new Blob(['x'], {type: 'image/webp'}))).toBe('Cell diagram.webp');
+    it('describes a picture with what the editor wrote', () => {
+        expect(imageMarkdown(ID, ' Cell [1] ')).toBe(`![Cell 1](${SAVED})`);
+        expect(imageMarkdown(ID, '')).toBe(`![image](${SAVED})`);
     });
 
-    it('writes the Markdown with the file name as its description', () => {
-        expect(imageMarkdown('https://flick-man-app.docchula.com/v1/study_aids/images/A.png', 'Cell [1].png'))
-            .toBe('![Cell 1](https://flick-man-app.docchula.com/v1/study_aids/images/A.png)');
+    it('draws a Drive picture lazily, from Google, inside its link', () => {
+        const root = document.createElement('div');
+        root.innerHTML = `<a href="${SAVED}" class="drive-image">ER</a>`;
+        drawDriveImages(root);
+        const image = root.querySelector('img') as HTMLImageElement;
+
+        expect(image.loading).toBe('lazy');
+        expect(image.alt).toBe('ER');
+        expect(image.src).toBe(`https://drive.google.com/thumbnail?id=${ID}&sz=w1600`);
+        expect(root.querySelector('a')?.getAttribute('href')).toBe(SAVED);
+
+        image.dispatchEvent(new Event('error'));
+        expect(root.querySelector('img')).toBeNull();
+        expect(root.textContent).toBe('ER (open in Google Drive)');
     });
 });

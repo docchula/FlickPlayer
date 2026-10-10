@@ -33,6 +33,7 @@ function aids(changes: Partial<StudyAids> = {}): StudyAids {
         can_manage: false,
         generation: 'ready',
         has_transcript: false,
+        my_ticks: null,
         summary: {markdown: MARKDOWN, revision: 1, origin: 'ai', edited: false, contributors: [], updated_at: null, verified: null},
         quiz: null,
         ...changes,
@@ -45,7 +46,7 @@ function quiz(questions: QuizQuestion[]): StudyAids['quiz'] {
 
 describe('LectureStudyAidsComponent', () => {
     let fixture: ComponentFixture<LectureStudyAidsComponent>;
-    let service: jasmine.SpyObj<Pick<StudyAidsService, 'watch' | 'refresh' | 'answer' | 'transcript' | 'retryTranscript' | 'profile'>>;
+    let service: jasmine.SpyObj<Pick<StudyAidsService, 'watch' | 'refresh' | 'answer' | 'transcript' | 'retryTranscript' | 'profile' | 'saveTicks'>>;
     let seek: jasmine.Spy;
     let query: Record<string, string>;
 
@@ -74,10 +75,11 @@ describe('LectureStudyAidsComponent', () => {
     }
 
     beforeEach(() => {
-        for (const key of ['flickSummaryTicks:7', 'flickQuizAnswers:7', 'flickStudyAidsCollapsed', 'flickStudyAidsTab']) {
+        for (const key of ['flickSummaryTicks:7', 'flickQuizAnswers:7', 'flickStudyAidsCollapsed', 'flickStudyAidsTab', 'flickSummaryTicksUnsynced']) {
             localStorage.removeItem(key);
         }
-        service = jasmine.createSpyObj('StudyAidsService', ['watch', 'refresh', 'answer', 'transcript', 'retryTranscript', 'profile']);
+        service = jasmine.createSpyObj('StudyAidsService', ['watch', 'refresh', 'answer', 'transcript', 'retryTranscript', 'profile', 'saveTicks']);
+        service.saveTicks.and.callFake((videoId, ticks) => of(ticks));
         service.answer.and.returnValue(of({answered: 13, correct: 11}));
         service.profile.and.returnValue(of(null));
         service.transcript.and.returnValue(of<TranscriptState>({status: 'ready', paragraphs: [
@@ -99,7 +101,7 @@ describe('LectureStudyAidsComponent', () => {
     });
 
     afterEach(() => {
-        for (const key of ['flickSummaryTicks:7', 'flickQuizAnswers:7', 'flickStudyAidsCollapsed', 'flickStudyAidsTab']) {
+        for (const key of ['flickSummaryTicks:7', 'flickQuizAnswers:7', 'flickStudyAidsCollapsed', 'flickStudyAidsTab', 'flickSummaryTicksUnsynced']) {
             localStorage.removeItem(key);
         }
     });

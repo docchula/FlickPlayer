@@ -124,6 +124,7 @@ export function toWebVtt(cues: readonly Cue[]): string {
 export class LectureCaptions {
     private readonly button: Button;
     private readonly icon: HTMLElement | null;
+    private readonly underline: HTMLElement;
     private on = readCaptions();
     private videoId: number | null = null;
     private duration: number | null = null;
@@ -135,6 +136,14 @@ export class LectureCaptions {
 
     constructor(private readonly player: Player, private readonly service: StudyAidsService) {
         const controlBar = player.getChild('ControlBar') as Component;
+        // video.js would add its own captions menu as soon as there are captions: this button takes its place.
+        for (const name of ['SubsCapsButton', 'CaptionsButton', 'SubtitlesButton']) {
+            const builtIn = controlBar.getChild(name);
+            if (builtIn) {
+                controlBar.removeChild(builtIn);
+                builtIn.dispose();
+            }
+        }
         const fullscreen = controlBar.getChild('FullscreenToggle');
         this.button = controlBar.addChild('button', {
             className: 'vjs-captions-toggle',
@@ -143,6 +152,19 @@ export class LectureCaptions {
         // video.js's own captions glyph, so the button looks like the player's other controls.
         this.icon = this.button.el().querySelector<HTMLElement>('.vjs-icon-placeholder');
         this.icon?.classList.add('vjs-icon-captions');
+        // The bar under the glyph while captions are on, as YouTube's captions button has.
+        this.underline = this.button.el().ownerDocument.createElement('span');
+        this.underline.setAttribute('aria-hidden', 'true');
+        Object.assign(this.underline.style, {
+            position: 'absolute',
+            left: '32%',
+            right: '32%',
+            bottom: '22%',
+            height: '0.2em',
+            borderRadius: '0.1em',
+            background: 'var(--ion-color-primary, currentColor)',
+        });
+        this.button.el().append(this.underline);
         this.button.hide();
         this.render();
     }
@@ -228,10 +250,11 @@ export class LectureCaptions {
     private render(): void {
         const showing = this.on && !this.problem;
         this.button.el().setAttribute('aria-pressed', String(showing));
-        // Dimmed while off.
+        // Dimmed while off, underlined while on.
         if (this.icon) {
             this.icon.style.opacity = showing ? '' : '0.5';
         }
+        this.underline.style.display = showing ? '' : 'none';
         this.button.controlText(
             this.problem === 'none' ? 'This lecture has no captions'
                 : this.problem === 'failed' ? 'Captions could not be loaded. Try again'

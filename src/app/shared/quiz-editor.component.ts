@@ -1,4 +1,4 @@
-import {afterNextRender, Component, ElementRef, inject, Injector, Input, OnInit, ViewChild, ViewEncapsulation} from '@angular/core';
+import {afterNextRender, Component, inject, Injector, Input, OnInit, ViewEncapsulation} from '@angular/core';
 import {
     AlertController,
     IonButton,
@@ -21,9 +21,8 @@ import {RichTextComponent} from './rich-text.component';
 import {formatStamp, renderBlock, renderInline} from '../study-aids/checklist';
 import {joinNames} from '../study-aids/byline';
 import {describeFailure} from '../study-aids/failures';
-import {IMAGE_TYPES} from '../study-aids/images';
 import {readCredit, writeCredit} from '../study-aids/local-store';
-import {uploadPickedImage} from '../study-aids/upload-image';
+import {askForDriveImage, DRIVE_IMAGE_CHECK, driveImageMarkdown} from '../study-aids/image-link';
 import {
     blankQuestionForm,
     CHOICE_LETTERS,
@@ -69,6 +68,7 @@ export class QuizEditorComponent implements OnInit {
     private service = inject(StudyAidsService);
     private modalCtrl = inject(ModalController);
     private alertCtrl = inject(AlertController);
+    private canShowImage = inject(DRIVE_IMAGE_CHECK);
     private injector = inject(Injector);
 
     @Input() videoId: number;
@@ -78,8 +78,6 @@ export class QuizEditorComponent implements OnInit {
     @Input() duration: number | null = null;
     @Input() playback: LecturePlayback | null = null;
 
-    @ViewChild('imagePicker') imagePicker: ElementRef<HTMLInputElement>;
-
     protected forms: QuestionForm[] = [];
     protected credit = readCredit();
     protected saving = false;
@@ -87,16 +85,14 @@ export class QuizEditorComponent implements OnInit {
     /** Problems are pointed out once the editor first tries to save, not while typing. */
     protected checked = false;
     protected removed: {form: QuestionForm; index: number} | null = null;
-    /** Which field an image is uploading into, as `key-field`. */
-    protected uploadingFor: string | null = null;
+    /** The field whose new picture is being checked, as `key-field`. */
+    protected checkingImageFor: string | null = null;
     protected previewing = new Set<number>();
-    protected readonly imageTypes = IMAGE_TYPES.join(',');
     protected readonly letters = CHOICE_LETTERS;
     protected readonly limits = LIMITS;
     protected readonly resetsStats = resetsStats;
 
     private serverProblems = new Map<number, string[]>();
-    private pickTarget: {form: QuestionForm; field: 'prompt' | 'explanation'} | null = null;
     private previews = new Map<string, string>();
     private nextKey = 0;
     private baseRevision = 0;
@@ -218,33 +214,24 @@ export class QuizEditorComponent implements OnInit {
         this.edited();
     }
 
-    pickImage(form: QuestionForm, field: 'prompt' | 'explanation'): void {
-        this.pickTarget = {form, field};
-        this.imagePicker.nativeElement.click();
-    }
-
-    async onImagePicked(event: Event): Promise<void> {
-        const picker = event.target as HTMLInputElement;
-        const file = picker.files?.[0];
-        // Cleared so that picking the same file again still counts as a change.
-        picker.value = '';
-        const target = this.pickTarget;
-        this.pickTarget = null;
-        if (!file || !target) {
-            return;
-        }
-        this.uploadingFor = target.form.key + '-' + target.field;
+    /** Adds a picture from Google Drive to the end of the question or its explanation. */
+    async addImage(form: QuestionForm, field: 'prompt' | 'explanation'): Promise<void> {
         this.problem = null;
         try {
-            const markdown = await uploadPickedImage(this.service, this.videoId, file);
-            const current = target.form[target.field].trimEnd();
-            target.form[target.field] = (current ? current + '\n\n' : '') + markdown;
-            this.previewing.add(target.form.key);
+            const choice = await askForDriveImage(this.alertCtrl);
+            if (!choice) {
+                return;
+            }
+            this.checkingImageFor = form.key + '-' + field;
+            const markdown = await driveImageMarkdown(choice, this.canShowImage);
+            const current = form[field].trimEnd();
+            form[field] = (current ? current + '\n\n' : '') + markdown;
+            this.previewing.add(form.key);
             this.edited();
         } catch (error) {
             this.problem = (error as Error).message;
         } finally {
-            this.uploadingFor = null;
+            this.checkingImageFor = null;
         }
     }
 

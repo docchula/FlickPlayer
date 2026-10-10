@@ -23,7 +23,7 @@ function operation(name: string, query: string): Operation {
 export const STUDY_AIDS = operation('StudyAids', `query StudyAids($id: ID!) {
     video(id: $id) {
         has_transcript
-        studyAids { video_id can_edit can_manage generation summary { ${SUMMARY} } quiz { ${QUIZ} } }
+        studyAids { video_id can_edit can_manage generation my_ticks summary { ${SUMMARY} } quiz { ${QUIZ} } }
     }
 }`);
 
@@ -59,8 +59,8 @@ export const ANSWER = operation('AnswerStudyQuestion', `mutation AnswerStudyQues
     answerStudyQuestion(video_id: $video_id, question_id: $question_id, choice: $choice) { answered correct }
 }`);
 
-export const UPLOAD_IMAGE = operation('UploadStudyAidImage', `mutation UploadStudyAidImage($video_id: ID!, $image: Upload!) {
-    uploadStudyAidImage(video_id: $video_id, image: $image) { url width height }
+export const SAVE_TICKS = operation('SaveStudyTicks', `mutation SaveStudyTicks($video_id: ID!, $ticks: [String!]!) {
+    saveStudyTicks(video_id: $video_id, ticks: $ticks)
 }`);
 
 export const EDITORS = operation('StudyAidEditors', `query StudyAidEditors { studyAidEditors { ${EDITOR} } }`);

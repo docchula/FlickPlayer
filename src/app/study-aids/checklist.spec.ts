@@ -100,17 +100,20 @@ describe('buildChecklist', () => {
         expect(renderInline('[notes](https://example.com)')).toContain('target="_blank"');
     });
 
-    it('shows images FlickMan stored', () => {
-        const html = renderInline('![ER](https://flick-man-app.docchula.com/v1/study_aids/images/01M4D7B2STKMV08W6Z0ZF3G56N.webp)');
+    it('marks Google Drive pictures to be drawn once shown', () => {
+        const html = renderInline('![ER](https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view)');
 
-        expect(html).toContain('<img src="https://flick-man-app.docchula.com/v1/study_aids/images/01M4D7B2STKMV08W6Z0ZF3G56N.webp" alt="ER">');
+        expect(html).not.toContain('<img');
+        expect(html).toContain('<a href="https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view" class="drive-image"');
+        expect(html).toContain('>ER</a>');
     });
 
     it('turns any other image into a link, so nothing loads from elsewhere', () => {
-        const markdown = '![pixel](https://tracker.example/p.gif) <img src="https://docchula.com.example/v1/study_aids/images/x.png" alt="raw">';
+        const markdown = '![pixel](https://tracker.example/p.gif) <img src="https://drive.google.com.example/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view" alt="raw">';
         const html = renderInline(markdown);
 
         expect(html).not.toContain('<img');
+        expect(html).not.toContain('drive-image');
         expect(html).toContain('<a href="https://tracker.example/p.gif" target="_blank" rel="noopener noreferrer">pixel</a>');
         expect(html).toContain('>raw</a>');
     });

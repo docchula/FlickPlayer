@@ -7,6 +7,8 @@ import {isStudyTab, StudyTab} from './tabs';
  */
 
 const TICKS_PREFIX = 'flickSummaryTicks:';
+/** Lectures whose ticks changed here and have not reached FlickMan yet. */
+const UNSYNCED_TICKS_KEY = 'flickSummaryTicksUnsynced';
 const ANSWERS_PREFIX = 'flickQuizAnswers:';
 const COLLAPSED_KEY = 'flickStudyAidsCollapsed';
 const TAB_KEY = 'flickStudyAidsTab';
@@ -39,6 +41,18 @@ export function readTicks(videoId: number): Set<string> {
 
 export function writeTicks(videoId: number, ticks: ReadonlySet<string>): void {
     write(TICKS_PREFIX + videoId, [...ticks]);
+}
+
+export function ticksUnsynced(videoId: number): boolean {
+    const stored = read(UNSYNCED_TICKS_KEY);
+
+    return Array.isArray(stored) && stored.includes(videoId);
+}
+
+export function markTicksUnsynced(videoId: number, unsynced: boolean): void {
+    const stored = read(UNSYNCED_TICKS_KEY);
+    const others = (Array.isArray(stored) ? stored : []).filter(id => typeof id === 'number' && id !== videoId);
+    write(UNSYNCED_TICKS_KEY, unsynced ? [...others, videoId] : others);
 }
 
 /** Null when this device has never started the quiz, as opposed to having cleared it. */

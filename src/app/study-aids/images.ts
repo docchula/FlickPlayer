@@ -1,89 +1,114 @@
-import {LIMITS} from './study-aids.model';
+/*
+ * Pictures in summaries and questions live in the editors' own Google Drive. Flick keeps only the
+ * link, always as https://drive.google.com/file/d/{id}/view, and draws the picture straight from
+ * Google when a reader gets to it, so FlickMan neither stores nor serves any images. An image from
+ * anywhere else is shown as a link, so a pasted picture cannot tell another site who is reading.
+ */
 
-export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+const DRIVE_ID = '[A-Za-z0-9_-]{20,100}';
 
-const EXTENSIONS: Record<string, string> = {'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif'};
-
-/** Each try draws the image smaller and compresses it harder, until it fits FlickMan's limit. */
-const SHRINK_STEPS = [
-    {side: 2000, quality: 0.9},
-    {side: 1600, quality: 0.85},
-    {side: 1200, quality: 0.8},
+/** The ways Drive writes a link to a file: file/d/{id}/…, open?id=, uc?id=, thumbnail?id= and its image host. */
+const DRIVE_LINKS = [
+    new RegExp(`^https://(?:drive|docs)\\.google\\.com/file/(?:u/\\d+/)?d/(${DRIVE_ID})(?:[/?#]|$)`),
+    new RegExp(`^https://(?:drive|docs)\\.google\\.com/(?:open|uc|thumbnail)\\?(?:[^#]*&)?id=(${DRIVE_ID})(?:[&#]|$)`),
+    new RegExp(`^https://lh3\\.googleusercontent\\.com/d/(${DRIVE_ID})(?:[=/?#]|$)`),
 ];
 
-/** FlickMan's own image addresses. Other images are never loaded, so they cannot track readers. */
-const FLICKMAN_IMAGE = /^https:\/\/([a-z0-9-]+\.)*docchula\.com\/v1\/study_aids\/images\//i;
-/** Images held in the page itself, such as previews, which load nothing from the network. */
-const LOCAL_IMAGE = /^(data:image\/|blob:)/i;
+/** The one form saved in the Markdown, the only one FlickMan accepts. */
+const SAVED_LINK = new RegExp(`^https://drive\\.google\\.com/file/d/(${DRIVE_ID})/view$`);
 
-export function isAllowedImage(url: string): boolean {
-    return FLICKMAN_IMAGE.test(url) || LOCAL_IMAGE.test(url);
-}
+/** Wide enough for the reading window; Google sends a smaller picture when the file is smaller. */
+const DRAWN_WIDTH = 1600;
 
-/** Why a picked file cannot be uploaded, or null when it can. */
-export function imageProblem(file: File): string | null {
-    if (!IMAGE_TYPES.includes(file.type)) {
-        return 'Choose a PNG, JPEG, WebP or GIF image.';
+/** The class of the link that stands for a Drive picture until the page draws it (see RichTextComponent). */
+export const DRIVE_IMAGE_CLASS = 'drive-image';
+
+/** The Drive file a link points at, in any form Drive gives out, or null. */
+export function driveFileId(link: string): string | null {
+    const trimmed = link.trim();
+    for (const pattern of DRIVE_LINKS) {
+        const match = pattern.exec(trimmed);
+        if (match) {
+            return match[1];
+        }
     }
 
-    // A GIF may be animated, which drawing it smaller would lose.
-    return file.type === 'image/gif' && file.size > LIMITS.imageBytes ? 'This GIF is too large. Use one under 5 MB.' : null;
+    return null;
 }
 
-function toBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob | null> {
-    return new Promise(resolve => canvas.toBlob(resolve, type, quality));
+export function driveLink(id: string): string {
+    return `https://drive.google.com/file/d/${id}/view`;
 }
 
-async function shrink(bitmap: ImageBitmap, side: number, quality: number, sourceType: string): Promise<Blob | null> {
-    const scale = Math.min(1, side / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+/** The Drive file of a saved image link, or null for any other address. */
+export function savedDriveId(src: string): string | null {
+    return SAVED_LINK.exec(src.trim())?.[1] ?? null;
+}
 
-    // WebP keeps transparency and stays small; a browser that cannot write it hands back PNG instead.
-    const webp = await toBlob(canvas, 'image/webp', quality);
-    if (webp?.type === 'image/webp') {
-        return webp;
-    }
+/** Where a Drive picture is drawn from. */
+export function driveImageUrl(id: string, width = DRAWN_WIDTH): string {
+    return `https://drive.google.com/thumbnail?id=${id}&sz=w${width}`;
+}
 
-    return toBlob(canvas, sourceType === 'image/png' ? 'image/png' : 'image/jpeg', quality);
+/** Markdown for a picture, described by what the editor wrote, else by the word "image". */
+export function imageMarkdown(id: string, description: string): string {
+    return `![${description.replace(/[[\]\\]/g, '').trim() || 'image'}](${driveLink(id)})`;
+}
+
+const MARKDOWN_IMAGE = /(!\[[^\]]*]\(\s*)(<?)([^)\s>]+)(>?)/g;
+
+/** The same Markdown with every Drive picture written in the saved form, whichever link was pasted. */
+export function normalizeImageLinks(markdown: string): string {
+    return markdown.replace(MARKDOWN_IMAGE, (whole, start: string, open: string, url: string, close: string) => {
+        const id = driveFileId(url);
+
+        return id ? start + driveLink(id) : start + open + url + close;
+    });
 }
 
 /**
- * The image to upload. A large photo is drawn smaller first, so readers do not download megabytes
- * for it; a GIF is sent as it is, since it may be animated. Null when nothing small enough results.
+ * Whether readers will be able to see the picture: it loads only when the file is shared as
+ * "Anyone with the link". Gives up after `timeout` milliseconds.
  */
-export async function prepareImage(file: File): Promise<Blob | null> {
-    if (file.type === 'image/gif') {
-        return file.size <= LIMITS.imageBytes ? file : null;
-    }
-    const bitmap = await createImageBitmap(file);
-    try {
-        if (file.size <= LIMITS.imageShrinkBytes && Math.max(bitmap.width, bitmap.height) <= LIMITS.imageMaxSide) {
-            return file;
-        }
-        for (const step of SHRINK_STEPS) {
-            const image = await shrink(bitmap, step.side, step.quality, file.type);
-            if (image && image.size <= LIMITS.imageShrinkBytes) {
-                return image;
-            }
-        }
-
-        return file.size <= LIMITS.imageBytes ? file : null;
-    } finally {
-        bitmap.close();
-    }
+export function canShowDriveImage(id: string, timeout = 15_000): Promise<boolean> {
+    return new Promise(resolve => {
+        const image = new Image();
+        const timer = setTimeout(() => finish(false), timeout);
+        const finish = (shown: boolean) => {
+            clearTimeout(timer);
+            image.onload = image.onerror = null;
+            resolve(shown);
+        };
+        image.referrerPolicy = 'no-referrer';
+        image.onload = () => finish(image.naturalWidth > 0);
+        image.onerror = () => finish(false);
+        image.src = driveImageUrl(id, 200);
+    });
 }
 
-/** The file name to upload under, with the extension of what prepareImage produced. */
-export function uploadName(file: File, image: Blob): string {
-    return (file.name.replace(/\.[^.]+$/, '') || 'image') + '.' + (EXTENSIONS[image.type] ?? 'img');
-}
-
-/** Markdown for an uploaded image, described by its file name until the editor writes better. */
-export function imageMarkdown(url: string, fileName: string): string {
-    const description = fileName.replace(/\.[^.]+$/, '').replace(/[[\]\\]/g, '').trim() || 'image';
-
-    return `![${description}](${/[\s()]/.test(url) ? '<' + url + '>' : url})`;
+/**
+ * Turns the links that stand for Drive pictures into the pictures, each loaded only when it comes
+ * into view. A file that is not shared with everyone stays a link to it.
+ */
+export function drawDriveImages(root: HTMLElement): void {
+    root.querySelectorAll<HTMLAnchorElement>(`a.${DRIVE_IMAGE_CLASS}:not(.drawn)`).forEach(link => {
+        const id = savedDriveId(link.getAttribute('href') ?? '');
+        if (!id) {
+            return;
+        }
+        const description = link.textContent ?? '';
+        const image = root.ownerDocument.createElement('img');
+        image.loading = 'lazy';
+        image.decoding = 'async';
+        image.referrerPolicy = 'no-referrer';
+        image.alt = description;
+        image.addEventListener('error', () => {
+            link.textContent = `${description || 'Image'} (open in Google Drive)`;
+            link.classList.add('unavailable');
+        }, {once: true});
+        image.src = driveImageUrl(id);
+        link.classList.add('drawn');
+        link.title = 'Open in Google Drive';
+        link.replaceChildren(image);
+    });
 }

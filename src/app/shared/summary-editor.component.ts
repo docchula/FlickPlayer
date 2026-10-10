@@ -20,9 +20,9 @@ import {ChecklistViewComponent} from './checklist-view.component';
 import {CreditFieldComponent} from './credit-field.component';
 import {buildChecklist, Checklist, formatStamp} from '../study-aids/checklist';
 import {describeFailure} from '../study-aids/failures';
-import {IMAGE_TYPES} from '../study-aids/images';
+import {normalizeImageLinks} from '../study-aids/images';
 import {readCredit, writeCredit} from '../study-aids/local-store';
-import {uploadPickedImage} from '../study-aids/upload-image';
+import {askForDriveImage, DRIVE_IMAGE_CHECK, driveImageMarkdown} from '../study-aids/image-link';
 import {GenerationState, LecturePlayback, LIMITS, SaveFailure, SummaryPart} from '../study-aids/study-aids.model';
 
 /** Editors rewrite the summary's Markdown here, with a live preview of the checklist it makes. */
@@ -53,6 +53,7 @@ export class SummaryEditorComponent implements OnInit, OnDestroy {
     private service = inject(StudyAidsService);
     private modalCtrl = inject(ModalController);
     private alertCtrl = inject(AlertController);
+    private canShowImage = inject(DRIVE_IMAGE_CHECK);
 
     @Input() videoId: number;
     @Input() summary: SummaryPart | null = null;
@@ -62,13 +63,13 @@ export class SummaryEditorComponent implements OnInit, OnDestroy {
     @ViewChild('input') input: ElementRef<HTMLTextAreaElement>;
 
     protected readonly limit = LIMITS.summaryChars;
-    protected readonly imageTypes = IMAGE_TYPES.join(',');
     protected text = '';
     protected mode: 'write' | 'preview' = 'write';
     protected preview: Checklist = buildChecklist('');
     protected credit = readCredit();
     protected saving = false;
-    protected uploading = false;
+    /** While a picture's Drive link is being checked. */
+    protected checkingImage = false;
     protected problem: string | null = null;
     protected showHelp = false;
 
@@ -142,25 +143,22 @@ export class SummaryEditorComponent implements OnInit, OnDestroy {
         this.insert(stamp, input.selectionStart, input.selectionEnd);
     }
 
-    async onImagePicked(event: Event): Promise<void> {
-        const picker = event.target as HTMLInputElement;
-        const file = picker.files?.[0];
-        // Cleared so that picking the same file again still counts as a change.
-        picker.value = '';
-        if (!file) {
-            return;
-        }
-        // The cursor may move while the image uploads, so the place to put it is taken now.
+    /** Puts a picture from Google Drive where the cursor was. */
+    async addImage(): Promise<void> {
+        // The cursor may move while the link is asked for and checked, so the place to put it is taken now.
         const {selectionStart: start, selectionEnd: end} = this.input.nativeElement;
-        this.uploading = true;
         this.problem = null;
         try {
-            const markdown = await uploadPickedImage(this.service, this.videoId, file);
-            this.insert('\n' + markdown + '\n', start, end);
+            const choice = await askForDriveImage(this.alertCtrl);
+            if (!choice) {
+                return;
+            }
+            this.checkingImage = true;
+            this.insert('\n' + await driveImageMarkdown(choice, this.canShowImage) + '\n', start, end);
         } catch (error) {
             this.problem = (error as Error).message;
         } finally {
-            this.uploading = false;
+            this.checkingImage = false;
         }
     }
 
@@ -171,7 +169,7 @@ export class SummaryEditorComponent implements OnInit, OnDestroy {
         this.saving = true;
         this.problem = null;
         this.service.saveSummary(this.videoId, {
-            markdown: this.text.trim(),
+            markdown: normalizeImageLinks(this.text.trim()),
             revision: this.baseRevision,
             credit: this.credit,
         }).subscribe({

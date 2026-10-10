@@ -9,7 +9,36 @@ import {StudyAidsService} from '../study-aids.service';
 import {formatClock} from '../study-aids/checklist';
 import {LecturePlayback, TranscriptParagraph, TranscriptState} from '../study-aids/study-aids.model';
 
-/** The paragraph being spoken at `seconds`, or -1 before the first. */
+/** A paragraph as the transcript shows it: FlickMan's stamped lines, grouped back together for reading. */
+export interface ReadingParagraph {
+    time: number;
+    /** Each line keeps its place in the transcript, to mark the one being spoken. */
+    lines: {index: number; time: number; text: string}[];
+}
+
+/** Lines stamped one by one are grouped into paragraphs of about this long; longer lines stand alone. */
+const PARAGRAPH_SECONDS = 45;
+const PARAGRAPH_CHARACTERS = 600;
+
+export function readingParagraphs(lines: readonly TranscriptParagraph[]): ReadingParagraph[] {
+    const paragraphs: ReadingParagraph[] = [];
+    let length = 0;
+    lines.forEach((line, index) => {
+        const last = paragraphs[paragraphs.length - 1];
+        const entry = {index, time: line.time, text: line.text};
+        if (last && line.time - last.time < PARAGRAPH_SECONDS && length + line.text.length <= PARAGRAPH_CHARACTERS) {
+            last.lines.push(entry);
+            length += line.text.length;
+        } else {
+            paragraphs.push({time: line.time, lines: [entry]});
+            length = line.text.length;
+        }
+    });
+
+    return paragraphs;
+}
+
+/** The line being spoken at `seconds`, or -1 before the first. */
 export function paragraphAt(paragraphs: readonly TranscriptParagraph[], seconds: number): number {
     let found = -1;
     paragraphs.forEach((paragraph, i) => {
@@ -23,7 +52,8 @@ export function paragraphAt(paragraphs: readonly TranscriptParagraph[], seconds:
 
 /**
  * The AI's word-for-word transcript of the lecture, each paragraph with the time it starts, which
- * plays the lecture from there. The paragraph being spoken is marked as the lecture plays.
+ * plays the lecture from there, as does each stamped line in it. The line being spoken is marked
+ * as the lecture plays.
  */
 @Component({
     selector: 'app-transcript-body',
@@ -44,7 +74,8 @@ export class TranscriptBodyComponent implements OnChanges, OnDestroy {
     @Output() seek = new EventEmitter<number>();
 
     protected state$: Observable<TranscriptState>;
-    /** The paragraph being spoken, or -1. */
+    protected reading: ReadingParagraph[] = [];
+    /** The line being spoken, or -1. */
     protected current = -1;
     /** Whether the list scrolls along as the lecture plays. */
     protected following = false;
@@ -65,7 +96,10 @@ export class TranscriptBodyComponent implements OnChanges, OnDestroy {
             this.shownFor = this.videoId;
             this.current = -1;
             this.state$ = this.service.transcript(this.videoId).pipe(
-                tap(state => this.paragraphs = state.status === 'ready' ? state.paragraphs : []),
+                tap(state => {
+                    this.paragraphs = state.status === 'ready' ? state.paragraphs : [];
+                    this.reading = readingParagraphs(this.paragraphs);
+                }),
             );
         }
     }
@@ -109,7 +143,13 @@ export class TranscriptBodyComponent implements OnChanges, OnDestroy {
         }
     }
 
-    private scrollTo(index: number): void {
+    /** Whether the line being spoken is in the paragraph. */
+    holdsCurrent(paragraph: ReadingParagraph): boolean {
+        return paragraph.lines.some(line => line.index === this.current);
+    }
+
+    private scrollTo(line: number): void {
+        const index = this.reading.findIndex(paragraph => paragraph.lines.some(entry => entry.index === line));
         const paragraph = this.host.nativeElement.querySelectorAll<HTMLElement>('.transcript-paragraph')[index];
         if (!paragraph) {
             return;

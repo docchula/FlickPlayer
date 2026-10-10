@@ -1,6 +1,7 @@
 import {formatDay} from './byline';
 import {buildChecklist, formatClock, renderBlock, renderInline} from './checklist';
 import {BLOCK_START, isWord, letters, netChanges, track, Tracked, words} from './diff';
+import {DRIVE_IMAGE_CLASS} from './images';
 import {CHOICE_LETTERS} from './quiz';
 import {QuizRevision, Revision, RevisionAuthor, RevisionQuestion, SummaryRevision} from './study-aids.model';
 
@@ -124,12 +125,12 @@ export function aiOriginal<T>(revisions: readonly Revision<T>[]): Revision<T> | 
 
 let inertDocument: Document | null = null;
 
-/** The words of rendered HTML, with images named so that adding or removing one shows. */
+/** The words of rendered HTML, with pictures named so that adding or removing one shows. */
 function textOf(html: string): string {
     inertDocument ??= document.implementation.createHTMLDocument('');
     const holder = inertDocument.createElement('div');
     holder.innerHTML = html;
-    holder.querySelectorAll('img').forEach(image => image.replaceWith(`[${image.getAttribute('alt') || 'image'}]`));
+    holder.querySelectorAll(`a.${DRIVE_IMAGE_CLASS}`).forEach(picture => picture.replaceWith(`[${picture.textContent || 'image'}]`));
 
     return (holder.textContent ?? '').replace(/\s+/g, ' ').trim();
 }

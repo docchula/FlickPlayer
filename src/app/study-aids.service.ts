@@ -14,10 +14,10 @@ import {
     REMOVE_ROLE,
     SAVE_QUIZ,
     SAVE_SUMMARY,
+    SAVE_TICKS,
     STUDY_AIDS,
     SUMMARY_REVISIONS,
     TRANSCRIPT,
-    UPLOAD_IMAGE,
     VERIFY_QUIZ,
     VERIFY_SUMMARY,
 } from './study-aids/operations';
@@ -26,7 +26,6 @@ import {
     parseEditor,
     parseEditors,
     parseErrors,
-    parseImage,
     parseProfile,
     parseQuiz,
     parseQuizRevisions,
@@ -54,7 +53,6 @@ import {
     SummaryPart,
     SummaryRevision,
     TranscriptState,
-    UploadedImage,
 } from './study-aids/study-aids.model';
 
 /** A lecture's study aids are fetched again when a card shows them after this long. */
@@ -294,6 +292,15 @@ export class StudyAidsService {
         );
     }
 
+    /** Keeps the summary points this reader has ticked on FlickMan, so their other devices show them too. */
+    saveTicks(videoId: number, ticks: string[]): Observable<string[]> {
+        return this.editorCall(this.run(SAVE_TICKS, {video_id: String(videoId), ticks}), data => {
+            const saved = data['saveStudyTicks'];
+
+            return Array.isArray(saved) ? saved.filter((key): key is string => typeof key === 'string') : null;
+        });
+    }
+
     /** Everyone allowed to edit study aids. Admins only. */
     editors(): Observable<StudyAidsEditor[]> {
         return this.editorCall(this.run(EDITORS), data => parseEditors({editors: data['studyAidEditors']}));
@@ -306,21 +313,6 @@ export class StudyAidsService {
 
     removeEditor(email: string): Observable<true> {
         return this.editorCall(this.run(REMOVE_ROLE, {email}), () => true);
-    }
-
-    /** Stores an image on FlickMan and returns the address to write into the Markdown. */
-    uploadImage(videoId: number, image: Blob, fileName: string): Observable<UploadedImage> {
-        // A GraphQL multipart request: the operation, where in it the file goes, then the file.
-        const form = new FormData();
-        form.append('operations', JSON.stringify({
-            operationName: UPLOAD_IMAGE.name,
-            query: UPLOAD_IMAGE.query,
-            variables: {video_id: String(videoId), image: null},
-        }));
-        form.append('map', JSON.stringify({0: ['variables.image']}));
-        form.append('0', image, fileName);
-
-        return this.editorCall(this.send(this.man.post<Reply>('graphql', form)), data => parseImage(data['uploadStudyAidImage']));
     }
 
     private run(operation: Operation, variables: object = {}): Observable<Fields> {
