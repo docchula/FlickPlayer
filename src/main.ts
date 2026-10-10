@@ -1,8 +1,8 @@
-import {enableProdMode, importProvidersFrom} from '@angular/core';
+import {enableProdMode, importProvidersFrom, provideZoneChangeDetection } from '@angular/core';
 
 import {environment} from './environments/environment';
 import {RouteReuseStrategy} from '@angular/router';
-import {IonicRouteStrategy, provideIonicAngular} from '@ionic/angular/standalone';
+import {IonicRouteStrategy, provideIonicAngular} from '@ionic/angular';
 import {DEBUG_MODE} from '@angular/fire/compat/analytics';
 import {INSTRUMENTATION_ENABLED} from '@angular/fire/compat/performance';
 import {DEFAULTS} from '@angular/fire/compat/remote-config';
@@ -28,6 +28,7 @@ if (environment.production) {
 
 bootstrapApplication(AppComponent, {
     providers: [
+        provideZoneChangeDetection(),
         importProvidersFrom(BrowserModule, AppRoutingModule, WelcomePageModule, ServiceWorkerModule.register('ngsw-worker.js', {enabled: environment.production})),
         {provide: RouteReuseStrategy, useClass: IonicRouteStrategy},
         {provide: INSTRUMENTATION_ENABLED, useValue: environment.production},

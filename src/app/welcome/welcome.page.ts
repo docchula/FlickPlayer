@@ -9,7 +9,7 @@ import {
   IonContent,
   IonText,
   LoadingController,
-} from "@ionic/angular/standalone";
+} from "@ionic/angular";
 import {Router, RouterLink} from "@angular/router";
 import {ManService} from "../man.service";
 import {HttpErrorResponse} from "@angular/common/http";
