@@ -1,6 +1,6 @@
 import {Component, inject, Input} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {AlertController, IonButton, IonIcon, IonSpinner} from '@ionic/angular/standalone';
+import {AlertController, IonButton, IonIcon, IonSpinner} from '@ionic/angular';
 import {addIcons} from 'ionicons';
 import {shieldCheckmark, shieldOutline} from 'ionicons/icons';
 import {firstValueFrom, Observable} from 'rxjs';

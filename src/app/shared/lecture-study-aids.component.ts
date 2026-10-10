@@ -1,7 +1,7 @@
 import {afterNextRender, Component, ElementRef, inject, Injector, Input, NgZone} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {AsyncPipe} from '@angular/common';
-import {IonButton, IonCard, IonIcon, IonLabel, IonSegment, IonSegmentButton, IonSpinner, ModalController} from '@ionic/angular/standalone';
+import {IonButton, IonCard, IonIcon, IonLabel, IonSegment, IonSegmentButton, IonSpinner, ModalController} from '@ionic/angular';
 import {addIcons} from 'ionicons';
 import {chevronDown, chevronUp, expandOutline} from 'ionicons/icons';
 import {BehaviorSubject, combineLatest, Observable, of} from 'rxjs';

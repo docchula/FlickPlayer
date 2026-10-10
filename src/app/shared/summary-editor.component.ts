@@ -14,7 +14,7 @@ import {
     IonTitle,
     IonToolbar,
     ModalController,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import {StudyAidsService} from '../study-aids.service';
 import {ChecklistViewComponent} from './checklist-view.component';
 import {CreditFieldComponent} from './credit-field.component';

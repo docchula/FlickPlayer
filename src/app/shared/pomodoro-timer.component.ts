@@ -9,7 +9,7 @@ import {
     IonInput,
     IonLabel,
     PopoverController,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import {PomodoroService, DURATION_FIELDS, DurationField, PomodoroDurations, PhaseNotification} from '../pomodoro.service';
 import {AsyncPipe} from '@angular/common';
 import {addIcons} from 'ionicons';

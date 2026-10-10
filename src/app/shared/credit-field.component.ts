@@ -1,6 +1,6 @@
 import {Component, EventEmitter, inject, Input, Output} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {AlertController, IonButton, IonCheckbox, IonInput, IonSpinner} from '@ionic/angular/standalone';
+import {AlertController, IonButton, IonCheckbox, IonInput, IonSpinner} from '@ionic/angular';
 import {firstValueFrom} from 'rxjs';
 import {StudyAidsService} from '../study-aids.service';
 import {formatDay} from '../study-aids/byline';

@@ -1,5 +1,5 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {AlertController, ModalController} from '@ionic/angular/standalone';
+import {AlertController, ModalController} from '@ionic/angular';
 import {BehaviorSubject, of} from 'rxjs';
 import {QuizEditorComponent} from './quiz-editor.component';
 import {StudyAidsService} from '../study-aids.service';

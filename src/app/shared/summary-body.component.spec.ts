@@ -1,5 +1,5 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {ModalController} from '@ionic/angular/standalone';
+import {ModalController} from '@ionic/angular';
 import {of, throwError} from 'rxjs';
 import {SummaryBodyComponent} from './summary-body.component';
 import {StudyAidsService} from '../study-aids.service';

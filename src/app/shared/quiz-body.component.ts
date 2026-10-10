@@ -1,6 +1,6 @@
 import {Component, DestroyRef, EventEmitter, inject, Input, OnChanges, Output} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {IonButton, IonIcon, IonSpinner, ModalController} from '@ionic/angular/standalone';
+import {IonButton, IonIcon, IonSpinner, ModalController} from '@ionic/angular';
 import {addIcons} from 'ionicons';
 import {
     checkmarkCircle,

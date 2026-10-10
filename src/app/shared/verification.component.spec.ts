@@ -1,5 +1,5 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {AlertController} from '@ionic/angular/standalone';
+import {AlertController} from '@ionic/angular';
 import {of} from 'rxjs';
 import {VerificationComponent} from './verification.component';
 import {StudyAidsService} from '../study-aids.service';

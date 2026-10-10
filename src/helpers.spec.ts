@@ -1,4 +1,4 @@
-import {colorByFolderName} from './helpers';
+import {colorByFolderName, snippetToHtml} from './helpers';
 
 describe('colorByFolderName', () => {
     it('returns the mapped color for a known folder name', () => {
@@ -12,5 +12,17 @@ describe('colorByFolderName', () => {
 
     it('falls back to gray for an empty string', () => {
         expect(colorByFolderName('')).toBe('gray');
+    });
+});
+
+describe('snippetToHtml', () => {
+    it('keeps <mark> highlights but escapes any other HTML', () => {
+        expect(snippetToHtml('a <mark>heart</mark> <script>x</script> & "b"'))
+            .toBe('a <mark>heart</mark> &lt;script&gt;x&lt;/script&gt; &amp; &quot;b&quot;');
+    });
+
+    it('strips Markdown headings, list markers and emphasis, and collapses whitespace', () => {
+        expect(snippetToHtml('## Heading\n\n- **bold** item\n1. `code`  here'))
+            .toBe('Heading bold item code here');
     });
 });

@@ -15,7 +15,7 @@ import {
     IonTitle,
     IonToolbar,
     ModalController,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import {firstValueFrom, Observable} from 'rxjs';
 import {take} from 'rxjs/operators';
 import {AuthService} from '../auth.service';

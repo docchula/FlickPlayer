@@ -1,5 +1,5 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {AlertController} from '@ionic/angular/standalone';
+import {AlertController} from '@ionic/angular';
 import {BehaviorSubject, of, throwError} from 'rxjs';
 import {CreditFieldComponent} from './credit-field.component';
 import {StudyAidsService} from '../study-aids.service';

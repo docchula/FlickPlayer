@@ -2,7 +2,7 @@ import {TestBed, fakeAsync, tick} from '@angular/core/testing';
 import {Router} from '@angular/router';
 import {throwError, of} from 'rxjs';
 import {HttpErrorResponse} from '@angular/common/http';
-import {provideIonicAngular} from '@ionic/angular/standalone';
+import {provideIonicAngular} from '@ionic/angular';
 import {WelcomePage} from './welcome.page';
 import {ManService} from '../man.service';
 import {AuthService} from '../auth.service';

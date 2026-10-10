@@ -1,6 +1,6 @@
 import {Component, ElementRef, EventEmitter, inject, Input, NgZone, OnChanges, OnDestroy, Output} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {IonButton, IonIcon, IonSpinner} from '@ionic/angular/standalone';
+import {IonButton, IonIcon, IonSpinner} from '@ionic/angular';
 import {addIcons} from 'ionicons';
 import {locateOutline, play} from 'ionicons/icons';
 import {Observable} from 'rxjs';

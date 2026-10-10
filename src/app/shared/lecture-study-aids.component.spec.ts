@@ -1,7 +1,7 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {By} from '@angular/platform-browser';
 import {ActivatedRoute, convertToParamMap} from '@angular/router';
-import {ModalController} from '@ionic/angular/standalone';
+import {ModalController} from '@ionic/angular';
 import {BehaviorSubject, of} from 'rxjs';
 import {LectureStudyAidsComponent} from './lecture-study-aids.component';
 import {QuizBodyComponent} from './quiz-body.component';

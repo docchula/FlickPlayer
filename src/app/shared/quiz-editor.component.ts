@@ -12,7 +12,7 @@ import {
     IonTitle,
     IonToolbar,
     ModalController,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import {addIcons} from 'ionicons';
 import {addOutline, arrowDown, arrowUp, closeOutline, eyeOutline, imageOutline, timeOutline, trashOutline} from 'ionicons/icons';
 import {StudyAidsService} from '../study-aids.service';

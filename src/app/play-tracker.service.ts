@@ -62,7 +62,7 @@ export interface PlayHistory {
 export interface PlayHistoryValue {
     duration?: number | null;
     end_time: number;
-    played_at: Timestamp | FieldValue;
+    played_at: Timestamp | FieldValue | string; // ISO 8601 string from the API
     video_id?: number;
     year?: string;
     course?: string;

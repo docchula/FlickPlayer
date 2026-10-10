@@ -1,6 +1,6 @@
 import {Component, EventEmitter, Input, Output, ViewEncapsulation} from '@angular/core';
 import {NgTemplateOutlet} from '@angular/common';
-import {IonIcon} from '@ionic/angular/standalone';
+import {IonIcon} from '@ionic/angular';
 import {addIcons} from 'ionicons';
 import {play} from 'ionicons/icons';
 import {RichTextComponent} from './rich-text.component';
