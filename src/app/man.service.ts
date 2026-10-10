@@ -244,6 +244,40 @@ export class ManService {
         ).pipe(map(response => response?.data?.videos?.data ?? []));
     }
 
+    // Hybrid keyword + semantic search over the AI-generated video documents. Returns the best section per video.
+    searchDocuments(query: string, first = 20): Observable<DocumentSearchHit[]> {
+        const trimmed = query.trim();
+        if (trimmed.length < 2) {
+            return of([]);
+        }
+        const body = {
+            query: `query SearchDocuments($query: String!, $first: Int!) {
+                searchDocuments(query: $query, first: $first) {
+                    hits { video_id course_id title heading_path snippet score lecturer date }
+                }
+            }`,
+            variables: {query: trimmed.substring(0, 500), first},
+        };
+        if (this.httpOptions.headers.get('Authorization').length < 30) {
+            console.error('ManService ID token is not set.');
+            return of([]);
+        }
+        return this.http.post<{
+            data?: { searchDocuments: { hits: DocumentSearchHit[] } | null } | null,
+            errors?: { message: string }[],
+        }>(
+            this.getEndpointLocation() + 'graphql',
+            body,
+            this.httpOptions
+        ).pipe(map(response => {
+            const hits = response?.data?.searchDocuments?.hits;
+            if (!hits && response?.errors?.length) {
+                throw new Error(response.errors[0].message);
+            }
+            return hits ?? [];
+        }));
+    }
+
     /*updateCurrentStudent(requestBody) {
         if (!this.email) {
             console.error('ManService user email is not set.');
@@ -343,4 +377,15 @@ export interface SearchVideoResult {
     lecturer: string;
     duration: number;
     course_id: string;
+}
+
+export interface DocumentSearchHit {
+    video_id: string;
+    course_id: string;
+    title: string;
+    heading_path: string; // e.g. `Title > Heading > Subheading`
+    snippet: string; // raw Markdown excerpt with matches wrapped in `<mark>`
+    score: number | null;
+    lecturer: string[];
+    date: string | null;
 }

@@ -66,6 +66,50 @@ p {
   margin-right: 0.5rem;
 }
 
+/* ── Global Search ── */
+.search-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-right: 0.5rem;
+
+  ion-searchbar {
+    flex: 1;
+    min-width: 0;
+  }
+
+  // Not enough room beside the search box on small screens, so the switch goes below it
+  @media (max-width: 575px) {
+    flex-wrap: wrap;
+    gap: 0;
+    padding: 0 0.75rem 0.5rem 0;
+
+    ion-searchbar {
+      flex-basis: 100%;
+    }
+  }
+}
+
+.search-mode {
+  flex: 0 0 auto;
+  width: auto;
+  // Ionic sizes segment buttons as equal grid columns up to 360px each; size them to their labels instead
+  grid-auto-columns: max-content;
+
+  ion-segment-button {
+    min-width: 0;
+    --padding-start: 0.75rem;
+    --padding-end: 0.75rem;
+    text-transform: none;
+  }
+
+  @media (max-width: 575px) {
+    flex: 1 1 100%;
+    margin-left: 0.75rem;
+    grid-auto-columns: 1fr;
+  }
+}
+
 /* ── Global Search Results ── */
 .search-results-container {
   padding-top: 0.5rem;
@@ -167,4 +211,38 @@ p {
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+
+.heading-path {
+  font-size: 0.8rem;
+  color: var(--ion-color-medium) !important;
+  text-align: left !important;
+  padding: 0 !important;
+  margin-top: 0.1rem;
+}
+
+.snippet {
+  text-align: left !important;
+  padding: 0 !important;
+  margin: 0.35rem 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ion-text-color, #222) !important;
+  white-space: normal !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+
+  // [innerHTML] content doesn't get the component's scoping attribute
+  ::ng-deep mark {
+    background: rgba(255, 213, 79, 0.55);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+}
+
+.watch-button {
+  align-self: center;
 }

@@ -1,4 +1,4 @@
-import {colorByFolderName, contrastByFolderName} from './helpers';
+import {colorByFolderName, contrastByFolderName, snippetToHtml} from './helpers';
 
 // The colours themselves come from the theme; see palette.spec.ts for the values each mode gives.
 describe('colorByFolderName', () => {
@@ -17,5 +17,17 @@ describe('colorByFolderName', () => {
 
     it('pairs each colour with a text colour that reads on it', () => {
         expect(contrastByFolderName('1st year')).toBe('var(--flick-series-0-contrast)');
+    });
+});
+
+describe('snippetToHtml', () => {
+    it('keeps <mark> highlights but escapes any other HTML', () => {
+        expect(snippetToHtml('a <mark>heart</mark> <script>x</script> & "b"'))
+            .toBe('a <mark>heart</mark> &lt;script&gt;x&lt;/script&gt; &amp; &quot;b&quot;');
+    });
+
+    it('strips Markdown headings, list markers and emphasis, and collapses whitespace', () => {
+        expect(snippetToHtml('## Heading\n\n- **bold** item\n1. `code`  here'))
+            .toBe('Heading bold item code here');
     });
 });
