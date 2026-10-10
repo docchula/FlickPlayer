@@ -32,8 +32,8 @@ import {
     IonTitle,
     IonToolbar,
     ModalController,
-} from '@ionic/angular/standalone';
-import {AsyncPipe, NgStyle} from '@angular/common';
+} from '@ionic/angular';
+import {AsyncPipe, DatePipe, NgStyle} from '@angular/common';
 import {ThemeMenuComponent} from '../shared/theme-menu.component';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../consent.service';
@@ -64,7 +64,7 @@ export type SearchResults =
     imports: [
         IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon,
         IonContent, IonGrid, IonRow, IonCol, IonCard, RouterLink, NgStyle,
-        IonCardHeader, IonCardTitle, AsyncPipe, IonCardContent, IonItem,
+        IonCardHeader, IonCardTitle, AsyncPipe, DatePipe, IonCardContent, IonItem,
         ThemeMenuComponent,
         IonLabel, IonText, IonSpinner, IonSearchbar, IonList, IonSegment, IonSegmentButton,
     ]

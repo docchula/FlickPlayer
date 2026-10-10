@@ -170,7 +170,7 @@
         <ion-text class="ion-padding small-text">
             @if (response$ | async; as response) {
                 @if (response.last_fetched_at) {
-                    <p>Last fetched from MDCU E-Learning at {{ response.last_fetched_at }}</p>
+                    <p>Last fetched from MDCU E-Learning at {{ response.last_fetched_at | date: 'dd MMMM yyyy HH:mm' }}</p>
                 }
             }
             <p>

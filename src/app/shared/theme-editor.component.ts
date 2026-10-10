@@ -19,7 +19,7 @@ import {
     IonToggle,
     IonToolbar,
     ModalController,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import {addIcons} from 'ionicons';
 import {add, close, moonOutline, sunnyOutline} from 'ionicons/icons';
 import {ThemeService} from '../theme.service';

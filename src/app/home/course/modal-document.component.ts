@@ -1,7 +1,7 @@
 import {afterNextRender, Component, ElementRef, inject, Injector, Input, OnInit, ViewEncapsulation} from '@angular/core';
 import {
     AlertController, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonNote, IonSpinner, IonTitle, IonToolbar, ModalController,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import {addIcons} from 'ionicons';
 import {playOutline} from 'ionicons/icons';
 import {Lecture, ManService} from '../../man.service';
