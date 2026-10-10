@@ -3,7 +3,7 @@ import {Observable, of, Subject, timer} from 'rxjs';
 import {CourseListResponse, DocumentSearchHit, Lecture, ManService, SearchVideoResult} from '../man.service';
 import {Router, RouterLink} from '@angular/router';
 import {AuthService} from '../auth.service';
-import {colorByFolderName, snippetToHtml} from '../../helpers';
+import {colorByFolderName, contrastByFolderName, snippetToHtml} from '../../helpers';
 import {addIcons} from "ionicons";
 import {documentTextOutline, filmOutline, logOutOutline, playOutline, searchOutline} from "ionicons/icons";
 import {catchError, debounce, distinctUntilChanged, map, switchMap, tap} from 'rxjs/operators';
@@ -34,6 +34,7 @@ import {
     ModalController,
 } from '@ionic/angular';
 import {AsyncPipe, DatePipe, NgStyle} from '@angular/common';
+import {ThemeMenuComponent} from '../shared/theme-menu.component';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../consent.service';
 import {confirmAiDisclaimer, ModalDocumentComponent} from './course/modal-document.component';
@@ -64,6 +65,7 @@ export type SearchResults =
         IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon,
         IonContent, IonGrid, IonRow, IonCol, IonCard, RouterLink, NgStyle,
         IonCardHeader, IonCardTitle, AsyncPipe, DatePipe, IonCardContent, IonItem,
+        ThemeMenuComponent,
         IonLabel, IonText, IonSpinner, IonSearchbar, IonList, IonSegment, IonSegmentButton,
     ]
 })
@@ -190,6 +192,7 @@ export class HomePage implements OnInit {
     }
 
     protected readonly colorByFolderName = colorByFolderName;
+    protected readonly contrastByFolderName = contrastByFolderName;
     protected readonly Object = Object;
 
     goToLastVideo(lastVideo: Lecture) {

@@ -1,0 +1,268 @@
+import {DestroyRef, inject, Injectable} from '@angular/core';
+import {BehaviorSubject, firstValueFrom, Observable} from 'rxjs';
+import {filter} from 'rxjs/operators';
+import {getValue, RemoteConfig} from '@angular/fire/remote-config';
+import {AuthService} from './auth.service';
+import {ManService} from './man.service';
+
+export const SYNC_CACHE_KEY_PREFIX = 'flickSync_';
+/** A remote config flag, so sync can be switched off without a release. */
+export const SYNC_ENABLED_KEY = 'userSyncEnabled';
+
+/**
+ * The whole account lives in one document on FlickMan (`v1/user_settings`), fetched at most
+ * once per this interval however many times the app is opened or reloaded.
+ */
+export const SYNC_READ_TTL_MS = 5 * 60 * 1000;
+/**
+ * A preference is sent once it has been left alone this long, so dragging a slider or a colour
+ * picker costs one write rather than one per step.
+ */
+export const SYNC_URGENT_DELAY_MS = 2000;
+/**
+ * Study time accumulates continuously, so a device sends it at most once per this interval,
+ * which caps it at 48 writes a day. Leaving or reloading the page does not break the limit:
+ * what is held back is still on the device, and it goes out the next time the app opens there.
+ */
+export const SYNC_BACKGROUND_DELAY_MS = 30 * 60 * 1000;
+/** When this device last wrote, so the interval holds across reloads. */
+export const SYNC_SENT_AT_KEY = 'flickSyncSentAt';
+
+export interface RemoteUserSettings {
+    theme?: unknown;
+    pomodoro?: unknown;
+    study?: {devices?: Record<string, unknown>};
+}
+
+interface CachedSettings {
+    data: RemoteUserSettings;
+    at: number;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** Deep merge, so a queued patch never discards another part of the document. FlickMan merges the same way. */
+function mergePatch(target: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> {
+    for (const [key, value] of Object.entries(patch)) {
+        const existing = target[key];
+        target[key] = isRecord(value) && isRecord(existing)
+            ? mergePatch({...existing}, value)
+            : value;
+    }
+    return target;
+}
+
+/**
+ * Keeps one document per account in step across devices, on a budget.
+ *
+ * There is no live updating: none of this needs to arrive mid-session. Reads come from a cache
+ * that survives reloads, writes are merged and sent on a delay, and anything unexpected turns
+ * sync off for the session rather than retrying.
+ */
+@Injectable({
+    providedIn: 'root',
+})
+export class UserSyncService {
+    private authService = inject(AuthService);
+    private manService = inject(ManService);
+
+    private readonly activeSubject = new BehaviorSubject<boolean>(false);
+    /** True once the account document has actually been reached, so the app can say so. */
+    readonly active$: Observable<boolean> = this.activeSubject.asObservable();
+
+    private userId: string | null = null;
+    private enabled = true;
+    private pending: Record<string, unknown> = {};
+    private urgentPending = false;
+    private lastSentAt = this.readSentAt();
+    private timer: ReturnType<typeof setTimeout> | null = null;
+    private dueAt = 0;
+    /** Every caller opening the app at once shares the one read in flight. */
+    private reading: Promise<RemoteUserSettings | null> | null = null;
+
+    constructor() {
+        const remoteConfig = inject(RemoteConfig, {optional: true});
+        if (remoteConfig) {
+            try {
+                const flag = getValue(remoteConfig, SYNC_ENABLED_KEY);
+                // A static source means nothing has been published for the key, which must
+                // leave sync on: the switch is there to turn it off, never to fail it closed.
+                this.enabled = flag.getSource() === 'static' || flag.asBoolean();
+            } catch {
+                // Remote config is unavailable, so the switch simply does not apply.
+            }
+        }
+
+        const leave = () => this.flush(false);
+        window.addEventListener('pagehide', leave);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                leave();
+            }
+        });
+        inject(DestroyRef).onDestroy(() => {
+            window.removeEventListener('pagehide', leave);
+            this.flush();
+        });
+    }
+
+    attach(uid: string): void {
+        if (this.userId !== uid) {
+            this.flush();
+            this.userId = uid;
+        }
+    }
+
+    detach(): void {
+        this.flush();
+        this.userId = null;
+        this.activeSubject.next(false);
+    }
+
+    private disable(): void {
+        this.enabled = false;
+        this.activeSubject.next(false);
+    }
+
+    /** The stored document, from the local cache when it is recent enough to trust. */
+    async read(): Promise<RemoteUserSettings | null> {
+        const uid = this.userId;
+        if (!uid || !this.enabled) {
+            return null;
+        }
+        const cached = this.readCache(uid);
+        if (cached && Date.now() - cached.at < SYNC_READ_TTL_MS) {
+            this.activeSubject.next(true);
+            return cached.data;
+        }
+        // Callers read as soon as the user signs in, a moment before ManService has the ID token
+        await firstValueFrom(this.authService.idToken.pipe(filter(Boolean)));
+        if (this.userId !== uid) {
+            return null;
+        }
+        this.reading ??= this.fetch(uid, cached).finally(() => {
+            this.reading = null;
+        });
+        return this.reading;
+    }
+
+    private async fetch(uid: string, cached: CachedSettings | null): Promise<RemoteUserSettings | null> {
+        try {
+            const data = await firstValueFrom(this.manService.getUserSettings()) as RemoteUserSettings | null;
+            if (!data) {
+                throw new Error('No user settings');
+            }
+            this.writeCache(uid, data);
+            this.activeSubject.next(true);
+            return data;
+        } catch {
+            this.disable();
+            return cached?.data ?? null;
+        }
+    }
+
+    /**
+     * Merge a change into the document. `urgent` sends it in a couple of seconds; everything
+     * else waits for the background cadence or for the page to go away.
+     */
+    queue(patch: Record<string, unknown>, urgent = false): void {
+        if (!this.userId || !this.enabled) {
+            return;
+        }
+        mergePatch(this.pending, patch);
+        if (urgent) {
+            this.urgentPending = true;
+            this.schedule(SYNC_URGENT_DELAY_MS, true);
+        } else {
+            this.schedule(SYNC_BACKGROUND_DELAY_MS);
+        }
+    }
+
+    /**
+     * Send whatever is waiting. Leaving the page (`force` false) sends a preference straight
+     * away, but holds study time back while the last write is recent, so switching apps over
+     * and over never adds writes.
+     */
+    flush(force = true): void {
+        const uid = this.userId;
+        if (!force && !this.urgentPending && Date.now() - this.lastSentAt < SYNC_BACKGROUND_DELAY_MS) {
+            return;
+        }
+        this.clearTimer();
+        const patch = this.pending;
+        this.pending = {};
+        this.urgentPending = false;
+        if (!uid || !this.enabled || !Object.keys(patch).length) {
+            return;
+        }
+        this.writeSentAt(Date.now());
+        this.mergeCache(uid, patch);
+        this.manService.saveUserSettings(patch).subscribe({error: () => this.disable()});
+    }
+
+    /** A `restart` waits for changes to stop; otherwise the earliest send already due holds. */
+    private schedule(delay: number, restart = false): void {
+        const due = Date.now() + delay;
+        if (this.timer && this.dueAt <= due && !restart) {
+            return;
+        }
+        this.clearTimer();
+        this.dueAt = due;
+        this.timer = setTimeout(() => this.flush(), delay);
+    }
+
+    private clearTimer(): void {
+        if (this.timer) {
+            clearTimeout(this.timer);
+            this.timer = null;
+        }
+    }
+
+    private readSentAt(): number {
+        try {
+            return Number(localStorage.getItem(SYNC_SENT_AT_KEY)) || 0;
+        } catch {
+            return 0;
+        }
+    }
+
+    private writeSentAt(at: number): void {
+        this.lastSentAt = at;
+        try {
+            localStorage.setItem(SYNC_SENT_AT_KEY, String(at));
+        } catch {
+            // Without it the interval still holds within this page.
+        }
+    }
+
+    private cacheKey(uid: string): string {
+        return SYNC_CACHE_KEY_PREFIX + uid;
+    }
+
+    private readCache(uid: string): CachedSettings | null {
+        try {
+            const raw = localStorage.getItem(this.cacheKey(uid));
+            const parsed = raw ? JSON.parse(raw) as CachedSettings : null;
+            return parsed && isRecord(parsed.data) ? parsed : null;
+        } catch {
+            return null;
+        }
+    }
+
+    private writeCache(uid: string, data: RemoteUserSettings): void {
+        try {
+            localStorage.setItem(this.cacheKey(uid), JSON.stringify({data, at: Date.now()} as CachedSettings));
+        } catch {
+            // Without the cache every load costs one read, which is still affordable.
+        }
+    }
+
+    /** Keep the cache in step with what was just sent, so the next read stays local. */
+    private mergeCache(uid: string, patch: Record<string, unknown>): void {
+        const cached = this.readCache(uid);
+        const data = mergePatch({...(cached?.data ?? {})} as Record<string, unknown>, patch);
+        this.writeCache(uid, data as RemoteUserSettings);
+    }
+}

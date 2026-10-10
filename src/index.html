@@ -7,6 +7,27 @@
 
   <base href="/"/>
 
+  <!-- Paint the saved theme before Angular boots. Key matches APPLIED_THEME_KEY in theme.service.ts. -->
+  <script>
+    (function () {
+      var root = document.documentElement;
+      try {
+        var saved = JSON.parse(localStorage.getItem('flickThemeApplied') || 'null');
+        if (saved && saved.scheme) {
+          root.setAttribute('data-theme', saved.scheme);
+          var variables = saved.variables || {};
+          Object.keys(variables).forEach(function (name) {
+            root.style.setProperty(name, variables[name]);
+          });
+          return;
+        }
+      } catch (error) {
+        // No usable saved theme; fall back to the system preference.
+      }
+      root.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    })();
+  </script>
+
   <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <meta name="format-detection" content="telephone=no"/>
   <meta name="msapplication-tap-highlight" content="no"/>

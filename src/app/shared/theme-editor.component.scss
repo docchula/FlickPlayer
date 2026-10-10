@@ -1,0 +1,383 @@
+.theme-section {
+    margin-bottom: 1.5rem;
+}
+
+.section-title {
+    margin: 0 0 0.15rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--flick-muted-text);
+}
+
+.section-hint {
+    margin: 0 0 0.6rem;
+    font-size: 0.75rem;
+    color: var(--flick-muted-text);
+}
+
+.colour-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.colour-field {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.colour-value {
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    text-transform: uppercase;
+    color: var(--flick-muted-text);
+}
+
+.swatch-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.swatch-template {
+    background: linear-gradient(90deg, var(--swatch-from) 0 50%, var(--swatch-to) 50% 100%);
+}
+
+.swatch-divider {
+    width: 1px;
+    height: 1.5rem;
+    margin: 0 0.15rem;
+    background: var(--ion-border-color, var(--ion-color-step-150));
+}
+
+.swatch {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.swatch.selected {
+    box-shadow: 0 0 0 2px var(--ion-background-color), 0 0 0 4px var(--ion-color-primary);
+}
+
+.colour-field input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.colour-preview {
+    display: inline-block;
+    width: 1.6rem;
+    height: 1.6rem;
+    border: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.control-card {
+    margin: 0.75rem 0;
+    border-radius: 0.75rem;
+    border: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+    background: var(--flick-surface, var(--ion-color-step-50, rgba(0, 0, 0, 0.04)));
+    overflow: hidden;
+
+    ion-item:not(:last-child) {
+        border-bottom: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+    }
+}
+
+.control-item {
+    --background: transparent;
+    --padding-start: 1rem;
+    --inner-padding-end: 1rem;
+    --min-height: 3rem;
+    font-size: 0.88rem;
+    color: var(--ion-text-color);
+}
+
+.control-label {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--ion-text-color);
+    flex-shrink: 0;
+    min-width: 4.5rem;
+}
+
+.control-range {
+    max-width: 58%;
+    padding-inline: 0.5rem 0.25rem;
+}
+
+.fit-segment {
+    margin: 0.75rem 0;
+}
+
+.picture-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+    gap: 0.5rem;
+    margin: 0.75rem 0 0.5rem;
+}
+
+.picture-tile {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid transparent;
+}
+
+.picture-tile.selected {
+    border-color: var(--flick-accent-text);
+}
+
+.picture-button {
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+}
+
+.picture-button:disabled {
+    cursor: default;
+}
+
+.picture-button img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Big enough to hit with a fingertip on a tablet, small enough to leave the picture visible. */
+.picture-delete {
+    position: absolute;
+    top: 0.2rem;
+    right: 0.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(var(--ion-color-dark-rgb), 0.6);
+    color: var(--ion-color-dark-contrast);
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.picture-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--flick-accent-text);
+    background: transparent;
+    color: var(--flick-accent-text);
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.file-input {
+    display: none;
+}
+
+.hint {
+    margin: 0.4rem 0 0.5rem;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    color: var(--flick-muted-text);
+}
+
+/* Ionic paints these labels in a palette colour; the theme's readable variants are used
+   instead so the editor stays legible whatever colour the page ends up. */
+.quiet-button {
+    --color: var(--flick-muted-text);
+}
+
+.accent-button {
+    --color: var(--flick-accent-text);
+    --border-color: var(--flick-accent-text);
+}
+
+ion-segment-button {
+    --color: var(--flick-muted-text);
+    --color-checked: var(--flick-accent-text);
+    --indicator-color: var(--flick-accent-text);
+}
+
+/* iOS fills the chosen segment instead of underlining it, so the label needs the page behind it. */
+ion-segment-button.ios {
+    --indicator-color: var(--ion-background-color, #fff);
+}
+
+.saved-swatch {
+    position: relative;
+    display: inline-flex;
+}
+
+.swatch-remove {
+    position: absolute;
+    top: -0.2rem;
+    inset-inline-end: -0.2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    padding: 0;
+    font-size: 0.65rem;
+    border: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+    border-radius: 50%;
+    background: var(--ion-background-color);
+    color: var(--flick-muted-text);
+    cursor: pointer;
+}
+
+.swatch-save {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--flick-surface-muted);
+    color: var(--ion-text-color);
+}
+
+.swatch-save[disabled] {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.template-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.template-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--flick-muted-text);
+    font: inherit;
+    font-size: 0.72rem;
+    cursor: pointer;
+}
+
+.template-option .swatch {
+    width: 2.5rem;
+    height: 2.5rem;
+}
+
+.template-option.selected {
+    color: var(--ion-text-color);
+    font-weight: 600;
+}
+
+.template-option.selected .swatch {
+    box-shadow: 0 0 0 2px var(--ion-background-color), 0 0 0 4px var(--ion-color-primary);
+}
+
+.role-segment ion-segment-button {
+    text-transform: none;
+}
+
+.role-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.role-dot {
+    width: 0.8rem;
+    height: 0.8rem;
+    border: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+    border-radius: 50%;
+}
+
+.role-hint {
+    margin-top: 0.5rem;
+}
+
+.colour-row {
+    flex-wrap: wrap;
+    margin-bottom: 0.6rem;
+}
+
+.choice-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+    border-radius: 999px;
+    background: none;
+    color: var(--flick-muted-text);
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.choice-chip.selected {
+    border-color: var(--flick-accent-text);
+    color: var(--flick-accent-text);
+    font-weight: 600;
+}
+
+.template-group-label {
+    margin: 0.75rem 0 0.45rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--flick-muted-text);
+}
+
+.template-group-label:first-of-type {
+    margin-top: 0;
+}
+
+/* Set apart from the colour picker so the Light and Dark choices read as the custom theme's
+   own setting rather than the app's light and dark modes. */
+.shade-block {
+    margin: 0 0 0.75rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--ion-border-color, var(--ion-color-step-150));
+    border-radius: 10px;
+    background: var(--flick-surface);
+}
+
+.shade-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--flick-muted-text);
+}
+
+.shade-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
