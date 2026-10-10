@@ -2,7 +2,25 @@ import {inject, Injectable} from '@angular/core';
 import {HttpErrorResponse} from '@angular/common/http';
 import {BehaviorSubject, defer, Observable, of, Subscription, throwError} from 'rxjs';
 import {catchError, map, shareReplay, tap} from 'rxjs/operators';
-import {JSend, ManService} from './man.service';
+import {ManService} from './man.service';
+import {
+    ANSWER,
+    CHANGE_DISPLAY_NAME,
+    DISPLAY_NAME_QUERY,
+    EDITORS,
+    GRANT_ROLE,
+    Operation,
+    QUIZ_REVISIONS,
+    REMOVE_ROLE,
+    SAVE_QUIZ,
+    SAVE_SUMMARY,
+    STUDY_AIDS,
+    SUMMARY_REVISIONS,
+    TRANSCRIPT,
+    UPLOAD_IMAGE,
+    VERIFY_QUIZ,
+    VERIFY_SUMMARY,
+} from './study-aids/operations';
 import {
     isObject,
     parseEditor,
@@ -41,6 +59,10 @@ import {
 
 /** A lecture's study aids are fetched again when a card shows them after this long. */
 const FRESH_FOR_MS = 5 * 60 * 1000;
+/** Earlier versions are large and only fetched when a reader asks for them, so few are kept. */
+const KEPT_HISTORIES = 4;
+/** A transcript can be long, and FlickMan only lets a reader fetch a few an hour. */
+const KEPT_TRANSCRIPTS = 6;
 
 interface Entry {
     state: BehaviorSubject<StudyAidsState>;
@@ -48,25 +70,83 @@ interface Entry {
     request: Subscription | null;
 }
 
-/** Earlier versions are large and only fetched when a reader asks for them, so few are kept. */
-const KEPT_HISTORIES = 4;
-/** A transcript can be long, and FlickMan only lets a reader fetch a few an hour. */
-const KEPT_TRANSCRIPTS = 6;
+type Fields = Record<string, unknown>;
 
-const EDITORS_PATH = 'v1/study_aids/editors';
-const PROFILE_PATH = 'v1/study_aids/me';
-
-function path(videoId: number): string {
-    return 'v1/study_aids/' + videoId;
+interface Reply {
+    data?: Fields | null;
+    errors?: unknown[];
 }
 
-function isSaveFailure(value: unknown): value is SaveFailure {
+/** What can go wrong: what the editors are told, or a FlickMan that has no study aids at all. */
+type Failure = SaveFailure | {kind: 'unsupported'};
+
+const UNEXPECTED: SaveFailure = {kind: 'failed', message: 'FlickMan sent back something unexpected.'};
+
+function isFailure(value: unknown): value is Failure {
     return isObject(value) && typeof value['kind'] === 'string';
 }
 
+/** The value at a path through an answer, such as `video`, `transcript`. */
+function at(data: unknown, ...keys: string[]): unknown {
+    return keys.reduce<unknown>((value, key) => isObject(value) ? value[key] : null, data);
+}
+
+/** FlickMan's GraphQL errors in the terms the editors need. Validation messages keep the argument paths as fields. */
+function graphqlFailure(errors: unknown[]): Failure {
+    const entries = errors.filter(isObject);
+    const validation: Record<string, string[]> = {};
+    for (const entry of entries) {
+        Object.assign(validation, parseErrors(at(entry, 'extensions', 'validation')));
+    }
+    const messages = Object.values(validation).flat();
+    if (messages.length) {
+        return {kind: 'invalid', message: messages[0], errors: validation};
+    }
+    const message = text(entries[0]?.['message']) ?? '';
+    if (at(entries[0], 'extensions', 'category') === 'authorization' || message === 'This action is unauthorized.') {
+        return {kind: 'forbidden'};
+    }
+    if (/^Rate limit for .+ exceeded/.test(message)) {
+        return {kind: 'rate-limited'};
+    }
+    // A FlickMan without study aids does not know their fields.
+    if (/^Cannot query field/.test(message)) {
+        return {kind: 'unsupported'};
+    }
+
+    return {kind: 'failed', message: message || 'FlickMan could not do that.'};
+}
+
+function failureOf(error: unknown): Failure {
+    if (isFailure(error)) {
+        return error;
+    }
+    if (!(error instanceof HttpErrorResponse) || error.status === 0) {
+        return {kind: 'network'};
+    }
+    const errors = at(error.error, 'errors');
+    if (Array.isArray(errors) && errors.length) {
+        return graphqlFailure(errors);
+    }
+    switch (error.status) {
+        case 401:
+        case 403:
+            return {kind: 'forbidden'};
+        case 429:
+            return {kind: 'rate-limited'};
+        default:
+            return {kind: 'failed', message: `FlickMan answered with error ${error.status}.`};
+    }
+}
+
+function forEditors(failure: Failure): SaveFailure {
+    return failure.kind === 'unsupported' ? {kind: 'failed', message: 'This server has no study aids yet.'} : failure;
+}
+
 /**
- * The AI summary and quiz FlickMan keeps for each lecture. Both cards share one request per
- * lecture, and an edit or an answer updates what they show without fetching again.
+ * The AI summary, quiz and transcript FlickMan keeps for each lecture, through its GraphQL API.
+ * The tabs share one request per lecture, and an edit or an answer updates what they show without
+ * fetching again.
  */
 @Injectable({
     providedIn: 'root',
@@ -99,29 +179,39 @@ export class StudyAidsService {
     }
 
     saveSummary(videoId: number, change: SummaryChange): Observable<SummaryPart> {
-        return this.save(videoId, '/summary', change, parseSummary, (aids, summary) => ({...aids, summary}));
+        return this.savePart(videoId, 'summary', SAVE_SUMMARY, 'saveStudySummary', {
+            video_id: String(videoId),
+            markdown: change.markdown,
+            revision: change.revision,
+            credit: change.credit,
+        }, parseSummary, (aids, summary) => ({...aids, summary}));
     }
 
     saveQuiz(videoId: number, change: QuizChange): Observable<QuizPart> {
-        return this.save(videoId, '/quiz', change, parseQuiz, (aids, quiz) => ({...aids, quiz}));
+        return this.savePart(videoId, 'quiz', SAVE_QUIZ, 'saveStudyQuiz', {
+            video_id: String(videoId),
+            questions: change.questions,
+            revision: change.revision,
+            credit: change.credit,
+        }, parseQuiz, (aids, quiz) => ({...aids, quiz}));
     }
 
     /** Marks the version an editor has checked against the lecture, or takes their mark back. */
     verify(videoId: number, part: PartName, revision: number, verified: boolean): Observable<SummaryPart | QuizPart> {
-        const body = {revision, verified};
+        const variables = {video_id: String(videoId), revision, verified};
 
         return part === 'summary'
-            ? this.save(videoId, '/summary/verify', body, parseSummary, (aids, summary) => ({...aids, summary}))
-            : this.save(videoId, '/quiz/verify', body, parseQuiz, (aids, quiz) => ({...aids, quiz}));
+            ? this.savePart(videoId, 'summary', VERIFY_SUMMARY, 'verifyStudySummary', variables, parseSummary, (aids, summary) => ({...aids, summary}))
+            : this.savePart(videoId, 'quiz', VERIFY_QUIZ, 'verifyStudyQuiz', variables, parseQuiz, (aids, quiz) => ({...aids, quiz}));
     }
 
     /** Every saved version of the summary, oldest first. `revision` is the one on show, so a newer one is fetched afresh. */
     summaryRevisions(videoId: number, revision: number): Observable<SummaryRevision[]> {
-        return this.history(videoId, 'summary', revision, parseSummaryRevisions);
+        return this.history(videoId, 'summary', revision, SUMMARY_REVISIONS, parseSummaryRevisions);
     }
 
     quizRevisions(videoId: number, revision: number): Observable<QuizRevision[]> {
-        return this.history(videoId, 'quiz', revision, parseQuizRevisions);
+        return this.history(videoId, 'quiz', revision, QUIZ_REVISIONS, parseQuizRevisions);
     }
 
     /** The AI's word-for-word transcript, fetched once a visit; a failure is only tried again on request. */
@@ -150,14 +240,14 @@ export class StudyAidsService {
     /** This editor's display name; null for readers who are not editors, and until it arrives. */
     profile(): Observable<EditorProfile | null> {
         if (!this.profileKnown && (!this.profileRequest || this.profileRequest.closed)) {
-            this.profileRequest = this.man.get<JSend<unknown>>(PROFILE_PATH).subscribe({
-                next: response => {
-                    this.profileKnown = !!response;
-                    this.profileState.next(parseProfile(response?.data));
+            this.profileRequest = this.run(DISPLAY_NAME_QUERY).subscribe({
+                next: data => {
+                    this.profileKnown = true;
+                    this.profileState.next(parseProfile(data['studyAidDisplayName']));
                 },
-                error: (error: unknown) => {
+                error: (failure: Failure) => {
                     // Anything but "not an editor" is asked about again next time.
-                    this.profileKnown = error instanceof HttpErrorResponse && [401, 403, 404].includes(error.status);
+                    this.profileKnown = failure.kind === 'forbidden' || failure.kind === 'unsupported';
                 },
             });
         }
@@ -167,7 +257,7 @@ export class StudyAidsService {
 
     /** Changes the name students see, which FlickMan allows once every 30 days. */
     saveProfile(name: string): Observable<EditorProfile> {
-        return this.send(this.man.post<JSend<unknown>>(PROFILE_PATH, {name}), parseProfile).pipe(
+        return this.editorCall(this.run(CHANGE_DISPLAY_NAME, {name}), data => parseProfile(data['changeStudyAidDisplayName'])).pipe(
             tap(profile => {
                 this.profileKnown = true;
                 this.profileState.next(profile);
@@ -185,112 +275,121 @@ export class StudyAidsService {
 
     /** Adds an answer to the class stats. Only a reader's first answer to a question counts. */
     answer(videoId: number, questionId: string, choice: number): Observable<AnswerStats | null> {
-        return this.man.post<JSend<unknown>>(path(videoId) + '/answers', {question_id: questionId, choice}).pipe(
-            map(response => parseStats(response?.data)),
+        return this.run(ANSWER, {video_id: String(videoId), question_id: questionId, choice}).pipe(
+            map(data => {
+                const stats = parseStats(data['answerStudyQuestion']);
+                if (!stats) {
+                    // The question was removed or replaced since the quiz was loaded.
+                    this.refresh(videoId);
+                }
+
+                return stats;
+            }),
             tap(stats => this.updateQuestion(videoId, questionId, question => ({
                 ...question,
                 stats: stats ?? question.stats,
                 mine: question.mine ?? choice,
             }))),
-            catchError((error: unknown) => {
-                // The question was removed or replaced since the quiz was loaded.
-                if (error instanceof HttpErrorResponse && error.status === 404) {
-                    this.refresh(videoId);
-                }
-
-                return of(null);
-            }),
+            catchError(() => of(null)),
         );
     }
 
     /** Everyone allowed to edit study aids. Admins only. */
     editors(): Observable<StudyAidsEditor[]> {
-        return this.send(this.man.get<JSend<unknown>>(EDITORS_PATH), parseEditors);
+        return this.editorCall(this.run(EDITORS), data => parseEditors({editors: data['studyAidEditors']}));
     }
 
     /** Adds an editor, or changes their role. Admins only. */
     saveEditor(email: string, role: EditorRole): Observable<StudyAidsEditor> {
-        return this.send(this.man.post<JSend<unknown>>(EDITORS_PATH, {email, role}), parseEditor);
+        return this.editorCall(this.run(GRANT_ROLE, {email, role}), data => parseEditor(data['grantStudyAidRole']));
     }
 
     removeEditor(email: string): Observable<true> {
-        return this.send(this.man.post<JSend<unknown>>(EDITORS_PATH + '/remove', {email}), () => true);
+        return this.editorCall(this.run(REMOVE_ROLE, {email}), () => true);
     }
 
     /** Stores an image on FlickMan and returns the address to write into the Markdown. */
     uploadImage(videoId: number, image: Blob, fileName: string): Observable<UploadedImage> {
+        // A GraphQL multipart request: the operation, where in it the file goes, then the file.
         const form = new FormData();
-        form.append('image', image, fileName);
+        form.append('operations', JSON.stringify({
+            operationName: UPLOAD_IMAGE.name,
+            query: UPLOAD_IMAGE.query,
+            variables: {video_id: String(videoId), image: null},
+        }));
+        form.append('map', JSON.stringify({0: ['variables.image']}));
+        form.append('0', image, fileName);
 
-        return this.send(this.man.post<JSend<unknown>>(path(videoId) + '/images', form), parseImage);
+        return this.editorCall(this.send(this.man.post<Reply>('graphql', form)), data => parseImage(data['uploadStudyAidImage']));
     }
 
-    private send<T>(request: Observable<JSend<unknown> | null>, parse: (value: unknown) => T | null): Observable<T> {
+    private run(operation: Operation, variables: object = {}): Observable<Fields> {
+        return this.send(this.man.post<Reply>('graphql', {operationName: operation.name, query: operation.query, variables}));
+    }
+
+    /** The answer's data, or a Failure when FlickMan reports errors or cannot be reached. */
+    private send(request: Observable<Reply | null>): Observable<Fields> {
         return request.pipe(
-            map(response => {
-                if (!response) {
-                    throw {kind: 'network'} satisfies SaveFailure;
+            map(reply => {
+                if (!reply) {
+                    throw {kind: 'network'} satisfies Failure;
                 }
-                const result = parse(response.data);
+                if (Array.isArray(reply.errors) && reply.errors.length) {
+                    throw graphqlFailure(reply.errors);
+                }
+                if (!isObject(reply.data)) {
+                    throw UNEXPECTED;
+                }
+
+                return reply.data;
+            }),
+            catchError((error: unknown) => throwError(() => failureOf(error))),
+        );
+    }
+
+    private editorCall<T>(request: Observable<Fields>, parse: (data: Fields) => T | null): Observable<T> {
+        return request.pipe(
+            map(data => {
+                const result = parse(data);
                 if (result === null) {
-                    throw {kind: 'failed', message: 'FlickMan sent back something unexpected.'} satisfies SaveFailure;
+                    throw UNEXPECTED;
                 }
 
                 return result;
             }),
-            catchError((error: unknown) => throwError(() => this.saveFailure(error, () => null))),
+            catchError((error: unknown) => throwError(() => forEditors(failureOf(error)))),
         );
     }
 
-    private history<T>(videoId: number, part: PartName, revision: number, parse: (value: unknown) => T[] | null): Observable<T[]> {
-        const key = `${videoId}/${part}/${revision}`;
-        let cached = this.histories.get(key) as Observable<T[]> | undefined;
-        if (!cached) {
-            // A failed request is not kept, so asking again sends a new one.
-            cached = this.send(defer(() => this.man.get<JSend<unknown>>(`${path(videoId)}/${part}/revisions`)), parse).pipe(shareReplay(1));
-            this.histories.set(key, cached);
-            for (const old of [...this.histories.keys()].slice(0, -KEPT_HISTORIES)) {
-                this.histories.delete(old);
-            }
-        }
-
-        return cached;
-    }
-
-    private fetchTranscript(videoId: number, subject: BehaviorSubject<TranscriptState>): void {
-        this.man.get<JSend<unknown>>(path(videoId) + '/transcript').subscribe({
-            next: response => {
-                const paragraphs = parseTranscript(response?.data);
-                subject.next(paragraphs?.length ? {status: 'ready', paragraphs} : response ? {status: 'none'} : {status: 'error', limited: false});
-            },
-            error: (error: unknown) => {
-                const status = error instanceof HttpErrorResponse ? error.status : 0;
-                subject.next([401, 403, 404].includes(status) ? {status: 'none'} : {status: 'error', limited: status === 429});
-            },
-        });
-    }
-
-    private save<P extends SummaryPart | QuizPart>(
+    /** A save or a verification. FlickMan answers with what became of it and the part as it now stands. */
+    private savePart<P extends SummaryPart | QuizPart>(
         videoId: number,
-        part: string,
-        change: SummaryChange | QuizChange | {revision: number; verified: boolean},
+        name: PartName,
+        operation: Operation,
+        field: string,
+        variables: object,
         parse: (value: unknown) => P | null,
         apply: (aids: StudyAids, saved: P) => StudyAids,
     ): Observable<P> {
-        return this.man.post<JSend<unknown>>(path(videoId) + part, change).pipe(
-            map(response => {
-                const saved = parse(response?.data);
-                if (!saved) {
-                    throw (response
-                        ? {kind: 'failed', message: 'FlickMan sent back something unexpected.'}
-                        : {kind: 'network'}) satisfies SaveFailure;
+        return this.run(operation, variables).pipe(
+            map(data => {
+                const outcome = at(data, field, 'outcome');
+                const part = parse(at(data, field, name));
+                if ((outcome === 'saved' || outcome === 'unchanged') && part) {
+                    return part;
                 }
-
-                return saved;
+                if (outcome === 'conflict') {
+                    throw {kind: 'conflict', current: part} satisfies SaveFailure;
+                }
+                if (outcome === 'missing') {
+                    this.refresh(videoId);
+                    throw {kind: 'failed', message: `This lecture has no ${name} yet.`} satisfies SaveFailure;
+                }
+                throw UNEXPECTED;
             }),
             tap(saved => this.update(videoId, aids => apply(aids, saved))),
             catchError((error: unknown) => {
-                const failure = this.saveFailure(error, parse);
+                const failure = forEditors(failureOf(error));
                 if (failure.kind === 'conflict' && failure.current) {
                     // Show everyone's latest version behind the editor straight away.
                     this.update(videoId, aids => apply(aids, failure.current as P));
@@ -303,27 +402,35 @@ export class StudyAidsService {
         );
     }
 
-    private saveFailure(error: unknown, parse: (value: unknown) => SummaryPart | QuizPart | null): SaveFailure {
-        if (isSaveFailure(error)) {
-            return error;
+    private history<T>(videoId: number, name: PartName, revision: number, operation: Operation, parse: (value: unknown) => T[] | null): Observable<T[]> {
+        const key = `${videoId}/${name}/${revision}`;
+        let cached = this.histories.get(key) as Observable<T[]> | undefined;
+        if (!cached) {
+            // A failed request is not kept, so asking again sends a new one.
+            cached = this.editorCall(defer(() => this.run(operation, {id: String(videoId)})), data => {
+                const revisions = at(data, 'video', 'studyAids', name, 'revisions');
+
+                return parse({revisions: Array.isArray(revisions) ? revisions : []});
+            }).pipe(shareReplay(1));
+            this.histories.set(key, cached);
+            for (const old of [...this.histories.keys()].slice(0, -KEPT_HISTORIES)) {
+                this.histories.delete(old);
+            }
         }
-        if (!(error instanceof HttpErrorResponse) || error.status === 0) {
-            return {kind: 'network'};
-        }
-        const body = isObject(error.error) ? error.error : {};
-        switch (error.status) {
-            case 409:
-                return {kind: 'conflict', current: parse(body['data'])};
-            case 422:
-                return {kind: 'invalid', message: text(body['message']) ?? 'FlickMan did not accept the change.', errors: parseErrors(body['errors'])};
-            case 401:
-            case 403:
-                return {kind: 'forbidden'};
-            case 429:
-                return {kind: 'rate-limited'};
-            default:
-                return {kind: 'failed', message: text(body['message']) ?? `FlickMan answered with error ${error.status}.`};
-        }
+
+        return cached;
+    }
+
+    private fetchTranscript(videoId: number, subject: BehaviorSubject<TranscriptState>): void {
+        this.run(TRANSCRIPT, {id: String(videoId)}).subscribe({
+            next: data => {
+                const paragraphs = parseTranscript(at(data, 'video', 'transcript'));
+                subject.next(paragraphs?.length ? {status: 'ready', paragraphs} : {status: 'none'});
+            },
+            error: (failure: Failure) => subject.next(failure.kind === 'forbidden' || failure.kind === 'unsupported'
+                ? {status: 'none'}
+                : {status: 'error', limited: failure.kind === 'rate-limited'}),
+        });
     }
 
     private fetch(videoId: number, entry: Entry): void {
@@ -336,37 +443,28 @@ export class StudyAidsService {
         if (entry.state.value.status !== 'ready') {
             entry.state.next({status: 'loading'});
         }
-        entry.request = this.man.get<JSend<unknown>>(path(videoId)).subscribe({
-            next: response => {
-                const aids = parseStudyAids(response?.data);
+        entry.request = this.run(STUDY_AIDS, {id: String(videoId)}).subscribe({
+            next: data => {
+                const video = at(data, 'video');
+                // A lecture FlickMan does not have, or does not show this reader, comes back as null.
+                const aids = isObject(video) && isObject(video['studyAids'])
+                    ? parseStudyAids({...video['studyAids'], has_transcript: video['has_transcript']})
+                    : null;
                 entry.fetchedAt = Date.now();
-                entry.state.next(aids ? {status: 'ready', aids} : {status: response ? 'unavailable' : 'error'});
+                entry.state.next(aids ? {status: 'ready', aids} : {status: 'unavailable'});
             },
-            error: (error: unknown) => {
-                const status = this.errorState(error);
+            error: (failure: Failure) => {
+                if (failure.kind === 'unsupported') {
+                    this.supported = false;
+                }
+                const status = failure.kind === 'unsupported' || failure.kind === 'forbidden' ? 'unavailable' : 'error';
                 entry.fetchedAt = Date.now();
-                // A failed refresh keeps what the cards already show.
+                // A failed refresh keeps what the tabs already show.
                 if (status === 'unavailable' || entry.state.value.status !== 'ready') {
                     entry.state.next({status});
                 }
             },
         });
-    }
-
-    private errorState(error: unknown): 'unavailable' | 'error' {
-        if (!(error instanceof HttpErrorResponse)) {
-            return 'error';
-        }
-        if (error.status === 404) {
-            // FlickMan says a lecture is missing in JSend; any other 404 means it has no study aids routes.
-            if (!isObject(error.error) || error.error['status'] !== 'error') {
-                this.supported = false;
-            }
-
-            return 'unavailable';
-        }
-
-        return error.status === 401 || error.status === 403 ? 'unavailable' : 'error';
     }
 
     private update(videoId: number, change: (aids: StudyAids) => StudyAids): void {

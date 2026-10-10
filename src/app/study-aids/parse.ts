@@ -40,6 +40,11 @@ function count(value: unknown): number | null {
     return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null;
 }
 
+/** GraphQL sends IDs as strings: "7". */
+function numericId(value: unknown): number | null {
+    return count(typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : value);
+}
+
 function seconds(value: unknown): number | null {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.floor(value) : null;
 }
@@ -141,7 +146,7 @@ export function parseStudyAids(value: unknown): StudyAids | null {
     if (!isObject(value)) {
         return null;
     }
-    const videoId = count(value['video_id']);
+    const videoId = numericId(value['video_id']);
     if (videoId === null) {
         return null;
     }

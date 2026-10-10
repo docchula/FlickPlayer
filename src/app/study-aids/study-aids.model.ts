@@ -1,5 +1,5 @@
 /**
- * The summary and quiz FlickMan keeps for each lecture, as served by `GET v1/study_aids/{video}`.
+ * The summary and quiz FlickMan keeps for each lecture, as served by `Video.studyAids` in its GraphQL API.
  * Field names follow the API, like the rest of the ManService models.
  */
 export interface StudyAids {
