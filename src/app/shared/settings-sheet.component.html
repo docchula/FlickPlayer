@@ -1,0 +1,97 @@
+<ion-header>
+    <ion-toolbar>
+        <ion-title>Settings</ion-title>
+        <ion-buttons slot="end">
+            <ion-button (click)="close()" aria-label="Close">
+                <ion-icon name="close" slot="icon-only"></ion-icon>
+            </ion-button>
+        </ion-buttons>
+    </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+    @if (settings$ | async; as settings) {
+        @if (availableWidgets$ | async; as widgets) {
+            @if (widgets.length) {
+                <section class="settings-section">
+                    <h2 class="section-title">Show or hide</h2>
+                    <p class="section-hint">Kept on this device, so your phone and your computer can differ.</p>
+                    <ion-list lines="none" class="settings-card">
+                        @for (widget of widgets; track widget.key) {
+                            <ion-item>
+                                <ion-icon [name]="widget.icon" slot="start" aria-hidden="true"></ion-icon>
+                                <!-- The label sits inside the toggle so the whole row is the control. -->
+                                <ion-toggle class="widget-toggle"
+                                            labelPlacement="start"
+                                            justify="space-between"
+                                            [checked]="isVisible(settings, widget.key)"
+                                            (ionChange)="onWidgetToggle(widget.key, $event)">
+                                    <span class="widget-label">{{ widget.label }}</span>
+                                    <span class="widget-hint">{{ widget.description }}</span>
+                                </ion-toggle>
+                            </ion-item>
+                        }
+                    </ion-list>
+                </section>
+            }
+        }
+
+        <section class="settings-section">
+            <h2 class="section-title">Font</h2>
+            <p class="section-hint">Changes every page, on this device only.</p>
+            <ion-list lines="none" class="settings-card">
+                <ion-item>
+                    <ion-select label="Typeface" labelPlacement="start" interface="popover"
+                                [interfaceOptions]="popoverOptions"
+                                [value]="settings.fontId"
+                                (ionChange)="onFontChange($event)">
+                        @for (font of settingsService.fonts; track font.id) {
+                            <ion-select-option [value]="font.id" [class]="fontOptionClass(font)">{{ font.name }}</ion-select-option>
+                        }
+                    </ion-select>
+                </ion-item>
+                @if (font$ | async; as font) {
+                    <p class="card-note font-preview" [style.font-family]="font.stack || null">{{ sample }}</p>
+                }
+            </ion-list>
+        </section>
+
+        @if (pomodoroAvailable$ | async) {
+            <section class="settings-section">
+                <h2 class="section-title">Pomodoro</h2>
+                <p class="section-hint">How the focus timer counts your study, on this device only.</p>
+                <ion-list lines="none" class="settings-card">
+                    <ion-item>
+                        <ion-select label="Day starts at" labelPlacement="start" interface="popover"
+                                    [interfaceOptions]="popoverOptions"
+                                    [value]="settings.pomodoroResetHour"
+                                    (ionChange)="onResetHourChange($event)">
+                            @for (option of settingsService.resetHours; track option.value) {
+                                <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
+                            }
+                        </ion-select>
+                    </ion-item>
+                    <p class="card-note">The session count goes back to zero at this time.</p>
+
+                    @if (sessionModeSupported$ | async) {
+                        <div class="card-block">
+                            <span class="block-label" id="session-type-label">Session type</span>
+                            <ion-segment aria-labelledby="session-type-label"
+                                         [value]="sessionMode$ | async"
+                                         (ionChange)="onSessionModeChange($event)">
+                                @for (option of sessionModeOptions; track option.value) {
+                                    <ion-segment-button [value]="option.value">
+                                        <ion-label>{{ option.label }}</ion-label>
+                                    </ion-segment-button>
+                                }
+                            </ion-segment>
+                            <p class="card-note">{{ sessionModeHint(sessionMode$ | async) }}</p>
+                        </div>
+                    }
+                </ion-list>
+            </section>
+        }
+
+        <ion-button expand="block" fill="clear" class="quiet-button" (click)="reset()">Restore default settings</ion-button>
+    }
+</ion-content>

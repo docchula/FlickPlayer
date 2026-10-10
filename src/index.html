@@ -18,6 +18,42 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#1976d2">
+
+  <!-- Apply saved settings before Angular boots. Keys match settings.service.ts. -->
+  <script>
+    (function () {
+      var root = document.documentElement;
+      // Matches DEFAULT_HIDDEN in settings-presets.ts.
+      var hidden = ['pomodoro', 'heatmap'];
+      try {
+        var saved = JSON.parse(localStorage.getItem('flickSettings') || 'null');
+        if (saved && Array.isArray(saved.hidden)) {
+          hidden = saved.hidden;
+        }
+      } catch (error) {
+        // No usable saved settings; the defaults apply.
+      }
+      if (hidden.length) {
+        root.setAttribute('data-hidden', hidden.join(' '));
+      }
+      try {
+        var font = JSON.parse(localStorage.getItem('flickFontApplied') || 'null');
+        if (font && font.stack) {
+          root.style.setProperty('--ion-font-family', font.stack);
+          root.style.setProperty('--flick-font-scale', String(font.scale || 1));
+        }
+        if (font && font.href) {
+          var link = document.createElement('link');
+          link.id = 'flick-font-' + font.id;
+          link.rel = 'stylesheet';
+          link.href = font.href;
+          document.head.appendChild(link);
+        }
+      } catch (error) {
+        // No usable saved font; the default stack applies.
+      }
+    })();
+  </script>
 </head>
 
 <body>

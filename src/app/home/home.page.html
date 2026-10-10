@@ -4,6 +4,7 @@
             MDCU Recorded Lecture
         </ion-title>
         <ion-buttons slot="end">
+            <app-settings-menu></app-settings-menu>
             <ion-button fill="outline" color="secondary" (click)="logout()">
                 <span class="ion-hide-sm-down text-sign-out">Sign out</span>
                 <ion-icon name="log-out-outline"></ion-icon>
@@ -126,6 +127,7 @@
                 }
             </div>
         } @else if (response$ | async; as response) {
+            <app-pomodoro-timer></app-pomodoro-timer>
             @if (response.last_played) {
                 <ion-card color="tertiary" class="ion-margin-top">
                     <ion-card-header>

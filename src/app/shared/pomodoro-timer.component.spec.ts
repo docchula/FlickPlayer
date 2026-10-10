@@ -1,6 +1,5 @@
 import {TestBed} from '@angular/core/testing';
 import {PopoverController} from '@ionic/angular';
-import {of} from 'rxjs';
 import {PomodoroTimerComponent} from './pomodoro-timer.component';
 import {PomodoroService, DEFAULT_DURATIONS} from '../pomodoro.service';
 
@@ -11,7 +10,6 @@ describe('PomodoroTimerComponent', () => {
     beforeEach(() => {
         pomodoroService = jasmine.createSpyObj('PomodoroService', ['updateDurations', 'getDurations']);
         pomodoroService.getDurations.and.returnValue({...DEFAULT_DURATIONS});
-        (pomodoroService as unknown as {phaseNotification$: unknown}).phaseNotification$ = of();
 
         TestBed.configureTestingModule({
             providers: [
@@ -21,7 +19,6 @@ describe('PomodoroTimerComponent', () => {
             ],
         });
         component = TestBed.inject(PomodoroTimerComponent);
-        component.ngOnInit();
     });
 
     describe('onDurationChange', () => {

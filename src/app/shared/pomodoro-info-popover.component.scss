@@ -1,0 +1,26 @@
+.pomodoro-info-popover {
+    padding: 1rem;
+    max-width: 300px;
+}
+
+.pomodoro-info-popover h3 {
+    margin: 0 0 0.5rem 0;
+    font-weight: 700;
+    color: var(--ion-text-color);
+}
+
+.pomodoro-info-popover p,
+.pomodoro-info-popover li {
+    font-size: 0.85rem;
+    color: var(--ion-color-medium);
+    line-height: 1.4;
+}
+
+.pomodoro-info-popover ol {
+    padding-left: 1.25rem;
+    margin: 0.5rem 0 0 0;
+}
+
+.step-detail {
+    color: var(--ion-color-medium-tint);
+}
