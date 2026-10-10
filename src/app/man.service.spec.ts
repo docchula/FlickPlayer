@@ -135,6 +135,43 @@ describe('ManService', () => {
         });
     });
 
+    describe('getPlayStats', () => {
+        const playStats = {
+            from: '2025-10-11', to: '2026-10-10', updated_at: '2026-10-10T12:00:00+07:00',
+            total: {sessions: 1, video_seconds: 120, actual_seconds: 60},
+            days: [{date: '2026-10-10', sessions: 1, video_seconds: 120, actual_seconds: 60}],
+            recent_hours: [{date: '2026-10-10', hour: 9, sessions: 1, video_seconds: 120, actual_seconds: 60}],
+        };
+
+        beforeEach(() => service.setIdToken(VALID_TOKEN));
+
+        it('requests the stats of the logged-in user and unwraps them', done => {
+            service.getPlayStats().subscribe(result => {
+                expect(result).toEqual(playStats);
+                done();
+            });
+
+            const req = httpMock.expectOne(APP_ENDPOINT + 'graphql');
+            expect(req.request.body.query).toContain('playStats');
+            req.flush({data: {me: {playStats}}});
+        });
+
+        it('returns null for a user who has not played a video yet', done => {
+            service.getPlayStats().subscribe(result => {
+                expect(result).toBeNull();
+                done();
+            });
+            httpMock.expectOne(APP_ENDPOINT + 'graphql').flush({data: {me: null}});
+        });
+
+        it('is not cached, so a later call fetches fresh stats', () => {
+            service.getPlayStats().subscribe();
+            httpMock.expectOne(APP_ENDPOINT + 'graphql').flush({data: {me: null}});
+            service.getPlayStats().subscribe();
+            httpMock.expectOne(APP_ENDPOINT + 'graphql').flush({data: {me: null}});
+        });
+    });
+
     describe('getVideosInCourse', () => {
         beforeEach(() => service.setIdToken(VALID_TOKEN));
 

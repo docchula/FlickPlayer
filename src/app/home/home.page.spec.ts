@@ -10,7 +10,7 @@ import {ConsentService} from '../consent.service';
 
 describe('HomePage', () => {
     let component: HomePage;
-    let manService: jasmine.SpyObj<Pick<ManService, 'getVideoList' | 'searchVideos' | 'searchDocuments'>>;
+    let manService: jasmine.SpyObj<Pick<ManService, 'getVideoList' | 'getPlayStats' | 'searchVideos' | 'searchDocuments'>>;
     let router: jasmine.SpyObj<Pick<Router, 'navigate'>>;
 
     const videoList = {
@@ -22,8 +22,9 @@ describe('HomePage', () => {
     };
 
     beforeEach(() => {
-        manService = jasmine.createSpyObj('ManService', ['getVideoList', 'searchVideos', 'searchDocuments']);
+        manService = jasmine.createSpyObj('ManService', ['getVideoList', 'getPlayStats', 'searchVideos', 'searchDocuments']);
         manService.getVideoList.and.returnValue(of(videoList));
+        manService.getPlayStats.and.returnValue(of(null));
         router = jasmine.createSpyObj('Router', ['navigate']);
 
         TestBed.configureTestingModule({

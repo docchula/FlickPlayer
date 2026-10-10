@@ -10,7 +10,9 @@
                     Watch video
                 </ion-button>
             }
-            <ion-button (click)="close()" [strong]="true">Close</ion-button>
+            <ion-button (click)="close()" aria-label="Close" title="Close">
+                <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
         </ion-buttons>
     </ion-toolbar>
 </ion-header>

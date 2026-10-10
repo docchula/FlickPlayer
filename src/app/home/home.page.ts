@@ -1,9 +1,9 @@
 import {Component, inject, OnInit} from '@angular/core';
 import {Observable, of, Subject, timer} from 'rxjs';
-import {CourseListResponse, DocumentSearchHit, Lecture, ManService, SearchVideoResult} from '../man.service';
+import {CourseListResponse, DocumentSearchHit, Lecture, ManService, PlayStats, SearchVideoResult} from '../man.service';
 import {Router, RouterLink} from '@angular/router';
 import {AuthService} from '../auth.service';
-import {colorByFolderName, snippetToHtml} from '../../helpers';
+import {colorByFolderName, formatDuration, snippetToHtml} from '../../helpers';
 import {addIcons} from "ionicons";
 import {documentTextOutline, filmOutline, logOutOutline, playOutline, searchOutline} from "ionicons/icons";
 import {catchError, debounce, distinctUntilChanged, map, switchMap, tap} from 'rxjs/operators';
@@ -37,6 +37,8 @@ import {AsyncPipe, DatePipe, NgStyle} from '@angular/common';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../consent.service';
 import {confirmAiDisclaimer, ModalDocumentComponent} from './course/modal-document.component';
+import {ModalPlayStatsComponent} from './modal-play-stats.component';
+import {buildRecentGrid, formatDay, RecentRow, serverNow} from './play-stats';
 
 // `title` searches videos by title, lecturer or date; `content` searches the AI-generated transcript documents.
 export type SearchMode = 'title' | 'content';
@@ -77,6 +79,10 @@ export class HomePage implements OnInit {
     private alertController = inject(AlertController);
 
     response$: Observable<CourseListResponse>;
+    playStats: PlayStats | null = null;
+    recentRows: RecentRow[] = [];
+    /** Totals of the 7-day grid, in seconds */
+    recentTotals = {video: 0, actual: 0};
     searchQuery = '';
     searchMode: SearchMode = 'title';
     // The mode switch is only shown while the search box is focused or holds a query
@@ -97,6 +103,19 @@ export class HomePage implements OnInit {
         this.authService.signOut().then(() => {
             this.router.navigate(['/']);
         }).catch(e => console.log('Reject', e));
+    }
+
+    // Runs each time the page is shown, so the activity is up to date after watching a video
+    ionViewWillEnter() {
+        this.manService.getPlayStats().pipe(catchError(() => of(null))).subscribe(stats => {
+            this.playStats = stats;
+            this.recentRows = stats ? buildRecentGrid(stats, undefined, serverNow(stats)) : [];
+            const cells = this.recentRows.flatMap(row => row.cells).filter(c => c);
+            this.recentTotals = {
+                video: cells.reduce((sum, c) => sum + c.video_seconds, 0),
+                actual: cells.reduce((sum, c) => sum + c.actual_seconds, 0),
+            };
+        });
     }
 
     ngOnInit() {
@@ -189,19 +208,27 @@ export class HomePage implements OnInit {
         }
     }
 
+    async openPlayStats() {
+        if (!this.playStats) {
+            return;
+        }
+        const modal = await this.modalCtrl.create({
+            component: ModalPlayStatsComponent,
+            componentProps: {stats: this.playStats},
+        });
+        await modal.present();
+        if (this.consentService.current === 'granted') {
+            logEvent(this.analytics, 'view_play_stats');
+        }
+    }
+
     protected readonly colorByFolderName = colorByFolderName;
+    protected readonly formatDay = formatDay;
     protected readonly Object = Object;
 
     goToLastVideo(lastVideo: Lecture) {
         return this.router.navigate(['home', 'course', lastVideo.course.id]);
     }
 
-    formatDuration(seconds: number): string {
-        if (!seconds) return '';
-        const m = Math.floor(seconds / 60);
-        if (m < 60) return `${m} min`;
-        const h = Math.floor(m / 60);
-        const rem = m % 60;
-        return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
-    }
+    protected readonly formatDuration = formatDuration;
 }

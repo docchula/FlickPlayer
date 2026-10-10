@@ -12,6 +12,16 @@ export function colorByFolderName(name: string) {
     return colorMap[name] || 'gray';
 }
 
+// "45 min", "2h 5m" or "3h"; empty for zero.
+export function formatDuration(seconds: number): string {
+    if (!seconds) return '';
+    const m = Math.floor(seconds / 60);
+    if (m < 60) return `${m} min`;
+    const h = Math.floor(m / 60);
+    const rem = m % 60;
+    return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
+}
+
 const HTML_ESCAPES: Record<string, string> = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'};
 
 // Turns a search snippet (raw Markdown with matches wrapped in `<mark>`) into safe HTML that keeps only the highlights.

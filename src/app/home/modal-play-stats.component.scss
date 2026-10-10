@@ -1,0 +1,167 @@
+@use 'heat-levels' as *;
+
+h2 {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+section:first-child h2 {
+  margin-top: 0;
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)); // always 3 columns, whatever the screen width
+  gap: 0.75rem;
+
+  .tile {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    background: var(--ion-color-step-50, #f2f2f2);
+    text-align: center;
+  }
+
+  .value {
+    font-size: 1.8rem;
+    font-weight: 600;
+  }
+
+  .label {
+    font-weight: 500;
+  }
+
+  .caption {
+    font-size: 0.75rem;
+    color: var(--ion-color-medium);
+  }
+
+  @media (max-width: 480px) {
+    gap: 0.4rem;
+
+    .tile {
+      padding: 0.5rem 0.3rem;
+    }
+
+    .value {
+      font-size: 1.3rem;
+    }
+
+    .caption {
+      font-size: 0.65rem;
+    }
+  }
+}
+
+.range {
+  margin: 0.5rem 0;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.hours {
+  margin-top: 0.5rem;
+  @include hour-grid;
+  max-width: 40rem;
+
+  .hour-label {
+    font-size: 0.7rem;
+    color: var(--ion-color-medium);
+    white-space: nowrap;
+  }
+
+  button.cell {
+    width: auto;
+    height: auto;
+  }
+}
+
+.year {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: center; // a map narrower than the modal sits in the middle; a wider one scrolls
+  font-size: 0.7rem;
+  color: var(--ion-color-medium);
+
+  .scroller {
+    min-width: 0;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
+
+  .weeks {
+    display: flex;
+    gap: 3px;
+  }
+
+  .week {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .month {
+    height: 0.8rem;
+    margin-bottom: 0.3rem;
+    line-height: 0.8rem;
+    white-space: nowrap;
+    overflow: visible;
+  }
+}
+
+.cell {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  @include heat-levels;
+
+  &.blank {
+    background: transparent;
+  }
+
+}
+
+button.cell {
+  cursor: pointer;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  margin-top: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--ion-color-medium);
+}
+
+.updated {
+  margin: 1.5rem 0 0;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--ion-color-medium);
+  text-align: center;
+}
+
+.root {
+  position: relative;
+}
+
+.tip {
+  position: absolute;
+  z-index: 10;
+  width: max-content;
+  max-width: 200px; // keep in sync with TIP_WIDTH
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  background: var(--ion-color-dark);
+  color: var(--ion-color-dark-contrast);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-align: center;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 6px));
+}

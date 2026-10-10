@@ -156,6 +156,38 @@
                 </ion-row>
             </ion-grid>
 
+            @if (playStats) {
+                <ion-card button class="play-stats-card ion-margin-top" (click)="openPlayStats()"
+                          aria-label="Open your activity for the past year">
+                    <ion-card-content>
+                        <div class="play-stats-header">
+                            <strong>Your activity &middot; last 7 days</strong>
+                            <span class="play-stats-summary">
+                                @if (recentTotals.actual) {
+                                    {{ formatDuration(recentTotals.video) }} video &middot; {{ formatDuration(recentTotals.actual) }} actual
+                                } @else {
+                                    No activity yet
+                                }
+                            </span>
+                        </div>
+                        <div class="recent-heatmap">
+                            @for (row of recentRows; track row.date) {
+                                <span class="day-label">{{ row.label }}</span>
+                                @for (cell of row.cells; track $index) {
+                                    @if (cell) {
+                                        <span class="cell level-{{ cell.level }}"
+                                              [title]="formatDay(cell.date) + ' ' + cell.hour + ':00 · ' + (formatDuration(cell.actual_seconds) || 'no activity')"></span>
+                                    } @else {
+                                        <span class="cell"></span>
+                                    }
+                                }
+                            }
+                        </div>
+                        <div class="play-stats-hint">Tap to see the whole year</div>
+                    </ion-card-content>
+                </ion-card>
+            }
+
         } @else {
             <ion-spinner name="crescent" class="ion-margin-top center-spinner"></ion-spinner>
             <h4 class="ion-text-center ion-margin-top">Loading lectures...</h4>
