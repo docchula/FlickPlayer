@@ -9,7 +9,7 @@ import {
     IonInput,
     IonLabel,
     PopoverController,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import {
     PomodoroService,
     DURATION_FIELDS,

@@ -1,5 +1,5 @@
 import {Component, inject} from '@angular/core';
-import {IonButton, IonIcon, ModalController} from '@ionic/angular/standalone';
+import {IonButton, IonIcon, ModalController} from '@ionic/angular';
 import {addIcons} from 'ionicons';
 import {settingsOutline} from 'ionicons/icons';
 import {SettingsSheetComponent} from './settings-sheet.component';

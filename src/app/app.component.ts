@@ -1,6 +1,6 @@
 import {Component, inject, Injector} from '@angular/core';
 
-import {IonApp, IonRouterOutlet} from '@ionic/angular/standalone';
+import {IonApp, IonRouterOutlet} from '@ionic/angular';
 import {ScreenTrackingService, UserTrackingService} from '@angular/fire/analytics';
 import {ConsentService} from './consent.service';
 import {ConsentBannerComponent} from './shared/consent-banner.component';
