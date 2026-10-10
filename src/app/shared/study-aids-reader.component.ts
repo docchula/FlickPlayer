@@ -1,4 +1,4 @@
-import {Component, ElementRef, inject, Input, OnInit, ViewEncapsulation} from '@angular/core';
+import {Component, ElementRef, inject, Input, OnInit, ViewChild, ViewEncapsulation} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
 import {
     IonButton,
@@ -20,11 +20,12 @@ import {Observable} from 'rxjs';
 import {Lecture} from '../man.service';
 import {StudyAidsService} from '../study-aids.service';
 import {SummaryBodyComponent} from './summary-body.component';
+import {TranscriptBodyComponent} from './transcript-body.component';
 import {QuizBodyComponent} from './quiz-body.component';
+import {PartView} from './version-switch.component';
 import {Checklist, checklistFor, formatClock} from '../study-aids/checklist';
+import {isStudyTab, StudyTab, studyTabs, TAB_LABELS} from '../study-aids/tabs';
 import {LecturePlayback, StudyAids, StudyAidsState} from '../study-aids/study-aids.model';
-
-export type ReaderTab = 'summary' | 'quiz';
 
 interface OutlineEntry {
     /** The section's position in the checklist, which is also its place in the page. */
@@ -33,7 +34,7 @@ interface OutlineEntry {
     time: number | null;
 }
 
-export async function openReader(modalCtrl: ModalController, video: Lecture, playback: LecturePlayback | null, tab: ReaderTab): Promise<void> {
+export async function openReader(modalCtrl: ModalController, video: Lecture, playback: LecturePlayback | null, tab: StudyTab): Promise<void> {
     const modal = await modalCtrl.create({
         component: StudyAidsReaderComponent,
         cssClass: 'study-reader-modal',
@@ -42,7 +43,7 @@ export async function openReader(modalCtrl: ModalController, video: Lecture, pla
     await modal.present();
 }
 
-/** The summary and the quiz in a large window, like the transcript, with room to read and practise. */
+/** The summary, the transcription and the quiz in a large window, with room to read and practise. */
 @Component({
     selector: 'app-study-aids-reader',
     templateUrl: './study-aids-reader.component.html',
@@ -63,6 +64,7 @@ export async function openReader(modalCtrl: ModalController, video: Lecture, pla
         IonLabel,
         IonSpinner,
         SummaryBodyComponent,
+        TranscriptBodyComponent,
         QuizBodyComponent,
     ],
 })
@@ -73,11 +75,17 @@ export class StudyAidsReaderComponent implements OnInit {
 
     @Input() video: Lecture;
     @Input() playback: LecturePlayback | null = null;
-    @Input() tab: ReaderTab = 'summary';
+    @Input() tab: StudyTab = 'summary';
+
+    @ViewChild(TranscriptBodyComponent) transcript?: TranscriptBodyComponent;
 
     protected state$: Observable<StudyAidsState>;
     protected activeSection = 0;
+    /** The version of the summary on show; its sections are only listed for the edited one. */
+    protected summaryView: PartView = 'current';
     protected readonly formatClock = formatClock;
+    protected readonly tabLabels = TAB_LABELS;
+    protected readonly tabsOf = studyTabs;
 
     private outlineFrom: Checklist | null = null;
     private outlineEntries: OutlineEntry[] = [];
@@ -92,6 +100,29 @@ export class StudyAidsReaderComponent implements OnInit {
 
     aidsOf(state: StudyAidsState): StudyAids | null {
         return state.status === 'ready' ? state.aids : null;
+    }
+
+    /** The chosen tab, or the first with something in it. */
+    activeTab(aids: StudyAids): StudyTab {
+        const tabs = studyTabs(aids);
+
+        return tabs.includes(this.tab) ? this.tab : tabs[0] ?? 'summary';
+    }
+
+    /** The summary's sections that say when they start, to move through the transcript by. */
+    timedOutline(aids: StudyAids): OutlineEntry[] {
+        const checklist = aids.summary ? checklistFor(aids.summary.markdown) : null;
+
+        return (checklist?.sections ?? [])
+            .map((section, index) => ({index, text: section.headingText ?? '', time: section.time}))
+            .filter(entry => entry.text && entry.time !== null);
+    }
+
+    scrollTranscriptTo(entry: OutlineEntry): void {
+        if (entry.time !== null) {
+            this.transcript?.scrollToTime(entry.time);
+            this.activeSection = entry.index;
+        }
     }
 
     /** The sections worth listing beside a summary, or none when there is only one. */
@@ -109,7 +140,11 @@ export class StudyAidsReaderComponent implements OnInit {
     }
 
     onTab(event: Event): void {
-        this.tab = (event as CustomEvent<{value: string}>).detail.value === 'quiz' ? 'quiz' : 'summary';
+        const value = (event as CustomEvent<{value: unknown}>).detail.value;
+        if (isStudyTab(value)) {
+            this.tab = value;
+            this.activeSection = 0;
+        }
     }
 
     /** Jumps the lecture from inside the window, which closes first so the video can be seen. */

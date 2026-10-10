@@ -1,0 +1,9 @@
+@for (run of runs; track $index) {
+    @if (run.change === 'added') {
+        <ins [class]="changeClass(history, run.version)" [title]="describeChange(history, 'added', run.version)">{{ run.text }}</ins>
+    } @else if (run.change === 'removed') {
+        <del [class]="changeClass(history, run.version)" [title]="describeChange(history, 'removed', run.version)">{{ run.text }}</del>
+    } @else {
+        <span>{{ run.text }}</span>
+    }
+}

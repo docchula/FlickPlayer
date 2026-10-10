@@ -1,0 +1,28 @@
+@if (number !== null) {
+    <p class="sheet-number">Question {{ number }}</p>
+}
+<app-rich-text class="sheet-prompt" [html]="promptHtml"></app-rich-text>
+<ol class="sheet-choices">
+    @for (choice of choicesHtml; track $index; let i = $index) {
+        <li [class.is-answer]="i === question.answer">
+            <span class="choice-letter">{{ letter(i) }}</span>
+            <app-rich-text class="inline choice-text" [html]="choice"></app-rich-text>
+            @if (i === question.answer) {
+                <ion-icon class="answer-mark" name="checkmark-circle" aria-label="The answer"></ion-icon>
+            }
+        </li>
+    }
+</ol>
+@if (explanationHtml) {
+    <app-rich-text class="sheet-explanation" [html]="explanationHtml"></app-rich-text>
+}
+@if (question.time !== null) {
+    @if (seekable) {
+        <ion-button class="small-button" size="small" fill="clear" (click)="seek.emit(question.time)">
+            <ion-icon slot="start" name="play-circle-outline" aria-hidden="true"></ion-icon>
+            Watch this part ({{ formatClock(question.time) }})
+        </ion-button>
+    } @else {
+        <p class="sheet-time">Taught at {{ formatClock(question.time) }}</p>
+    }
+}

@@ -9,6 +9,8 @@ export interface StudyAids {
     /** Whether this user is an admin, who also chooses who the editors are. */
     can_manage: boolean;
     generation: GenerationState;
+    /** Whether FlickMan has the AI's word-for-word transcript of the lecture. */
+    has_transcript: boolean;
     summary: SummaryPart | null;
     quiz: QuizPart | null;
 }
@@ -35,6 +37,15 @@ export interface PartMeta {
     /** Editors who chose to be named, in the order they first contributed. */
     contributors: Contributor[];
     updated_at: string | null;
+    /** The latest version editors checked against the lecture, which may be older than this one. */
+    verified: Verification | null;
+}
+
+export interface Verification {
+    revision: number;
+    /** Everyone who checked that version, by display name, in the order they did. */
+    by: Contributor[];
+    at: string | null;
 }
 
 export interface SummaryPart extends PartMeta {
@@ -82,17 +93,56 @@ export interface UploadedImage {
     height: number;
 }
 
-/** The co-author box in the editors: whether students see this editor's name, and which name. */
-export interface CreditChoice {
-    credit: boolean;
+/** The name students see for an editor, which can only be changed once every 30 days. */
+export interface EditorProfile {
     name: string;
+    changed_at: string | null;
+    /** Null when the name can be changed now. */
+    next_change_at: string | null;
 }
+
+/** Who saved a version: null for the AI. */
+export interface RevisionAuthor {
+    /** Tells editors of the same part apart, even when their names are hidden. */
+    key: string;
+    /** Students only see the names of editors who chose to be credited. */
+    name: string | null;
+}
+
+export interface Revision<T> {
+    revision: number;
+    author: RevisionAuthor | null;
+    created_at: string | null;
+    content: T;
+}
+
+/** A question as it was saved in a version, without anyone's answers. */
+export type RevisionQuestion = Omit<QuizQuestion, 'stats' | 'mine'>;
+
+export type SummaryRevision = Revision<string>;
+export type QuizRevision = Revision<RevisionQuestion[]>;
+
+export type PartName = 'summary' | 'quiz';
+
+export interface TranscriptParagraph {
+    /** Seconds into the lecture where the paragraph starts. */
+    time: number;
+    text: string;
+}
+
+export type TranscriptState =
+    | {status: 'loading'}
+    | {status: 'ready'; paragraphs: TranscriptParagraph[]}
+    /** The lecture has no transcript. */
+    | {status: 'none'}
+    /** `limited` when this reader has opened too many transcripts for now. */
+    | {status: 'error'; limited: boolean};
 
 export interface SummaryChange {
     markdown: string;
     revision: number;
+    /** Whether students see this editor's display name with the summary. */
     credit: boolean;
-    credit_name: string | null;
 }
 
 export interface QuestionChange {
@@ -109,7 +159,6 @@ export interface QuizChange {
     questions: QuestionChange[];
     revision: number;
     credit: boolean;
-    credit_name: string | null;
 }
 
 /** Lets the cards read and move the lecture video without depending on the player. */
@@ -143,7 +192,7 @@ export const LIMITS = {
     maxChoices: 6,
     choiceChars: 500,
     explanationChars: 4000,
-    creditNameChars: 50,
+    displayNameChars: 50,
     imageBytes: 5_000_000,
     /** Photos larger than this, or wider or taller than imageMaxSide, are shrunk before upload. */
     imageShrinkBytes: 2_000_000,

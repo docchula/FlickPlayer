@@ -10,7 +10,7 @@ const IMAGE_URL = 'https://flick-man-app.docchula.com/v1/study_aids/images/01M4D
 
 describe('QuizEditorComponent', () => {
     let fixture: ComponentFixture<QuizEditorComponent>;
-    let service: jasmine.SpyObj<Pick<StudyAidsService, 'uploadImage' | 'saveQuiz'>>;
+    let service: jasmine.SpyObj<Pick<StudyAidsService, 'uploadImage' | 'saveQuiz' | 'profile'>>;
 
     const editor = () => fixture.componentInstance as unknown as {
         forms: QuestionForm[];
@@ -20,7 +20,8 @@ describe('QuizEditorComponent', () => {
     };
 
     beforeEach(() => {
-        service = jasmine.createSpyObj('StudyAidsService', ['uploadImage', 'saveQuiz']);
+        service = jasmine.createSpyObj('StudyAidsService', ['uploadImage', 'saveQuiz', 'profile']);
+        service.profile.and.returnValue(of(null));
         TestBed.configureTestingModule({
             imports: [QuizEditorComponent],
             providers: [

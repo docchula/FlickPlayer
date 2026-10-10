@@ -1,0 +1,25 @@
+@let state = verifiedState(part);
+@if (verifiedLine(part); as line) {
+    <p class="verification" [class.is-verified]="state === 'current'">
+        <ion-icon [name]="state === 'current' ? 'shield-checkmark' : 'shield-outline'" aria-hidden="true"></ion-icon>
+        <span [attr.title]="state && when() ? 'Last verified on ' + when() : null">{{ line }}.</span>
+    </p>
+}
+@if (canEdit) {
+    @let profile = myProfile$ | async;
+    <div class="verify-actions">
+        @if (busy) {
+            <ion-spinner name="dots" aria-label="Saving"></ion-spinner>
+        } @else if (verifiedByMe(profile)) {
+            <button type="button" class="link-button" (click)="unverify()">Remove my verification</button>
+        } @else {
+            <ion-button class="small-button" size="small" fill="outline" (click)="verify(profile)">
+                <ion-icon slot="start" name="shield-checkmark" aria-hidden="true"></ion-icon>
+                {{ state === 'earlier' ? 'Verify this version' : 'Verify' }}
+            </ion-button>
+        }
+    </div>
+}
+@if (problem) {
+    <p class="verify-problem" role="alert">{{ problem }}</p>
+}

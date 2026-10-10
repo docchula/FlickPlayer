@@ -1,0 +1,54 @@
+@if (state$ | async; as state) {
+    @if (state.status === 'loading') {
+        <div class="card-loading">
+            <ion-spinner name="dots" aria-label="Loading the transcript"></ion-spinner>
+        </div>
+    } @else if (state.status === 'none') {
+        <p class="card-note">There is no transcript of this lecture.</p>
+    } @else if (state.status === 'error') {
+        <p class="card-note">
+            @if (state.limited) {
+                You have opened many transcripts in the last hour, so Flick has to wait before opening more. Try again later.
+            } @else {
+                The transcript could not be loaded.
+            }
+        </p>
+        <ion-button class="small-button" size="small" fill="outline" (click)="retry()">Try again</ion-button>
+    } @else {
+        <div class="transcript-head">
+            <p class="card-note">
+                Word for word as the AI heard the lecture, so it can mishear names and terms.
+                @if (playback) {
+                    Select a time to play the lecture from there.
+                }
+            </p>
+            @if (playback) {
+                <span class="editor-actions">
+                    <ion-button class="small-button" size="small" fill="clear" (click)="showNow()">
+                        <ion-icon slot="start" name="locate-outline" aria-hidden="true"></ion-icon>
+                        Now playing
+                    </ion-button>
+                    <ion-button class="small-button" size="small" [fill]="following ? 'solid' : 'outline'"
+                                [attr.aria-pressed]="following" (click)="toggleFollowing()">
+                        Follow the lecture
+                    </ion-button>
+                </span>
+            }
+        </div>
+        <ol class="transcript">
+            @for (paragraph of state.paragraphs; track $index; let i = $index) {
+                <li class="transcript-paragraph" [class.is-current]="i === current" [attr.aria-current]="i === current ? 'time' : null">
+                    @if (playback) {
+                        <button type="button" class="time-chip" (click)="seek.emit(paragraph.time)"
+                                [attr.aria-label]="'Play the lecture from ' + formatClock(paragraph.time)">
+                            <ion-icon name="play" aria-hidden="true"></ion-icon>{{ formatClock(paragraph.time) }}
+                        </button>
+                    } @else {
+                        <span class="time-chip">{{ formatClock(paragraph.time) }}</span>
+                    }
+                    <p class="paragraph-text">{{ paragraph.text }}</p>
+                </li>
+            }
+        </ol>
+    }
+}

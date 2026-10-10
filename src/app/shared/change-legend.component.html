@@ -1,0 +1,21 @@
+<p class="changes-intro">
+    @if (history.changed) {
+        How the {{ part }} differs from {{ since }}: <ins>added</ins> and <del>removed</del> words are
+        coloured by the editor who changed them.
+    } @else {
+        Nobody has changed the {{ part }} since {{ since }}.
+    }
+</p>
+@if (entries.length) {
+    <ul class="change-legend" aria-label="Editors">
+        @for (entry of entries; track entry.key) {
+            <li [class]="entry.colour">
+                <span class="legend-swatch" aria-hidden="true"></span>
+                <span class="legend-name">{{ entry.label }}</span>
+                <span class="legend-count" [title]="entry.added + ' words added, ' + entry.removed + ' removed'">
+                    +{{ entry.added }} −{{ entry.removed }}
+                </span>
+            </li>
+        }
+    </ul>
+}

@@ -19,12 +19,11 @@ import {StudyAidsService} from '../study-aids.service';
 import {ChecklistViewComponent} from './checklist-view.component';
 import {CreditFieldComponent} from './credit-field.component';
 import {buildChecklist, Checklist, formatStamp} from '../study-aids/checklist';
-import {creditFields} from '../study-aids/byline';
 import {describeFailure} from '../study-aids/failures';
 import {IMAGE_TYPES} from '../study-aids/images';
-import {readCreditChoice, writeCreditChoice} from '../study-aids/local-store';
+import {readCredit, writeCredit} from '../study-aids/local-store';
 import {uploadPickedImage} from '../study-aids/upload-image';
-import {CreditChoice, GenerationState, LecturePlayback, LIMITS, SaveFailure, SummaryPart} from '../study-aids/study-aids.model';
+import {GenerationState, LecturePlayback, LIMITS, SaveFailure, SummaryPart} from '../study-aids/study-aids.model';
 
 /** Editors rewrite the summary's Markdown here, with a live preview of the checklist it makes. */
 @Component({
@@ -67,7 +66,7 @@ export class SummaryEditorComponent implements OnInit, OnDestroy {
     protected text = '';
     protected mode: 'write' | 'preview' = 'write';
     protected preview: Checklist = buildChecklist('');
-    protected credit: CreditChoice = readCreditChoice();
+    protected credit = readCredit();
     protected saving = false;
     protected uploading = false;
     protected problem: string | null = null;
@@ -102,8 +101,7 @@ export class SummaryEditorComponent implements OnInit, OnDestroy {
 
     get changed(): boolean {
         return this.text !== this.savedText
-            || this.credit.credit !== this.savedCredit.credit
-            || (this.credit.credit && this.credit.name.trim() !== this.savedCredit.name.trim());
+            || this.credit !== this.savedCredit;
     }
 
     canSave(): boolean {
@@ -175,11 +173,11 @@ export class SummaryEditorComponent implements OnInit, OnDestroy {
         this.service.saveSummary(this.videoId, {
             markdown: this.text.trim(),
             revision: this.baseRevision,
-            ...creditFields(this.credit),
+            credit: this.credit,
         }).subscribe({
             next: () => {
                 this.saving = false;
-                writeCreditChoice(this.credit);
+                writeCredit(this.credit);
                 void this.modalCtrl.dismiss(null, 'saved');
             },
             error: (failure: SaveFailure) => {

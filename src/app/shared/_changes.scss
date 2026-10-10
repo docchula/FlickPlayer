@@ -1,0 +1,69 @@
+@use 'sass:list';
+
+// How the Changes views mark words: added ones underlined, removed ones struck through, each
+// editor in one of the theme's colours. A removed word is never shown by colour alone.
+
+$editor-colours: primary, tertiary, success, warning, secondary, danger;
+
+@mixin marks {
+    @for $i from 1 through list.length($editor-colours) {
+        .by-#{$i - 1} {
+            --change-rgb: var(--ion-color-#{list.nth($editor-colours, $i)}-rgb);
+        }
+    }
+
+    ins,
+    del {
+        border-radius: 0.15em;
+        text-decoration-thickness: 2px;
+        text-decoration-color: rgb(var(--change-rgb, var(--ion-color-primary-rgb)));
+    }
+
+    ins {
+        background: rgba(var(--change-rgb, var(--ion-color-primary-rgb)), 0.16);
+        text-decoration-line: underline;
+        text-underline-offset: 0.15em;
+    }
+
+    del {
+        background: rgba(var(--change-rgb, var(--ion-color-primary-rgb)), 0.07);
+        color: var(--ion-color-medium);
+        text-decoration-line: line-through;
+    }
+
+    // A block or a question added or removed whole.
+    .whole-added,
+    .whole-removed {
+        margin-left: -0.6rem;
+        padding-left: 0.45rem;
+        border-left: 3px solid rgb(var(--change-rgb, var(--ion-color-primary-rgb)));
+    }
+
+    .whole-added {
+        background: rgba(var(--change-rgb, var(--ion-color-primary-rgb)), 0.08);
+    }
+
+    .whole-removed {
+        color: var(--ion-color-medium);
+        text-decoration: line-through;
+        text-decoration-color: rgb(var(--change-rgb, var(--ion-color-primary-rgb)));
+
+        // Lines through every word, links and highlights included.
+        * {
+            text-decoration: inherit;
+        }
+
+        img {
+            opacity: 0.5;
+        }
+    }
+
+    .change-tag {
+        margin-left: 0.35rem;
+        color: rgb(var(--change-rgb, var(--ion-color-primary-rgb)));
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+}

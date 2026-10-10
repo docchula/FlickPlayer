@@ -1,4 +1,4 @@
-// The look the summary and quiz cards share with the Pomodoro card above them.
+// The look the study aids card shares with the Pomodoro card above it.
 @use 'study-shared';
 
 :host {
@@ -60,6 +60,10 @@
     font-size: 0.7rem;
     font-weight: 600;
     white-space: nowrap;
+
+    &.is-verified {
+        background: rgba(var(--ion-color-success-rgb), 0.22);
+    }
 }
 
 .card-meta {

@@ -1,0 +1,39 @@
+:host {
+    display: block;
+    margin: 0 0 0.85rem;
+}
+
+.version-switch {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.2rem;
+    border-radius: 1rem;
+    background: rgba(var(--ion-text-color-rgb, 0, 0, 0), 0.05);
+}
+
+button {
+    padding: 0.25rem 0.75rem;
+    border: 0;
+    border-radius: 1rem;
+    background: transparent;
+    color: var(--ion-text-color);
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+
+    &:hover {
+        background: rgba(var(--ion-color-primary-rgb), 0.08);
+    }
+
+    &.active {
+        background: var(--ion-color-primary);
+        color: var(--ion-color-primary-contrast);
+        font-weight: 600;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--ion-color-primary);
+        outline-offset: 2px;
+    }
+}

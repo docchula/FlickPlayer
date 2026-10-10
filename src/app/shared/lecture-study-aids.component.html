@@ -1,0 +1,61 @@
+@if (view$ | async; as view) {
+    @if (shows(view)) {
+        @let tab = activeTab(view);
+        <ion-card class="study-card">
+            <div class="card-head">
+                <button type="button" class="card-toggle" (click)="toggle()" [attr.aria-expanded]="!collapsed">
+                    <span class="card-heading">
+                        <span class="card-title">Summary &amp; Transcription</span>
+                        @if (badge(view); as label) {
+                            <span class="card-badge" [class.is-verified]="label.verified">{{ label.text }}</span>
+                        }
+                    </span>
+                    @if (progressOf(view); as progress) {
+                        <span class="card-meta">{{ progress }}</span>
+                    }
+                    <ion-icon class="collapse-icon" [name]="collapsed ? 'chevron-down' : 'chevron-up'" aria-hidden="true"></ion-icon>
+                </button>
+                @if (view.aids) {
+                    <button type="button" class="card-expand" (click)="read(view)" title="Reading mode"
+                            aria-label="Open the summary, transcription and quiz in a large window">
+                        <ion-icon name="expand-outline" aria-hidden="true"></ion-icon>
+                    </button>
+                }
+            </div>
+
+            @if (!collapsed) {
+                <div class="card-body">
+                    @if (view.status === 'loading') {
+                        <div class="card-loading">
+                            <ion-spinner name="dots" aria-label="Loading the summary"></ion-spinner>
+                        </div>
+                    } @else if (view.status === 'error') {
+                        <p class="card-note">The summary and quiz could not be loaded.</p>
+                        <ion-button class="small-button" size="small" fill="outline" (click)="retry(view)">Try again</ion-button>
+                    } @else if (view.aids) {
+                        @if (view.tabs.length > 1) {
+                            <ion-segment class="study-tabs" [value]="tab" (ionChange)="onTab($event)">
+                                @for (name of view.tabs; track name) {
+                                    <ion-segment-button [value]="name" [class]="'study-tab-' + name">
+                                        <ion-label>{{ tabLabels[name] }}</ion-label>
+                                    </ion-segment-button>
+                                }
+                            </ion-segment>
+                        }
+                        @switch (tab) {
+                            @case ('summary') {
+                                <app-summary-body [aids]="view.aids" [playback]="playback" (seek)="seek($event)"></app-summary-body>
+                            }
+                            @case ('transcript') {
+                                <app-transcript-body [videoId]="view.aids.video_id" [playback]="playback" (seek)="seek($event)"></app-transcript-body>
+                            }
+                            @case ('quiz') {
+                                <app-quiz-body [aids]="view.aids" [video]="view.video" [playback]="playback" (seek)="seek($event)"></app-quiz-body>
+                            }
+                        }
+                    }
+                </div>
+            }
+        </ion-card>
+    }
+}

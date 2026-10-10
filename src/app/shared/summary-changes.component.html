@@ -1,0 +1,63 @@
+<app-change-legend [history]="changes" part="summary"></app-change-legend>
+<div class="changes-body">
+    @for (block of changes.blocks; track $index) {
+        @let tag = wholeTag(block);
+        @switch (block.kind) {
+            @case ('title') {
+                <h3 class="checklist-title" [class]="wholeClass(block)">
+                    <ng-container *ngTemplateOutlet="content; context: {$implicit: block}"></ng-container>
+                </h3>
+            }
+            @case ('heading') {
+                <h4 class="checklist-heading" [class]="wholeClass(block)">
+                    <span class="heading-text"><ng-container *ngTemplateOutlet="content; context: {$implicit: block}"></ng-container></span>
+                    @if (block.time !== null && block.change !== 'edited') {
+                        @if (seekable && block.change !== 'removed') {
+                            <button type="button" class="time-chip" (click)="seek.emit(block.time)"
+                                    [attr.aria-label]="'Play the lecture from ' + formatClock(block.time)">
+                                <ion-icon name="play" aria-hidden="true"></ion-icon>{{ formatClock(block.time) }}
+                            </button>
+                        } @else {
+                            <span class="time-chip">{{ formatClock(block.time) }}</span>
+                        }
+                    }
+                    @if (tag) {
+                        <span class="change-tag">{{ tag }}</span>
+                    }
+                </h4>
+            }
+            @case ('point') {
+                <div class="checklist-point" [class]="wholeClass(block)">
+                    <span class="point-number">{{ block.number === null ? '–' : block.number + '.' }}</span>
+                    <div class="point-body">
+                        <ng-container *ngTemplateOutlet="content; context: {$implicit: block}"></ng-container>
+                        @if (tag) {
+                            <span class="change-tag">{{ tag }}</span>
+                        }
+                    </div>
+                </div>
+            }
+            @case ('label') {
+                <div class="checklist-label" [class]="wholeClass(block)">
+                    <ng-container *ngTemplateOutlet="content; context: {$implicit: block}"></ng-container>
+                </div>
+            }
+            @default {
+                <div class="checklist-block" [class]="wholeClass(block)">
+                    <ng-container *ngTemplateOutlet="content; context: {$implicit: block}"></ng-container>
+                    @if (tag) {
+                        <span class="change-tag">{{ tag }}</span>
+                    }
+                </div>
+            }
+        }
+    }
+</div>
+
+<ng-template #content let-block>
+    @if (block.change === 'edited') {
+        <app-change-runs [runs]="block.runs" [history]="changes"></app-change-runs>
+    } @else {
+        <app-rich-text class="inline" [html]="block.html"></app-rich-text>
+    }
+</ng-template>

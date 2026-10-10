@@ -23,107 +23,144 @@
     @if (shareNote) {
         <p class="share-note" role="status">{{ shareNote }}</p>
     }
+    <app-verification [videoId]="aids.video_id" [part]="aids.quiz" name="quiz" [canEdit]="aids.can_edit"></app-verification>
+    @if (hasHistory()) {
+        <app-version-switch [view]="view" (viewChange)="setView($event)" [fromAi]="aids.quiz.origin === 'ai'"></app-version-switch>
+    }
 
-    @switch (phase()) {
-        @case ('start') {
-            <div class="quiz-start">
-                <p class="card-note">
-                    {{ items.length }} single-best-answer {{ items.length === 1 ? 'question' : 'questions' }}
-                    on this lecture.
-                    @if (answeredCount(); as answered) {
-                        You have answered {{ answered }} so far.
-                    }
-                </p>
-                <ion-button size="small" (click)="start()">
-                    {{ answeredCount() ? 'Continue' : 'Start quiz' }}
-                </ion-button>
-            </div>
-        }
-        @case ('question') {
-            @let item = items[current ?? 0];
-            <div class="quiz-progress">
-                <span>Question {{ (current ?? 0) + 1 }} of {{ items.length }}</span>
-                <span class="progress-dots" aria-hidden="true">
-                    @for (other of items; track other.question.id; let i = $index) {
-                        <span class="dot" [class.dot-current]="i === current"
-                              [class.dot-right]="isAnswered(other) && isRight(other)"
-                              [class.dot-wrong]="isAnswered(other) && !isRight(other)"></span>
-                    }
-                </span>
-            </div>
-
-            <app-rich-text class="quiz-prompt" [html]="item.promptHtml"></app-rich-text>
-
-            <div class="quiz-choices">
-                @for (choice of item.choicesHtml; track $index; let i = $index) {
-                    @let state = choiceState(item, i);
-                    <button type="button" class="quiz-choice"
-                            [class.is-correct]="state === 'correct'"
-                            [class.is-wrong]="state === 'wrong'"
-                            [class.is-muted]="state === 'muted'"
-                            [disabled]="state !== null"
-                            (click)="choose(item, i)">
-                        <span class="choice-letter">{{ letter(i) }}</span>
-                        <app-rich-text class="inline choice-text" [html]="choice"></app-rich-text>
-                        @if (state === 'correct') {
-                            <ion-icon class="choice-mark" name="checkmark-circle" aria-label="The answer"></ion-icon>
-                        } @else if (state === 'wrong') {
-                            <ion-icon class="choice-mark" name="close-circle" aria-label="Your answer"></ion-icon>
-                        }
-                    </button>
-                }
-            </div>
-
-            @if (isAnswered(item)) {
-                <div class="quiz-feedback" [class.is-right]="isRight(item)">
-                    <p class="feedback-verdict">
-                        <ion-icon [name]="isRight(item) ? 'checkmark-circle' : 'close-circle'" aria-hidden="true"></ion-icon>
-                        {{ isRight(item) ? 'Correct' : 'Not quite. The answer is ' + letter(item.question.answer) + '.' }}
-                    </p>
-                    @if (statsLine(item.question); as line) {
-                        <p class="feedback-stats">{{ line }}</p>
-                    }
-                    @if (item.explanationHtml) {
-                        <app-rich-text class="feedback-explanation" [html]="item.explanationHtml"></app-rich-text>
-                    }
-                    @if (item.question.time !== null && playback) {
-                        <ion-button class="small-button watch-button" size="small" fill="clear" (click)="seek.emit(item.question.time)">
-                            <ion-icon slot="start" name="play-circle-outline" aria-hidden="true"></ion-icon>
-                            Watch this part ({{ formatClock(item.question.time) }})
-                        </ion-button>
-                    }
+    @if (view !== 'current') {
+        @if (history$ | async; as history) {
+            @if (history.status === 'loading') {
+                <div class="card-loading">
+                    <ion-spinner name="dots" aria-label="Loading the earlier versions"></ion-spinner>
                 </div>
-                <div class="quiz-actions">
-                    @if (answeredCount() === items.length) {
-                        <ion-button size="small" fill="clear" (click)="showResults()">All results</ion-button>
+            } @else if (history.status === 'error') {
+                <p class="card-note">The earlier versions could not be loaded. {{ history.message }}</p>
+                <ion-button class="small-button" size="small" fill="outline" (click)="retryHistory()">Try again</ion-button>
+            } @else {
+                @let versions = derive(history.revisions);
+                @if (view === 'original') {
+                    @if (versions.original) {
+                        <p class="card-note">
+                            The questions as the AI wrote them{{ versions.original.created_at ? ' on ' + formatDay(versions.original.created_at) : '' }},
+                            with its answers, before editors corrected them. Answers you give count only in the edited quiz.
+                        </p>
+                        @for (question of versions.original.content; track question.id; let i = $index) {
+                            <app-question-sheet class="original-question" [question]="question" [number]="i + 1"
+                                                [seekable]="!!playback" (seek)="seek.emit($event)"></app-question-sheet>
+                        }
+                    } @else {
+                        <p class="card-note">An editor wrote these questions, so there is no AI version of them.</p>
                     }
-                    <ion-button size="small" (click)="next()">
-                        {{ nextIndex() === null ? 'See results' : 'Next question' }}
+                } @else if (versions.changes) {
+                    <app-quiz-changes [changes]="versions.changes" [seekable]="!!playback" (seek)="seek.emit($event)"></app-quiz-changes>
+                } @else {
+                    <p class="card-note">No earlier versions of these questions were kept.</p>
+                }
+            }
+        }
+    } @else {
+        @switch (phase()) {
+            @case ('start') {
+                <div class="quiz-start">
+                    <p class="card-note">
+                        {{ items.length }} single-best-answer {{ items.length === 1 ? 'question' : 'questions' }}
+                        on this lecture.
+                        @if (answeredCount(); as answered) {
+                            You have answered {{ answered }} so far.
+                        }
+                    </p>
+                    <ion-button size="small" (click)="start()">
+                        {{ answeredCount() ? 'Continue' : 'Start quiz' }}
                     </ion-button>
                 </div>
             }
-        }
-        @case ('results') {
-            <p class="results-score">
-                <strong>{{ scoreOf() }} of {{ items.length }}</strong> correct
-            </p>
-            <ol class="results-list">
-                @for (item of items; track item.question.id; let i = $index) {
-                    <li>
-                        <button type="button" class="results-row" (click)="open(i)">
-                            <ion-icon [name]="isRight(item) ? 'checkmark-circle' : 'close-circle'"
-                                      [class.mark-right]="isRight(item)" [class.mark-wrong]="!isRight(item)"
-                                      [attr.aria-label]="isRight(item) ? 'Right' : 'Wrong'"></ion-icon>
-                            <span class="results-number">{{ i + 1 }}.</span>
-                            <span class="results-prompt">{{ item.promptText }}</span>
+            @case ('question') {
+                @let item = items[current ?? 0];
+                <div class="quiz-progress">
+                    <span>Question {{ (current ?? 0) + 1 }} of {{ items.length }}</span>
+                    <span class="progress-dots" aria-hidden="true">
+                        @for (other of items; track other.question.id; let i = $index) {
+                            <span class="dot" [class.dot-current]="i === current"
+                                  [class.dot-right]="isAnswered(other) && isRight(other)"
+                                  [class.dot-wrong]="isAnswered(other) && !isRight(other)"></span>
+                        }
+                    </span>
+                </div>
+
+                <app-rich-text class="quiz-prompt" [html]="item.promptHtml"></app-rich-text>
+
+                <div class="quiz-choices">
+                    @for (choice of item.choicesHtml; track $index; let i = $index) {
+                        @let state = choiceState(item, i);
+                        <button type="button" class="quiz-choice"
+                                [class.is-correct]="state === 'correct'"
+                                [class.is-wrong]="state === 'wrong'"
+                                [class.is-muted]="state === 'muted'"
+                                [disabled]="state !== null"
+                                (click)="choose(item, i)">
+                            <span class="choice-letter">{{ letter(i) }}</span>
+                            <app-rich-text class="inline choice-text" [html]="choice"></app-rich-text>
+                            @if (state === 'correct') {
+                                <ion-icon class="choice-mark" name="checkmark-circle" aria-label="The answer"></ion-icon>
+                            } @else if (state === 'wrong') {
+                                <ion-icon class="choice-mark" name="close-circle" aria-label="Your answer"></ion-icon>
+                            }
                         </button>
-                    </li>
+                    }
+                </div>
+
+                @if (isAnswered(item)) {
+                    <div class="quiz-feedback" [class.is-right]="isRight(item)">
+                        <p class="feedback-verdict">
+                            <ion-icon [name]="isRight(item) ? 'checkmark-circle' : 'close-circle'" aria-hidden="true"></ion-icon>
+                            {{ isRight(item) ? 'Correct' : 'Not quite. The answer is ' + letter(item.question.answer) + '.' }}
+                        </p>
+                        @if (statsLine(item.question); as line) {
+                            <p class="feedback-stats">{{ line }}</p>
+                        }
+                        @if (item.explanationHtml) {
+                            <app-rich-text class="feedback-explanation" [html]="item.explanationHtml"></app-rich-text>
+                        }
+                        @if (item.question.time !== null && playback) {
+                            <ion-button class="small-button watch-button" size="small" fill="clear" (click)="seek.emit(item.question.time)">
+                                <ion-icon slot="start" name="play-circle-outline" aria-hidden="true"></ion-icon>
+                                Watch this part ({{ formatClock(item.question.time) }})
+                            </ion-button>
+                        }
+                    </div>
+                    <div class="quiz-actions">
+                        @if (answeredCount() === items.length) {
+                            <ion-button size="small" fill="clear" (click)="showResults()">All results</ion-button>
+                        }
+                        <ion-button size="small" (click)="next()">
+                            {{ nextIndex() === null ? 'See results' : 'Next question' }}
+                        </ion-button>
+                    </div>
                 }
-            </ol>
-            <ion-button size="small" fill="outline" (click)="retake()">
-                <ion-icon slot="start" name="refresh-outline" aria-hidden="true"></ion-icon>
-                Retake quiz
-            </ion-button>
+            }
+            @case ('results') {
+                <p class="results-score">
+                    <strong>{{ scoreOf() }} of {{ items.length }}</strong> correct
+                </p>
+                <ol class="results-list">
+                    @for (item of items; track item.question.id; let i = $index) {
+                        <li>
+                            <button type="button" class="results-row" (click)="open(i)">
+                                <ion-icon [name]="isRight(item) ? 'checkmark-circle' : 'close-circle'"
+                                          [class.mark-right]="isRight(item)" [class.mark-wrong]="!isRight(item)"
+                                          [attr.aria-label]="isRight(item) ? 'Right' : 'Wrong'"></ion-icon>
+                                <span class="results-number">{{ i + 1 }}.</span>
+                                <span class="results-prompt">{{ item.promptText }}</span>
+                            </button>
+                        </li>
+                    }
+                </ol>
+                <ion-button size="small" fill="outline" (click)="retake()">
+                    <ion-icon slot="start" name="refresh-outline" aria-hidden="true"></ion-icon>
+                    Retake quiz
+                </ion-button>
+            }
         }
     }
 } @else if (aids.can_edit) {

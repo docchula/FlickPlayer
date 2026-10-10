@@ -162,7 +162,7 @@
             Add a question
         </ion-button>
 
-        <app-credit-field [(choice)]="credit" part="questions"></app-credit-field>
+        <app-credit-field [(credit)]="credit" part="questions"></app-credit-field>
         <input #imagePicker type="file" hidden [accept]="imageTypes" (change)="onImagePicked($event)">
     </div>
 </ion-content>

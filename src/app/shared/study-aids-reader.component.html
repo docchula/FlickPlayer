@@ -7,12 +7,22 @@
             </ion-button>
         </ion-buttons>
     </ion-toolbar>
-    <ion-toolbar class="reader-tabs">
-        <ion-segment [value]="tab" (ionChange)="onTab($event)">
-            <ion-segment-button value="summary"><ion-label>Summary</ion-label></ion-segment-button>
-            <ion-segment-button value="quiz"><ion-label>Quiz</ion-label></ion-segment-button>
-        </ion-segment>
-    </ion-toolbar>
+    @if (state$ | async; as state) {
+        @if (aidsOf(state); as aids) {
+            @let tabs = tabsOf(aids);
+            @if (tabs.length > 1) {
+                <ion-toolbar class="reader-tabs">
+                    <ion-segment [value]="activeTab(aids)" (ionChange)="onTab($event)">
+                        @for (name of tabs; track name) {
+                            <ion-segment-button [value]="name" [class]="'study-tab-' + name">
+                                <ion-label>{{ tabLabels[name] }}</ion-label>
+                            </ion-segment-button>
+                        }
+                    </ion-segment>
+                </ion-toolbar>
+            }
+        }
+    }
 </ion-header>
 
 <ion-content [scrollEvents]="tab === 'summary'" (ionScroll)="onScroll()">
@@ -25,32 +35,54 @@
             } @else if (state.status === 'error') {
                 <p class="reader-note">The summary and quiz could not be loaded.</p>
             } @else if (aidsOf(state); as aids) {
-                @if (tab === 'summary') {
-                    @let outlineEntries = outline(aids);
-                    <div class="reader-summary" [class.with-outline]="outlineEntries.length">
-                        @if (outlineEntries.length) {
-                            <nav class="reader-outline" aria-label="Sections">
-                                <p class="outline-title">Sections</p>
-                                @for (entry of outlineEntries; track entry.index) {
-                                    <button type="button" class="outline-entry" [class.active]="entry.index === activeSection"
-                                            (click)="scrollToSection(entry.index)">
-                                        <span class="outline-text">{{ entry.text }}</span>
-                                        @if (entry.time !== null) {
-                                            <span class="outline-time">{{ formatClock(entry.time) }}</span>
-                                        }
-                                    </button>
-                                }
-                            </nav>
-                        }
-                        <app-summary-body class="reader-column" [aids]="aids" [playback]="playback" [reader]="true"
-                                          (seek)="watch($event)"></app-summary-body>
-                    </div>
-                } @else {
-                    <app-quiz-body class="reader-column quiz-column" [aids]="aids" [video]="video" [playback]="playback"
-                                   [reader]="true" (seek)="watch($event)"></app-quiz-body>
+                @switch (activeTab(aids)) {
+                    @case ('summary') {
+                        @let outlineEntries = summaryView === 'current' ? outline(aids) : [];
+                        <div class="reader-summary" [class.with-outline]="outlineEntries.length">
+                            @if (outlineEntries.length) {
+                                <nav class="reader-outline" aria-label="Sections">
+                                    <p class="outline-title">Sections</p>
+                                    @for (entry of outlineEntries; track entry.index) {
+                                        <button type="button" class="outline-entry" [class.active]="entry.index === activeSection"
+                                                (click)="scrollToSection(entry.index)">
+                                            <span class="outline-text">{{ entry.text }}</span>
+                                            @if (entry.time !== null) {
+                                                <span class="outline-time">{{ formatClock(entry.time) }}</span>
+                                            }
+                                        </button>
+                                    }
+                                </nav>
+                            }
+                            <app-summary-body class="reader-column" [aids]="aids" [playback]="playback" [reader]="true"
+                                              (seek)="watch($event)" (viewChange)="summaryView = $event"></app-summary-body>
+                        </div>
+                    }
+                    @case ('transcript') {
+                        @let timedEntries = timedOutline(aids);
+                        <div class="reader-summary" [class.with-outline]="timedEntries.length > 1">
+                            @if (timedEntries.length > 1) {
+                                <nav class="reader-outline" aria-label="Sections of the lecture">
+                                    <p class="outline-title">Sections</p>
+                                    @for (entry of timedEntries; track entry.index) {
+                                        <button type="button" class="outline-entry" [class.active]="entry.index === activeSection"
+                                                (click)="scrollTranscriptTo(entry)">
+                                            <span class="outline-text">{{ entry.text }}</span>
+                                            <span class="outline-time">{{ formatClock(entry.time ?? 0) }}</span>
+                                        </button>
+                                    }
+                                </nav>
+                            }
+                            <app-transcript-body class="reader-column" [videoId]="aids.video_id" [playback]="playback" [reader]="true"
+                                                 (seek)="watch($event)"></app-transcript-body>
+                        </div>
+                    }
+                    @case ('quiz') {
+                        <app-quiz-body class="reader-column quiz-column" [aids]="aids" [video]="video" [playback]="playback"
+                                       [reader]="true" (seek)="watch($event)"></app-quiz-body>
+                    }
                 }
             } @else {
-                <p class="reader-note">There is no summary or quiz for this lecture.</p>
+                <p class="reader-note">There is no summary, transcription or quiz for this lecture.</p>
             }
         }
     </div>

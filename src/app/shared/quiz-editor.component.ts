@@ -19,10 +19,10 @@ import {StudyAidsService} from '../study-aids.service';
 import {CreditFieldComponent} from './credit-field.component';
 import {RichTextComponent} from './rich-text.component';
 import {formatStamp, renderBlock, renderInline} from '../study-aids/checklist';
-import {creditFields, joinNames} from '../study-aids/byline';
+import {joinNames} from '../study-aids/byline';
 import {describeFailure} from '../study-aids/failures';
 import {IMAGE_TYPES} from '../study-aids/images';
-import {readCreditChoice, writeCreditChoice} from '../study-aids/local-store';
+import {readCredit, writeCredit} from '../study-aids/local-store';
 import {uploadPickedImage} from '../study-aids/upload-image';
 import {
     blankQuestionForm,
@@ -34,7 +34,7 @@ import {
     questionProblems,
     resetsStats,
 } from '../study-aids/quiz';
-import {CreditChoice, GenerationState, LecturePlayback, LIMITS, QuizPart, SaveFailure} from '../study-aids/study-aids.model';
+import {GenerationState, LecturePlayback, LIMITS, QuizPart, SaveFailure} from '../study-aids/study-aids.model';
 
 function inputValue(event: Event): string {
     return (event as CustomEvent<{value: string | null}>).detail.value ?? '';
@@ -81,7 +81,7 @@ export class QuizEditorComponent implements OnInit {
     @ViewChild('imagePicker') imagePicker: ElementRef<HTMLInputElement>;
 
     protected forms: QuestionForm[] = [];
-    protected credit: CreditChoice = readCreditChoice();
+    protected credit = readCredit();
     protected saving = false;
     protected problem: string | null = null;
     /** Problems are pointed out once the editor first tries to save, not while typing. */
@@ -129,8 +129,7 @@ export class QuizEditorComponent implements OnInit {
 
     get changed(): boolean {
         return this.snapshot() !== this.savedSnapshot
-            || this.credit.credit !== this.savedCredit.credit
-            || (this.credit.credit && this.credit.name.trim() !== this.savedCredit.name.trim());
+            || this.credit !== this.savedCredit;
     }
 
     problemsOf(form: QuestionForm, index: number): string[] {
@@ -306,11 +305,11 @@ export class QuizEditorComponent implements OnInit {
         this.service.saveQuiz(this.videoId, {
             questions: this.forms.map(questionChange),
             revision: this.baseRevision,
-            ...creditFields(this.credit),
+            credit: this.credit,
         }).subscribe({
             next: () => {
                 this.saving = false;
-                writeCreditChoice(this.credit);
+                writeCredit(this.credit);
                 void this.modalCtrl.dismiss(null, 'saved');
             },
             error: (failure: SaveFailure) => {

@@ -1,11 +1,12 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {ModalController} from '@ionic/angular/standalone';
-import {BehaviorSubject} from 'rxjs';
+import {BehaviorSubject, of} from 'rxjs';
 import {StudyAidsReaderComponent} from './study-aids-reader.component';
 import {StudyAidsService} from '../study-aids.service';
 import {StudyAidsProgressService} from '../study-aids-progress.service';
 import {Lecture} from '../man.service';
-import {StudyAids, StudyAidsState} from '../study-aids/study-aids.model';
+import {StudyAids, StudyAidsState, TranscriptState} from '../study-aids/study-aids.model';
+import {StudyTab} from '../study-aids/tabs';
 
 const VIDEO = {id: 7, title: 'Organelles', duration: 3000} as Lecture;
 const MARKDOWN = '# Organelles\n\n## Nucleus [00:01:10]\n\n1. **Barr body** : X − 1\n\n## Golgi [00:14:05]\n\n1. **Golgi** : sorts protein\n';
@@ -15,12 +16,19 @@ const AIDS: StudyAids = {
     can_edit: false,
     can_manage: false,
     generation: 'ready',
-    summary: {markdown: MARKDOWN, revision: 1, origin: 'ai', edited: false, contributors: [], updated_at: null},
+    has_transcript: true,
+    summary: {markdown: MARKDOWN, revision: 1, origin: 'ai', edited: false, contributors: [], updated_at: null, verified: null},
     quiz: {
         questions: [{id: 'a', prompt: 'Which cell?', choices: ['Plasma cell', 'Leydig cell'], answer: 1, explanation: null, time: 465, stats: null, mine: null}],
-        revision: 1, origin: 'ai', edited: false, contributors: [], updated_at: null,
+        revision: 1, origin: 'ai', edited: false, contributors: [], updated_at: null, verified: null,
     },
 };
+
+const TRANSCRIPT: TranscriptState = {status: 'ready', paragraphs: [
+    {time: 5, text: 'สวัสดีครับ'},
+    {time: 70, text: 'Nucleus เก็บ genetic material'},
+    {time: 845, text: 'Golgi รับ protein จาก RER'},
+]};
 
 describe('StudyAidsReaderComponent', () => {
     let fixture: ComponentFixture<StudyAidsReaderComponent>;
@@ -30,7 +38,7 @@ describe('StudyAidsReaderComponent', () => {
     const element = () => fixture.nativeElement as HTMLElement;
     const text = () => element().textContent?.replace(/\s+/g, ' ') ?? '';
 
-    function create(tab: 'summary' | 'quiz', state: StudyAidsState = {status: 'ready', aids: AIDS}): void {
+    function create(tab: StudyTab, state: StudyAidsState = {status: 'ready', aids: AIDS}): void {
         TestBed.inject(StudyAidsService).watch = () => new BehaviorSubject(state);
         fixture = TestBed.createComponent(StudyAidsReaderComponent);
         fixture.componentRef.setInput('video', VIDEO);
@@ -48,7 +56,11 @@ describe('StudyAidsReaderComponent', () => {
         TestBed.configureTestingModule({
             imports: [StudyAidsReaderComponent],
             providers: [
-                {provide: StudyAidsService, useValue: {watch: () => new BehaviorSubject<StudyAidsState>({status: 'loading'})}},
+                {provide: StudyAidsService, useValue: {
+                    watch: () => new BehaviorSubject<StudyAidsState>({status: 'loading'}),
+                    transcript: () => of(TRANSCRIPT),
+                    profile: () => of(null),
+                }},
                 {provide: ModalController, useValue: modalCtrl},
             ],
         });
@@ -65,6 +77,20 @@ describe('StudyAidsReaderComponent', () => {
         expect(element().querySelector('app-quiz-body')).not.toBeNull();
         expect(element().querySelector('app-summary-body')).toBeNull();
         expect(text()).toContain('Organelles');
+        expect(Array.from(element().querySelectorAll('ion-segment-button')).map(button => button.textContent?.trim()))
+            .toEqual(['Summary', 'Transcription', 'Quiz']);
+    });
+
+    it('moves through the transcription by the summary\'s sections', () => {
+        create('transcript');
+        const transcript = element().querySelector('app-transcript-body');
+        const scrolled = spyOn(HTMLElement.prototype, 'scrollIntoView');
+        const entries = Array.from(element().querySelectorAll<HTMLButtonElement>('.outline-entry'));
+
+        expect(transcript?.textContent).toContain('Golgi รับ protein จาก RER');
+        expect(entries.map(entry => entry.querySelector('.outline-time')?.textContent?.trim())).toEqual(['1:10', '14:05']);
+        entries[1].click();
+        expect((scrolled.calls.mostRecent().object as HTMLElement).textContent).toContain('Golgi รับ protein');
     });
 
     it('lists the summary\'s sections beside it', () => {
@@ -99,6 +125,6 @@ describe('StudyAidsReaderComponent', () => {
     it('says so when a lecture has nothing to read', () => {
         create('summary', {status: 'unavailable'});
 
-        expect(text()).toContain('There is no summary or quiz for this lecture.');
+        expect(text()).toContain('There is no summary, transcription or quiz for this lecture.');
     });
 });

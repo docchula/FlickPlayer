@@ -1,0 +1,74 @@
+@use 'changes';
+
+app-quiz-changes {
+    display: block;
+
+    @include changes.marks;
+
+    .changed-question {
+        margin: 0 0 0.75rem;
+        padding: 0.6rem 0.75rem;
+        border: 1px solid rgba(var(--ion-text-color-rgb, 0, 0, 0), 0.1);
+        border-radius: 0.6rem;
+    }
+
+    .changed-question.whole-added,
+    .changed-question.whole-removed {
+        margin-left: 0;
+        border-left-width: 3px;
+    }
+
+    .question-heading {
+        margin: 0 0 0.4rem;
+        color: var(--ion-color-medium);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-decoration: none;
+        text-transform: uppercase;
+    }
+
+    .question-same {
+        margin-left: 0.35rem;
+        font-weight: 400;
+        letter-spacing: normal;
+        text-transform: none;
+    }
+
+    .question-unchanged {
+        margin: 0;
+        color: var(--ion-color-medium);
+        font-size: 0.85rem;
+    }
+
+    .field-prompt {
+        margin-bottom: 0.4rem;
+        font-weight: 600;
+    }
+
+    .field-choice {
+        display: flex;
+        gap: 0.5rem;
+        margin: 0.2rem 0;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.4rem;
+        background: rgba(var(--ion-text-color-rgb, 0, 0, 0), 0.03);
+    }
+
+    .choice-letter {
+        flex: none;
+        min-width: 1.2em;
+        font-weight: 700;
+    }
+
+    .field-meta,
+    .field-explanation {
+        margin: 0.4rem 0 0;
+        font-size: 0.9rem;
+    }
+
+    .field-label {
+        margin-right: 0.25rem;
+        color: var(--ion-color-medium);
+    }
+}

@@ -38,8 +38,9 @@ import {checkmarkOutline, closeOutline, documentAttachOutline, documentTextOutli
 import type Player from 'video.js/dist/types/player';
 import {ulid} from 'ulid';
 import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
-import {LectureSummaryComponent} from '../../shared/lecture-summary.component';
-import {LectureQuizComponent} from '../../shared/lecture-quiz.component';
+import {LectureStudyAidsComponent} from '../../shared/lecture-study-aids.component';
+import {StudyAidsService} from '../../study-aids.service';
+import {LectureCaptions} from '../../study-aids/captions';
 import {LecturePlayback} from '../../study-aids/study-aids.model';
 import {ModalEvaluationComponent} from './modal-evaluation.component';
 import {ModalDocumentComponent} from './modal-document.component';
@@ -82,8 +83,7 @@ interface SeekBarPointerHandlers {
         NgClass,
         IonProgressBar,
         AsyncPipe,
-        LectureSummaryComponent,
-        LectureQuizComponent,
+        LectureStudyAidsComponent,
         DecimalPipe,
         DatePipe,
         PomodoroTimerComponent,
@@ -135,6 +135,8 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         currentTime: () => this.videoPlayer?.currentTime() ?? 0,
         seek: seconds => this.seekTo(seconds),
     };
+    private studyAids = inject(StudyAidsService);
+    private captions: LectureCaptions | null = null;
 
     constructor() {
         addIcons({ download, documentAttachOutline, documentTextOutline, checkmarkOutline, closeOutline, pauseCircleOutline });
@@ -204,6 +206,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             },
             techOrder: ['html5', 'youtube'],
         }, () => {
+            this.captions = new LectureCaptions(this.videoPlayer, this.studyAids);
             this.isPlayerReady = true;
             if (this.pendingVideoToPlay) {
                 this.viewVideo(this.pendingVideoToPlay);
@@ -307,6 +310,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
 
     ngOnDestroy() {
         this.stopPolling$.next(true);
+        this.captions?.dispose();
     }
 
     // video.js seeks as soon as a touch lands on the progress control, so a fingertip brushing
@@ -444,6 +448,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             ) !== '';
         });
         this.videoPlayer.src(video.sources);
+        this.captions?.show(video.id ?? null, !!video.has_document, video.duration ?? null);
         this.currentVideo = video;
         this.videoPlayerElement.nativeElement.focus();
         this.expectVideoTimeJump = true;

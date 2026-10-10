@@ -1,0 +1,69 @@
+@use 'study-shared';
+
+:host {
+    display: block;
+}
+
+.sheet-number {
+    margin: 0 0 0.35rem;
+    color: var(--ion-color-medium);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.sheet-prompt {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.sheet-choices {
+    display: grid;
+    gap: 0.3rem;
+    margin: 0 0 0.6rem;
+    padding: 0;
+    list-style: none;
+
+    li {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.35rem 0.6rem;
+        border: 1px solid rgba(var(--ion-text-color-rgb, 0, 0, 0), 0.12);
+        border-radius: 0.5rem;
+    }
+
+    li.is-answer {
+        border-color: var(--ion-color-success);
+        background: rgba(var(--ion-color-success-rgb), 0.1);
+    }
+}
+
+.choice-letter {
+    flex: none;
+    min-width: 1.2em;
+    font-weight: 700;
+}
+
+.choice-text {
+    flex: 1;
+}
+
+.answer-mark {
+    flex: none;
+    color: var(--ion-color-success);
+    font-size: 1.1rem;
+}
+
+.sheet-explanation {
+    padding: 0.5rem 0.75rem;
+    border-left: 3px solid rgba(var(--ion-color-primary-rgb), 0.5);
+    font-size: 0.9rem;
+}
+
+.sheet-time {
+    margin: 0.4rem 0 0;
+    color: var(--ion-color-medium);
+    font-size: 0.8rem;
+}

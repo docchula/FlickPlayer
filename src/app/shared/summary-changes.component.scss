@@ -1,0 +1,20 @@
+@use 'checklist';
+@use 'changes';
+
+app-summary-changes {
+    @include checklist.layout;
+    @include changes.marks;
+
+    .changes-body > .checklist-heading:not(:first-child) {
+        margin-top: 1rem;
+    }
+
+    // Wide enough for a struck-through block to read as one, as a point does.
+    .checklist-title.whole-added,
+    .checklist-title.whole-removed,
+    .checklist-heading.whole-added,
+    .checklist-heading.whole-removed {
+        padding-top: 0.1rem;
+        padding-bottom: 0.1rem;
+    }
+}

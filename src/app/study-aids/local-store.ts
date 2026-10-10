@@ -1,15 +1,17 @@
-import {CreditChoice} from './study-aids.model';
+import {isStudyTab, StudyTab} from './tabs';
 
 /*
  * What a reader does with the summary and quiz stays on the device: ticks, quiz answers in
- * progress and which cards are folded away. Storage may be unavailable (private browsing), in
- * which case everything still works for the visit.
+ * progress, whether the card is folded away, which tab is open and whether captions are on.
+ * Storage may be unavailable (private browsing), in which case everything still works for the visit.
  */
 
 const TICKS_PREFIX = 'flickSummaryTicks:';
 const ANSWERS_PREFIX = 'flickQuizAnswers:';
 const COLLAPSED_KEY = 'flickStudyAidsCollapsed';
+const TAB_KEY = 'flickStudyAidsTab';
 const CREDIT_KEY = 'flickStudyAidsCredit';
+const CAPTIONS_KEY = 'flickCaptions';
 
 function read(key: string): unknown {
     try {
@@ -59,28 +61,37 @@ export function writeAnswers(videoId: number, answers: Record<string, number>): 
     write(ANSWERS_PREFIX + videoId, answers);
 }
 
-export function readCollapsed(card: 'summary' | 'quiz'): boolean {
-    const stored = read(COLLAPSED_KEY);
-
-    return typeof stored === 'object' && stored !== null && (stored as Record<string, unknown>)[card] === true;
+export function readCollapsed(): boolean {
+    return read(COLLAPSED_KEY) === true;
 }
 
-export function writeCollapsed(card: 'summary' | 'quiz', collapsed: boolean): void {
-    const stored = read(COLLAPSED_KEY);
-    write(COLLAPSED_KEY, {...(typeof stored === 'object' && stored !== null ? stored : {}), [card]: collapsed});
+export function writeCollapsed(collapsed: boolean): void {
+    write(COLLAPSED_KEY, collapsed);
+}
+
+export function readTab(): StudyTab {
+    const stored = read(TAB_KEY);
+
+    return isStudyTab(stored) ? stored : 'summary';
+}
+
+export function writeTab(tab: StudyTab): void {
+    write(TAB_KEY, tab);
 }
 
 /** The co-author box starts as the editor last left it. */
-export function readCreditChoice(): CreditChoice {
-    const stored = read(CREDIT_KEY);
-    if (typeof stored !== 'object' || stored === null) {
-        return {credit: false, name: ''};
-    }
-    const fields = stored as Record<string, unknown>;
-
-    return {credit: fields['credit'] === true, name: typeof fields['name'] === 'string' ? fields['name'] : ''};
+export function readCredit(): boolean {
+    return read(CREDIT_KEY) === true;
 }
 
-export function writeCreditChoice(choice: CreditChoice): void {
-    write(CREDIT_KEY, choice);
+export function writeCredit(credit: boolean): void {
+    write(CREDIT_KEY, credit);
+}
+
+export function readCaptions(): boolean {
+    return read(CAPTIONS_KEY) === true;
+}
+
+export function writeCaptions(on: boolean): void {
+    write(CAPTIONS_KEY, on);
 }

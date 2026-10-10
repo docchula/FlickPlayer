@@ -17,18 +17,53 @@
             </span>
         }
     </div>
-    @if (checklist.pointKeys.length) {
-        <p class="review-progress">
-            @if (reviewed(checklist, ticked); as count) {
-                {{ count }} of {{ checklist.pointKeys.length }} points ticked.
-                <button type="button" class="link-button" (click)="clearTicks()">Clear ticks</button>
-            } @else {
-                Tick each point once you know it.
-            }
-        </p>
+    <app-verification [videoId]="aids.video_id" [part]="aids.summary" name="summary" [canEdit]="aids.can_edit"></app-verification>
+    @if (hasHistory()) {
+        <app-version-switch [view]="view" (viewChange)="setView($event)" [fromAi]="aids.summary.origin === 'ai'"></app-version-switch>
     }
-    <app-checklist-view [checklist]="checklist" [ticked]="ticked" [seekable]="!!playback"
-                        (tickChange)="onTick($event)" (seek)="seek.emit($event)"></app-checklist-view>
+
+    @if (view === 'current') {
+        @if (checklist.pointKeys.length) {
+            <p class="review-progress">
+                @if (reviewed(checklist, ticked); as count) {
+                    {{ count }} of {{ checklist.pointKeys.length }} points ticked.
+                    <button type="button" class="link-button" (click)="clearTicks()">Clear ticks</button>
+                } @else {
+                    Tick each point once you know it.
+                }
+            </p>
+        }
+        <app-checklist-view [checklist]="checklist" [ticked]="ticked" [seekable]="!!playback"
+                            (tickChange)="onTick($event)" (seek)="seek.emit($event)"></app-checklist-view>
+    } @else if (history$ | async; as history) {
+        @if (history.status === 'loading') {
+            <div class="card-loading">
+                <ion-spinner name="dots" aria-label="Loading the earlier versions"></ion-spinner>
+            </div>
+        } @else if (history.status === 'error') {
+            <p class="card-note">The earlier versions could not be loaded. {{ history.message }}</p>
+            <ion-button class="small-button" size="small" fill="outline" (click)="retryHistory()">Try again</ion-button>
+        } @else {
+            @let versions = derive(history.revisions);
+            @if (view === 'original') {
+                @if (versions.original) {
+                    <p class="card-note">
+                        The summary as the AI wrote it{{ versions.originalAt ? ' on ' + formatDay(versions.originalAt) : '' }},
+                        before editors corrected it. Your ticks stay with the edited version.
+                    </p>
+                    <app-checklist-view class="ai-original" [checklist]="versions.original" [seekable]="!!playback"
+                                        (seek)="seek.emit($event)"></app-checklist-view>
+                } @else {
+                    <p class="card-note">An editor wrote this summary, so there is no AI version of it.</p>
+                }
+            } @else if (versions.changes) {
+                <app-summary-changes [changes]="versions.changes" [seekable]="!!playback"
+                                     (seek)="seek.emit($event)"></app-summary-changes>
+            } @else {
+                <p class="card-note">No earlier versions of this summary were kept.</p>
+            }
+        }
+    }
 } @else if (aids.can_edit) {
     <p class="card-note">{{ emptyNote() }}</p>
     <span class="editor-actions">

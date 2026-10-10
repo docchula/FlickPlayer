@@ -1,14 +1,43 @@
+@let profile = profile$ | async;
 <section class="credit-field">
-    <ion-checkbox labelPlacement="end" justify="start" [checked]="choice.credit" (ionChange)="onCredit($event)">
+    <ion-checkbox labelPlacement="end" justify="start" [checked]="credit" (ionChange)="onCredit($event)">
         Show my name as a co-author
     </ion-checkbox>
-    @if (choice.credit) {
-        <ion-input class="credit-name" label="Name to show" labelPlacement="stacked" fill="outline"
-                   [maxlength]="maxName" [value]="choice.name"
-                   [placeholder]="(accountName$ | async) || 'Your name'"
-                   (ionInput)="onName($event)"></ion-input>
-        <p class="credit-hint">Readers see this name with the {{ part }}. Leave it empty to use your account name.</p>
+    @if (credit) {
+        <p class="credit-hint">Readers see your display name with the {{ part }} and beside the words you change.</p>
     } @else {
-        <p class="credit-hint">Readers will not see your name. If it was shown before, saving removes it.</p>
+        <p class="credit-hint">Readers will not see your name, here or beside your changes. If it was shown before, saving removes it.</p>
+    }
+
+    @if (profile) {
+        <div class="display-name">
+            @if (renaming) {
+                <form class="rename" (submit)="saveName($event, profile)">
+                    <ion-input class="name-input" label="Display name" labelPlacement="stacked" fill="outline"
+                               [maxlength]="maxName" [value]="name" [disabled]="saving" (ionInput)="onName($event)"></ion-input>
+                    <ion-button type="submit" size="small" [disabled]="saving || !name.trim()">
+                        @if (saving) {
+                            <ion-spinner name="dots" aria-label="Saving the name"></ion-spinner>
+                        } @else {
+                            Save name
+                        }
+                    </ion-button>
+                    <ion-button size="small" fill="clear" [disabled]="saving" (click)="cancelRename()">Cancel</ion-button>
+                </form>
+                <p class="credit-hint">Students see this name when you are credited and when you verify. You can change it once every 30 days.</p>
+            } @else {
+                <p class="name-line">
+                    Your display name: <strong>{{ profile.name }}</strong>
+                    @if (lockedUntil(profile); as day) {
+                        <span class="credit-hint">You can change it again on {{ day }}.</span>
+                    } @else {
+                        <button type="button" class="link-button" (click)="rename(profile)">Change</button>
+                    }
+                </p>
+            }
+            @if (problem) {
+                <p class="credit-problem" role="alert">{{ problem }}</p>
+            }
+        </div>
     }
 </section>

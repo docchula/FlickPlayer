@@ -1,7 +1,7 @@
 import {inject, Injectable} from '@angular/core';
 import {HttpErrorResponse} from '@angular/common/http';
-import {BehaviorSubject, Observable, of, Subscription, throwError} from 'rxjs';
-import {catchError, map, tap} from 'rxjs/operators';
+import {BehaviorSubject, defer, Observable, of, Subscription, throwError} from 'rxjs';
+import {catchError, map, shareReplay, tap} from 'rxjs/operators';
 import {JSend, ManService} from './man.service';
 import {
     isObject,
@@ -9,24 +9,33 @@ import {
     parseEditors,
     parseErrors,
     parseImage,
+    parseProfile,
     parseQuiz,
+    parseQuizRevisions,
     parseStats,
     parseStudyAids,
     parseSummary,
+    parseSummaryRevisions,
+    parseTranscript,
     text,
 } from './study-aids/parse';
 import {
     AnswerStats,
+    EditorProfile,
     EditorRole,
+    PartName,
     QuizChange,
     QuizPart,
     QuizQuestion,
+    QuizRevision,
     SaveFailure,
     StudyAids,
     StudyAidsEditor,
     StudyAidsState,
     SummaryChange,
     SummaryPart,
+    SummaryRevision,
+    TranscriptState,
     UploadedImage,
 } from './study-aids/study-aids.model';
 
@@ -39,7 +48,13 @@ interface Entry {
     request: Subscription | null;
 }
 
+/** Earlier versions are large and only fetched when a reader asks for them, so few are kept. */
+const KEPT_HISTORIES = 4;
+/** A transcript can be long, and FlickMan only lets a reader fetch a few an hour. */
+const KEPT_TRANSCRIPTS = 6;
+
 const EDITORS_PATH = 'v1/study_aids/editors';
+const PROFILE_PATH = 'v1/study_aids/me';
 
 function path(videoId: number): string {
     return 'v1/study_aids/' + videoId;
@@ -60,6 +75,12 @@ export class StudyAidsService {
     private man = inject(ManService);
 
     private readonly entries = new Map<number, Entry>();
+    private readonly histories = new Map<string, Observable<unknown>>();
+    private readonly transcripts = new Map<number, BehaviorSubject<TranscriptState>>();
+    private readonly profileState = new BehaviorSubject<EditorProfile | null>(null);
+    private profileRequest: Subscription | null = null;
+    /** Whether FlickMan has answered for good: with the editor's name, or that this reader is not an editor. */
+    private profileKnown = false;
     /** Turned off for the visit once FlickMan turns out to have no study aids at all. */
     private supported = true;
 
@@ -83,6 +104,83 @@ export class StudyAidsService {
 
     saveQuiz(videoId: number, change: QuizChange): Observable<QuizPart> {
         return this.save(videoId, '/quiz', change, parseQuiz, (aids, quiz) => ({...aids, quiz}));
+    }
+
+    /** Marks the version an editor has checked against the lecture, or takes their mark back. */
+    verify(videoId: number, part: PartName, revision: number, verified: boolean): Observable<SummaryPart | QuizPart> {
+        const body = {revision, verified};
+
+        return part === 'summary'
+            ? this.save(videoId, '/summary/verify', body, parseSummary, (aids, summary) => ({...aids, summary}))
+            : this.save(videoId, '/quiz/verify', body, parseQuiz, (aids, quiz) => ({...aids, quiz}));
+    }
+
+    /** Every saved version of the summary, oldest first. `revision` is the one on show, so a newer one is fetched afresh. */
+    summaryRevisions(videoId: number, revision: number): Observable<SummaryRevision[]> {
+        return this.history(videoId, 'summary', revision, parseSummaryRevisions);
+    }
+
+    quizRevisions(videoId: number, revision: number): Observable<QuizRevision[]> {
+        return this.history(videoId, 'quiz', revision, parseQuizRevisions);
+    }
+
+    /** The AI's word-for-word transcript, fetched once a visit; a failure is only tried again on request. */
+    transcript(videoId: number): Observable<TranscriptState> {
+        let subject = this.transcripts.get(videoId);
+        if (!subject) {
+            subject = new BehaviorSubject<TranscriptState>({status: 'loading'});
+            this.transcripts.set(videoId, subject);
+            this.fetchTranscript(videoId, subject);
+            for (const old of [...this.transcripts.keys()].slice(0, -KEPT_TRANSCRIPTS)) {
+                this.transcripts.delete(old);
+            }
+        }
+
+        return subject.asObservable();
+    }
+
+    retryTranscript(videoId: number): void {
+        const subject = this.transcripts.get(videoId);
+        if (subject?.value.status === 'error') {
+            subject.next({status: 'loading'});
+            this.fetchTranscript(videoId, subject);
+        }
+    }
+
+    /** This editor's display name; null for readers who are not editors, and until it arrives. */
+    profile(): Observable<EditorProfile | null> {
+        if (!this.profileKnown && (!this.profileRequest || this.profileRequest.closed)) {
+            this.profileRequest = this.man.get<JSend<unknown>>(PROFILE_PATH).subscribe({
+                next: response => {
+                    this.profileKnown = !!response;
+                    this.profileState.next(parseProfile(response?.data));
+                },
+                error: (error: unknown) => {
+                    // Anything but "not an editor" is asked about again next time.
+                    this.profileKnown = error instanceof HttpErrorResponse && [401, 403, 404].includes(error.status);
+                },
+            });
+        }
+
+        return this.profileState.asObservable();
+    }
+
+    /** Changes the name students see, which FlickMan allows once every 30 days. */
+    saveProfile(name: string): Observable<EditorProfile> {
+        return this.send(this.man.post<JSend<unknown>>(PROFILE_PATH, {name}), parseProfile).pipe(
+            tap(profile => {
+                this.profileKnown = true;
+                this.profileState.next(profile);
+                // Bylines and verifications show the new name.
+                for (const [videoId, entry] of this.entries) {
+                    entry.fetchedAt = 0;
+                    if (entry.state.observed) {
+                        this.fetch(videoId, entry);
+                    }
+                }
+                this.histories.clear();
+            }),
+        );
     }
 
     /** Adds an answer to the class stats. Only a reader's first answer to a question counts. */
@@ -144,10 +242,38 @@ export class StudyAidsService {
         );
     }
 
+    private history<T>(videoId: number, part: PartName, revision: number, parse: (value: unknown) => T[] | null): Observable<T[]> {
+        const key = `${videoId}/${part}/${revision}`;
+        let cached = this.histories.get(key) as Observable<T[]> | undefined;
+        if (!cached) {
+            // A failed request is not kept, so asking again sends a new one.
+            cached = this.send(defer(() => this.man.get<JSend<unknown>>(`${path(videoId)}/${part}/revisions`)), parse).pipe(shareReplay(1));
+            this.histories.set(key, cached);
+            for (const old of [...this.histories.keys()].slice(0, -KEPT_HISTORIES)) {
+                this.histories.delete(old);
+            }
+        }
+
+        return cached;
+    }
+
+    private fetchTranscript(videoId: number, subject: BehaviorSubject<TranscriptState>): void {
+        this.man.get<JSend<unknown>>(path(videoId) + '/transcript').subscribe({
+            next: response => {
+                const paragraphs = parseTranscript(response?.data);
+                subject.next(paragraphs?.length ? {status: 'ready', paragraphs} : response ? {status: 'none'} : {status: 'error', limited: false});
+            },
+            error: (error: unknown) => {
+                const status = error instanceof HttpErrorResponse ? error.status : 0;
+                subject.next([401, 403, 404].includes(status) ? {status: 'none'} : {status: 'error', limited: status === 429});
+            },
+        });
+    }
+
     private save<P extends SummaryPart | QuizPart>(
         videoId: number,
         part: string,
-        change: SummaryChange | QuizChange,
+        change: SummaryChange | QuizChange | {revision: number; verified: boolean},
         parse: (value: unknown) => P | null,
         apply: (aids: StudyAids, saved: P) => StudyAids,
     ): Observable<P> {

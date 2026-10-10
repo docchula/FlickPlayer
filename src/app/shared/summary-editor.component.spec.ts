@@ -17,7 +17,7 @@ function pngFile(): Promise<File> {
 
 describe('SummaryEditorComponent', () => {
     let fixture: ComponentFixture<SummaryEditorComponent>;
-    let service: jasmine.SpyObj<Pick<StudyAidsService, 'uploadImage' | 'saveSummary'>>;
+    let service: jasmine.SpyObj<Pick<StudyAidsService, 'uploadImage' | 'saveSummary' | 'profile'>>;
 
     const textarea = () => (fixture.nativeElement as HTMLElement).querySelector('textarea') as HTMLTextAreaElement;
     const pick = async (file: File) => {
@@ -29,7 +29,8 @@ describe('SummaryEditorComponent', () => {
     };
 
     beforeEach(() => {
-        service = jasmine.createSpyObj('StudyAidsService', ['uploadImage', 'saveSummary']);
+        service = jasmine.createSpyObj('StudyAidsService', ['uploadImage', 'saveSummary', 'profile']);
+        service.profile.and.returnValue(of(null));
         TestBed.configureTestingModule({
             imports: [SummaryEditorComponent],
             providers: [

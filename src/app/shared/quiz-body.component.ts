@@ -1,5 +1,6 @@
 import {Component, DestroyRef, EventEmitter, inject, Input, OnChanges, Output} from '@angular/core';
-import {IonButton, IonIcon, ModalController} from '@ionic/angular/standalone';
+import {AsyncPipe} from '@angular/common';
+import {IonButton, IonIcon, IonSpinner, ModalController} from '@ionic/angular/standalone';
 import {addIcons} from 'ionicons';
 import {
     checkmarkCircle,
@@ -10,17 +11,24 @@ import {
     refreshOutline,
     shareSocialOutline,
 } from 'ionicons/icons';
-import {Subscription} from 'rxjs';
+import {Observable, of, Subscription} from 'rxjs';
+import {catchError, map, startWith} from 'rxjs/operators';
 import {Lecture} from '../man.service';
 import {StudyAidsService} from '../study-aids.service';
 import {StudyAidsProgressService} from '../study-aids-progress.service';
 import {RichTextComponent} from './rich-text.component';
 import {QuizEditorComponent} from './quiz-editor.component';
+import {QuizChangesComponent} from './quiz-changes.component';
+import {QuestionSheetComponent} from './question-sheet.component';
+import {VerificationComponent} from './verification.component';
+import {PartView, VersionSwitchComponent} from './version-switch.component';
 import {openEditorsList} from './study-aids-editors.component';
 import {formatClock, plainText, renderBlock, renderInline} from '../study-aids/checklist';
-import {byline} from '../study-aids/byline';
+import {byline, formatDay} from '../study-aids/byline';
+import {aiOriginal, HistoryState, quizChanges, QuizChanges} from '../study-aids/changes';
+import {describeFailure} from '../study-aids/failures';
 import {CHOICE_LETTERS, effectiveAnswers, score} from '../study-aids/quiz';
-import {LecturePlayback, QuizQuestion, StudyAids} from '../study-aids/study-aids.model';
+import {LecturePlayback, QuizQuestion, QuizRevision, RevisionQuestion, SaveFailure, StudyAids} from '../study-aids/study-aids.model';
 
 /** Fewer answers than this say nothing about how hard a question is. */
 const MIN_ANSWERS_FOR_STATS = 5;
@@ -46,7 +54,17 @@ type ChoiceState = 'correct' | 'wrong' | 'muted' | null;
     selector: 'app-quiz-body',
     templateUrl: './quiz-body.component.html',
     styleUrls: ['./quiz-body.component.scss'],
-    imports: [IonButton, IonIcon, RichTextComponent],
+    imports: [
+        AsyncPipe,
+        IonButton,
+        IonIcon,
+        IonSpinner,
+        RichTextComponent,
+        QuizChangesComponent,
+        QuestionSheetComponent,
+        VerificationComponent,
+        VersionSwitchComponent,
+    ],
     host: {'[class.reader]': 'reader'},
 })
 export class QuizBodyComponent implements OnChanges {
@@ -70,10 +88,16 @@ export class QuizBodyComponent implements OnChanges {
     protected announcement = '';
     /** What happened to the last shared link. */
     protected shareNote = '';
+    protected view: PartView = 'current';
+    protected history$: Observable<HistoryState<RevisionQuestion[]>> | null = null;
     protected readonly byline = byline;
     protected readonly formatClock = formatClock;
+    protected readonly formatDay = formatDay;
 
     private videoId: number | null = null;
+    private historyOf: number | null = null;
+    private derivedFrom: QuizRevision[] | null = null;
+    private derived: {original: QuizRevision | null; changes: QuizChanges | null} | null = null;
     private stored: Record<string, number> | null = null;
     private storedSubscription: Subscription | null = null;
     private renderedFrom: QuizQuestion[] | null = null;
@@ -89,6 +113,9 @@ export class QuizBodyComponent implements OnChanges {
             this.current = null;
             this.announcement = '';
             this.shareNote = '';
+            this.view = 'current';
+            this.history$ = null;
+            this.historyOf = null;
             this.storedSubscription?.unsubscribe();
             this.storedSubscription = this.progress.answers$(this.videoId).subscribe(stored => {
                 this.stored = stored;
@@ -100,6 +127,40 @@ export class QuizBodyComponent implements OnChanges {
         if (this.current !== null && this.current >= this.items.length) {
             this.current = null;
         }
+        if (!this.hasHistory()) {
+            this.view = 'current';
+        } else if (this.view !== 'current') {
+            this.loadHistory();
+        }
+    }
+
+    /** Whether there is more than one version: AI questions editors changed, or questions edited since they were written. */
+    hasHistory(): boolean {
+        const quiz = this.aids.quiz;
+
+        return !!quiz && quiz.edited && (quiz.origin === 'ai' || quiz.revision > 1);
+    }
+
+    setView(view: PartView): void {
+        this.view = view;
+        if (view !== 'current') {
+            this.loadHistory();
+        }
+    }
+
+    retryHistory(): void {
+        this.historyOf = null;
+        this.loadHistory();
+    }
+
+    /** The AI's questions and the changes since, worked out once for each set of versions. */
+    derive(revisions: QuizRevision[]): {original: QuizRevision | null; changes: QuizChanges | null} {
+        if (revisions !== this.derivedFrom || !this.derived) {
+            this.derivedFrom = revisions;
+            this.derived = {original: aiOriginal(revisions), changes: quizChanges(revisions)};
+        }
+
+        return this.derived;
     }
 
     phase(): 'start' | 'question' | 'results' {
@@ -263,6 +324,19 @@ export class QuizBodyComponent implements OnChanges {
             },
         });
         await modal.present();
+    }
+
+    private loadHistory(): void {
+        const quiz = this.aids.quiz;
+        if (!quiz || this.historyOf === quiz.revision) {
+            return;
+        }
+        this.historyOf = quiz.revision;
+        this.history$ = this.service.quizRevisions(this.aids.video_id, quiz.revision).pipe(
+            map((revisions): HistoryState<RevisionQuestion[]> => ({status: 'ready', revisions})),
+            catchError((failure: SaveFailure) => of<HistoryState<RevisionQuestion[]>>({status: 'error', message: describeFailure(failure)})),
+            startWith<HistoryState<RevisionQuestion[]>>({status: 'loading'}),
+        );
     }
 
     private questions(): QuizQuestion[] {
