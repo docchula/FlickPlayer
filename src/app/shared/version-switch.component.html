@@ -1,6 +1,6 @@
 <div class="version-switch" role="group" aria-label="Which version to show">
     <button type="button" [class.active]="view === 'current'" [attr.aria-pressed]="view === 'current'" (click)="choose('current')">
-        {{ fromAi ? 'Edited by editors' : 'Current' }}
+        {{ fromAi ? 'Edited by PS' : 'Current' }}
     </button>
     @if (fromAi) {
         <button type="button" [class.active]="view === 'original'" [attr.aria-pressed]="view === 'original'" (click)="choose('original')">

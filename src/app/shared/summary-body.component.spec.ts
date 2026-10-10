@@ -88,7 +88,7 @@ describe('SummaryBodyComponent', () => {
 
     it('goes back to the edited version', () => {
         show('Show changes');
-        show('Edited by editors');
+        show('Edited by PS');
 
         expect(element().querySelector('app-summary-changes')).toBeNull();
         expect(element().querySelectorAll('.point-tick').length).toBe(3);
