@@ -18,7 +18,7 @@
             <ion-searchbar
                 [placeholder]="searchMode === 'content'
                     ? 'Search lecture content (AI transcripts)...'
-                    : 'Search videos by title, lecturer, or date (YYYY-MM-DD)...'"
+                    : 'Search videos by title or lecturer...'"
                 debounce="0"
                 (ionInput)="onSearchChange($event)"
                 (ionFocus)="searchFocused = true"
