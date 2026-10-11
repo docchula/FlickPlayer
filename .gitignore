@@ -43,3 +43,7 @@ npm-debug.log*
 
 # Local editor and tool settings
 .claude/
+/.agents
+AGENTS.md
+CLAUDE.md
+*.local.json

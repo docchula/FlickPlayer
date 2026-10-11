@@ -1,0 +1,35 @@
+:host {
+    display: inline-flex;
+    align-items: center;
+}
+
+.mode-list {
+    padding: 0.25rem 0;
+}
+
+.mode-list ion-item {
+    --min-height: 3rem;
+    cursor: pointer;
+}
+
+.mode-list h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.mode-list p {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--flick-muted-text);
+}
+
+.mode-icon {
+    margin-inline-end: 0.75rem;
+    font-size: 1.15rem;
+    color: var(--flick-muted-text);
+}
+
+.selected .mode-icon {
+    color: var(--ion-color-primary);
+}

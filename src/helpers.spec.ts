@@ -1,17 +1,22 @@
-import {colorByFolderName, snippetToHtml} from './helpers';
+import {colorByFolderName, contrastByFolderName, formatDuration, snippetToHtml} from './helpers';
 
+// The colours themselves come from the theme; see palette.spec.ts for the values each mode gives.
 describe('colorByFolderName', () => {
-    it('returns the mapped color for a known folder name', () => {
-        expect(colorByFolderName('1st year')).toBe('#00BCD4');
-        expect(colorByFolderName('NLE2')).toBe('#FDD835');
+    it('returns the theme colour for a known folder name', () => {
+        expect(colorByFolderName('1st year')).toBe('var(--flick-series-0)');
+        expect(colorByFolderName('NLE2')).toBe('var(--flick-series-7)');
     });
 
-    it('falls back to gray for an unknown folder name', () => {
-        expect(colorByFolderName('Unknown Folder')).toBe('gray');
+    it('falls back to the theme fallback colour for an unknown folder name', () => {
+        expect(colorByFolderName('Unknown Folder')).toBe('var(--flick-series-fallback)');
     });
 
-    it('falls back to gray for an empty string', () => {
-        expect(colorByFolderName('')).toBe('gray');
+    it('falls back to the theme fallback colour for an empty string', () => {
+        expect(colorByFolderName('')).toBe('var(--flick-series-fallback)');
+    });
+
+    it('pairs each colour with a text colour that reads on it', () => {
+        expect(contrastByFolderName('1st year')).toBe('var(--flick-series-0-contrast)');
     });
 });
 
@@ -24,5 +29,20 @@ describe('snippetToHtml', () => {
     it('strips Markdown headings, list markers and emphasis, and collapses whitespace', () => {
         expect(snippetToHtml('## Heading\n\n- **bold** item\n1. `code`  here'))
             .toBe('Heading bold item code here');
+    });
+});
+
+describe('formatDuration', () => {
+    it('is empty for zero', () => {
+        expect(formatDuration(0)).toBe('');
+    });
+
+    it('uses minutes below an hour', () => {
+        expect(formatDuration(45 * 60 + 10)).toBe('45 min');
+    });
+
+    it('uses hours and minutes from an hour up', () => {
+        expect(formatDuration(125 * 60)).toBe('2h 5m');
+        expect(formatDuration(180 * 60)).toBe('3h');
     });
 });

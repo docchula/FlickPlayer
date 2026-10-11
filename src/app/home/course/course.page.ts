@@ -10,6 +10,7 @@ import {
     AlertController,
     IonBackButton,
     IonButton,
+    IonButtons,
     IonCard,
     IonCardContent,
     IonCardHeader,
@@ -45,6 +46,7 @@ import {LecturePlayback} from '../../study-aids/study-aids.model';
 import {ModalEvaluationComponent} from './modal-evaluation.component';
 import {confirmAiDisclaimer, ModalDocumentComponent} from './modal-document.component';
 import {PomodoroTimerComponent} from '../../shared/pomodoro-timer.component';
+import {ThemeMenuComponent} from '../../shared/theme-menu.component';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../../consent.service';
 
@@ -63,6 +65,7 @@ interface SeekBarPointerHandlers {
         IonHeader,
         IonToolbar,
         IonBackButton,
+        IonButtons,
         IonTitle,
         IonContent,
         IonGrid,
@@ -80,6 +83,7 @@ interface SeekBarPointerHandlers {
         IonItem,
         IonIcon,
         IonSearchbar,
+        ThemeMenuComponent,
         NgClass,
         IonProgressBar,
         AsyncPipe,

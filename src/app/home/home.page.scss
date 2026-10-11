@@ -1,3 +1,5 @@
+@use 'heat-levels' as *;
+
 main {
   min-height: 60vh;
 
@@ -10,18 +12,15 @@ ion-card {
   min-height: 4rem;
 }
 
-ion-card-title {
-  color: white;
+/* Ionic gives the header and title a colour of their own, so both have to defer to the
+   card, which carries the group's readable label colour. */
+.hover-card ion-card-header,
+.hover-card ion-card-title {
+  color: inherit;
 }
 
 .course-name {
-  color: #222222;
-}
-
-@media (prefers-color-scheme: dark) {
-  .course-name {
-    color: #cccccc;
-  }
+  color: var(--ion-text-color);
 }
 
 .center-text {
@@ -34,18 +33,10 @@ ion-card-title {
 }
 
 .small-text {
-  color: #aaaaaa;
+  color: var(--flick-muted-text);
 
   a {
-    color: #bbbbbb;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    color: #555555;
-
-    a {
-      color: #666666;
-    }
+    color: var(--flick-muted-text);
   }
 }
 
@@ -60,12 +51,12 @@ ion-card-title {
 
 p {
   padding: 0 1.5rem 0 1.5rem;
-  color: gray;
+  color: var(--flick-muted-text);
   text-align: center;
 
   ion-icon {
     margin: 0 0.6em;
-    color: gray;
+    color: var(--flick-muted-text);
   }
 
   a {
@@ -193,10 +184,6 @@ p {
   padding: 0.1rem 0.4rem;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
-
-  @media (prefers-color-scheme: dark) {
-    background: var(--ion-color-dark-tint);
-  }
 }
 
 .course-info {
@@ -217,21 +204,17 @@ p {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-
-  @media (prefers-color-scheme: dark) {
-    color: var(--ion-color-primary-tint);
-  }
 }
 
 .course-year-badge {
   flex-shrink: 0;
-  color: #fff;
   border-radius: 4px;
   padding: 0.05rem 0.4rem;
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.02em;
 }
+
 .heading-path {
   font-size: 0.8rem;
   color: var(--ion-color-medium) !important;
@@ -264,4 +247,34 @@ p {
 
 .watch-button {
   align-self: center;
+}
+
+/* ── Activity heatmap ── */
+.play-stats-card {
+  max-width: 36rem;
+  margin-inline: auto;
+
+  .play-stats-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .play-stats-summary {
+    font-size: 0.8rem;
+    color: var(--ion-color-medium);
+  }
+
+  .play-stats-hint {
+    margin-top: 0.5rem;
+    font-size: 0.6rem;
+    text-align: right;
+    color: var(--ion-color-medium);
+  }
+}
+
+.recent-heatmap {
+  @include hour-grid;
 }
