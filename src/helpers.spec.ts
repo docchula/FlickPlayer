@@ -1,4 +1,4 @@
-import {colorByFolderName, contrastByFolderName, snippetToHtml} from './helpers';
+import {colorByFolderName, contrastByFolderName, formatDuration, snippetToHtml} from './helpers';
 
 // The colours themselves come from the theme; see palette.spec.ts for the values each mode gives.
 describe('colorByFolderName', () => {
@@ -29,5 +29,20 @@ describe('snippetToHtml', () => {
     it('strips Markdown headings, list markers and emphasis, and collapses whitespace', () => {
         expect(snippetToHtml('## Heading\n\n- **bold** item\n1. `code`  here'))
             .toBe('Heading bold item code here');
+    });
+});
+
+describe('formatDuration', () => {
+    it('is empty for zero', () => {
+        expect(formatDuration(0)).toBe('');
+    });
+
+    it('uses minutes below an hour', () => {
+        expect(formatDuration(45 * 60 + 10)).toBe('45 min');
+    });
+
+    it('uses hours and minutes from an hour up', () => {
+        expect(formatDuration(125 * 60)).toBe('2h 5m');
+        expect(formatDuration(180 * 60)).toBe('3h');
     });
 });

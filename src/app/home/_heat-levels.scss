@@ -1,0 +1,42 @@
+// Cell colors and the 7-day hour grid shared by the home card and the modal. Works in light and dark themes.
+@mixin heat-levels {
+  &.level-0 {
+    background: var(--ion-color-step-100, #e6e6e6);
+  }
+
+  &.level-1 {
+    background: rgba(var(--ion-color-success-rgb), 0.3);
+  }
+
+  &.level-2 {
+    background: rgba(var(--ion-color-success-rgb), 0.55);
+  }
+
+  &.level-3 {
+    background: rgba(var(--ion-color-success-rgb), 0.8);
+  }
+
+  &.level-4 {
+    background: var(--ion-color-success-shade, #28ba62);
+  }
+}
+
+// 7 days of 24 hourly cells, with a day label in front of each row
+@mixin hour-grid {
+  display: grid;
+  grid-template-columns: auto repeat(24, minmax(0, 1fr));
+  gap: 2px;
+  align-items: center;
+
+  .day-label {
+    padding-right: 0.4rem;
+    font-size: 0.7rem;
+    color: var(--ion-color-medium);
+  }
+
+  .cell {
+    aspect-ratio: 1;
+    border-radius: 2px;
+    @include heat-levels;
+  }
+}
