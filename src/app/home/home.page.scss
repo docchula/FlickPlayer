@@ -254,6 +254,10 @@ p {
   max-width: 36rem;
   margin-inline: auto;
 
+  @media (min-width: 1024px) {
+      max-width: 50vw;
+    }
+
   .play-stats-header {
     display: flex;
     flex-wrap: wrap;

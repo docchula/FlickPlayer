@@ -62,7 +62,7 @@ section:first-child h2 {
 .hours {
   margin-top: 0.5rem;
   @include hour-grid;
-  max-width: 40rem;
+  max-width: 58rem;
 
   .hour-label {
     font-size: 0.7rem;
