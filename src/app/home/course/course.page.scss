@@ -3,7 +3,7 @@ span a {
 }
 
 ion-title small {
-  color: gray;
+  color: var(--flick-muted-text);
 }
 
 .e-learning-tag {
@@ -12,30 +12,21 @@ ion-title small {
 
 span.date {
   font-family: monospace, monospace;
-  color: darkblue;
-  @media (prefers-color-scheme: dark) {
-    color: lightblue;
-  }
+  color: var(--flick-companion-text);
 }
 
 span.date-divider {
   margin: 0 0.2rem 0 0.2rem;
   opacity: 0.5;
-  color: darkblue;
-  @media (prefers-color-scheme: dark) {
-    color: lightblue;
-  }
+  color: var(--flick-companion-text);
 }
 
 .time-info {
-  color: darkgoldenrod;
-  @media (prefers-color-scheme: dark) {
-    color: yellow;
-  }
+  color: var(--flick-warning-text);
 }
 
 .ion-color .check-icon {
-  background-color: white;
+  background-color: var(--ion-color-contrast);
 }
 
 .set-playback-speed-button {
