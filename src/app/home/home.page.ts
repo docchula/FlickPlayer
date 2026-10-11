@@ -2,6 +2,11 @@ import {Component, inject, OnInit} from '@angular/core';
 import {Observable, of, Subject, timer} from 'rxjs';
 import {CourseListResponse, DocumentSearchHit, Lecture, ManService, PlayStats, SearchVideoResult} from '../man.service';
 import {Router, RouterLink} from '@angular/router';
+import {SettingsMenuComponent} from '../shared/settings-menu.component';
+import {PomodoroTimerComponent} from '../shared/pomodoro-timer.component';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {SettingsService} from '../settings.service';
+import {ACTIVITY_RANGES, DEFAULT_ACTIVITY_RANGE} from '../settings/settings-presets';
 import {AuthService} from '../auth.service';
 import {colorByFolderName, formatDuration, snippetToHtml} from '../../helpers';
 import {addIcons} from "ionicons";
@@ -38,7 +43,7 @@ import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../consent.service';
 import {confirmAiDisclaimer, ModalDocumentComponent} from './course/modal-document.component';
 import {ModalPlayStatsComponent} from './modal-play-stats.component';
-import {buildRecentGrid, formatDay, RecentRow, serverNow} from './play-stats';
+import {buildRecentGrid, buildYearGrid, formatDay, rangeStart, RecentRow, serverNow, sumFrom, WeekColumn} from './play-stats';
 
 // `title` searches videos by title, lecturer or date; `content` searches the AI-generated transcript documents.
 export type SearchMode = 'title' | 'content';
@@ -64,6 +69,7 @@ export type SearchResults =
     styleUrls: ['home.page.scss'],
     imports: [
         IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon,
+        SettingsMenuComponent, PomodoroTimerComponent,
         IonContent, IonGrid, IonRow, IonCol, IonCard, RouterLink, NgStyle,
         IonCardHeader, IonCardTitle, AsyncPipe, DatePipe, IonCardContent, IonItem,
         IonLabel, IonText, IonSpinner, IonSearchbar, IonList, IonSegment, IonSegmentButton,
@@ -77,12 +83,17 @@ export class HomePage implements OnInit {
     private consentService = inject(ConsentService);
     private modalCtrl = inject(ModalController);
     private alertController = inject(AlertController);
+    private settings = inject(SettingsService);
 
     response$: Observable<CourseListResponse>;
     playStats: PlayStats | null = null;
     recentRows: RecentRow[] = [];
-    /** Totals of the 7-day grid, in seconds */
+    /** The days of a longer period, a column a week; empty while the last 7 days are shown by the hour */
+    activityWeeks: WeekColumn[] = [];
+    /** Totals of the grid shown, in seconds */
     recentTotals = {video: 0, actual: 0};
+    /** The period the grid covers, chosen in the settings */
+    activityRange = ACTIVITY_RANGES.find(range => range.value === DEFAULT_ACTIVITY_RANGE);
     searchQuery = '';
     searchMode: SearchMode = 'title';
     // The mode switch is only shown while the search box is focused or holds a query
@@ -97,6 +108,10 @@ export class HomePage implements OnInit {
 
     constructor() {
         addIcons({documentTextOutline, filmOutline, logOutOutline, playOutline, searchOutline});
+        this.settings.activityRange$.pipe(takeUntilDestroyed()).subscribe(value => {
+            this.activityRange = ACTIVITY_RANGES.find(range => range.value === value);
+            this.showActivity();
+        });
     }
 
     logout() {
@@ -109,13 +124,29 @@ export class HomePage implements OnInit {
     ionViewWillEnter() {
         this.manService.getPlayStats().pipe(catchError(() => of(null))).subscribe(stats => {
             this.playStats = stats;
-            this.recentRows = stats ? buildRecentGrid(stats, undefined, serverNow(stats)) : [];
-            const cells = this.recentRows.flatMap(row => row.cells).filter(c => c);
-            this.recentTotals = {
-                video: cells.reduce((sum, c) => sum + c.video_seconds, 0),
-                actual: cells.reduce((sum, c) => sum + c.actual_seconds, 0),
-            };
+            this.showActivity();
         });
+    }
+
+    /** The last 7 days by the hour, or a longer period by the day */
+    private showActivity() {
+        const stats = this.playStats;
+        const months = this.activityRange.months;
+        if (stats && months !== null) {
+            const from = rangeStart(stats, months);
+            const total = sumFrom(stats, from);
+            this.recentRows = [];
+            this.activityWeeks = buildYearGrid(stats, undefined, from);
+            this.recentTotals = {video: total.video_seconds, actual: total.actual_seconds};
+            return;
+        }
+        this.activityWeeks = [];
+        this.recentRows = stats ? buildRecentGrid(stats, undefined, serverNow(stats)) : [];
+        const cells = this.recentRows.flatMap(row => row.cells).filter(c => c);
+        this.recentTotals = {
+            video: cells.reduce((sum, c) => sum + c.video_seconds, 0),
+            actual: cells.reduce((sum, c) => sum + c.actual_seconds, 0),
+        };
     }
 
     ngOnInit() {

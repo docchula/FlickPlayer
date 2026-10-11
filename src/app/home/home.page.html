@@ -4,6 +4,7 @@
             MDCU Recorded Lecture
         </ion-title>
         <ion-buttons slot="end">
+            <app-settings-menu></app-settings-menu>
             <ion-button fill="outline" color="secondary" (click)="logout()">
                 <span class="ion-hide-sm-down text-sign-out">Sign out</span>
                 <ion-icon name="log-out-outline"></ion-icon>
@@ -126,6 +127,7 @@
                 }
             </div>
         } @else if (response$ | async; as response) {
+            <app-pomodoro-timer></app-pomodoro-timer>
             @if (response.last_played) {
                 <ion-card color="tertiary" class="ion-margin-top">
                     <ion-card-header>
@@ -161,7 +163,7 @@
                           aria-label="Open your activity for the past year">
                     <ion-card-content>
                         <div class="play-stats-header">
-                            <strong>Your activity &middot; last 7 days</strong>
+                            <strong>Your activity &middot; {{ activityRange.label.toLowerCase() }}</strong>
                             <span class="play-stats-summary">
                                 @if (recentTotals.actual) {
                                     {{ formatDuration(recentTotals.video) }} video &middot; {{ formatDuration(recentTotals.actual) }} actual
@@ -170,19 +172,35 @@
                                 }
                             </span>
                         </div>
-                        <div class="recent-heatmap">
-                            @for (row of recentRows; track row.date) {
-                                <span class="day-label">{{ row.label }}</span>
-                                @for (cell of row.cells; track $index) {
-                                    @if (cell) {
-                                        <span class="cell level-{{ cell.level }}"
-                                              [title]="formatDay(cell.date) + ' ' + cell.hour + ':00 · ' + (formatDuration(cell.actual_seconds) || 'no activity')"></span>
-                                    } @else {
-                                        <span class="cell"></span>
+                        @if (activityWeeks.length) {
+                            <div class="period-heatmap">
+                                @for (week of activityWeeks; track $index) {
+                                    <span class="month">{{ week.monthLabel }}</span>
+                                    @for (day of week.days; track $index) {
+                                        @if (day) {
+                                            <span class="cell level-{{ day.level }}"
+                                                  [title]="formatDay(day.date) + ' · ' + (formatDuration(day.actual_seconds) || 'no activity')"></span>
+                                        } @else {
+                                            <span class="cell"></span>
+                                        }
                                     }
                                 }
-                            }
-                        </div>
+                            </div>
+                        } @else {
+                            <div class="recent-heatmap">
+                                @for (row of recentRows; track row.date) {
+                                    <span class="day-label">{{ row.label }}</span>
+                                    @for (cell of row.cells; track $index) {
+                                        @if (cell) {
+                                            <span class="cell level-{{ cell.level }}"
+                                                  [title]="formatDay(cell.date) + ' ' + cell.hour + ':00 · ' + (formatDuration(cell.actual_seconds) || 'no activity')"></span>
+                                        } @else {
+                                            <span class="cell"></span>
+                                        }
+                                    }
+                                }
+                            </div>
+                        }
                         <div class="play-stats-hint">Tap to see the whole year</div>
                     </ion-card-content>
                 </ion-card>

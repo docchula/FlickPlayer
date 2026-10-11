@@ -8,6 +8,16 @@ main {
   }
 }
 
+/* iOS centres the title between fixed gutters, which the toolbar buttons outgrow on a phone.
+   There the title moves to the start and gives way to them instead of running underneath. */
+@media (max-width: 575.98px) {
+  ion-title.ios {
+    position: static;
+    padding-inline: 16px 0;
+    text-align: start;
+  }
+}
+
 ion-card {
   min-height: 4rem;
 }
@@ -296,4 +306,28 @@ p {
 
 .recent-heatmap {
   @include hour-grid;
+}
+
+// A longer period chosen in the settings: a day a square, a column a week with Sunday on top,
+// under the month that starts in it. Columns shrink to fit a year on the card.
+.period-heatmap {
+  display: grid;
+  grid-template-rows: auto repeat(7, auto);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1rem);
+  gap: 2px;
+  justify-content: center;
+
+  .month {
+    font-size: 0.6rem;
+    line-height: 1.2;
+    color: var(--ion-color-medium);
+    white-space: nowrap;
+  }
+
+  .cell {
+    aspect-ratio: 1;
+    border-radius: 2px;
+    @include heat-levels;
+  }
 }

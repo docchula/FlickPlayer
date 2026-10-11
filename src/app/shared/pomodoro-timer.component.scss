@@ -1,0 +1,118 @@
+:host {
+    display: block;
+    width: 100%;
+}
+
+.pomodoro-card {
+    margin: 0.75rem 0 0 0;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: var(--flick-welcome-card-shadow, 0 4px 16px rgba(0, 0, 0, 0.08));
+}
+
+.pomodoro-header {
+    cursor: pointer;
+    padding: 0.75rem 1rem;
+}
+
+.pomodoro-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.collapse-icon {
+    font-size: 1.2rem;
+    color: var(--ion-color-medium);
+}
+
+.pomodoro-content {
+    padding: 0 1rem 1rem 1rem;
+}
+
+.timer-section {
+    text-align: center;
+    padding: 0.5rem 0 0.75rem 0;
+}
+
+.timer-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.phase-label {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--ion-text-color);
+}
+
+.info-btn {
+    --padding-start: 0;
+    --padding-end: 0;
+    height: auto;
+}
+
+.timer-display {
+    font-size: 2.25rem;
+    font-weight: 300;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+    color: var(--ion-color-medium);
+    margin: 0.25rem 0;
+}
+
+.timer-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.session-counter {
+    font-size: 0.8rem;
+    color: var(--ion-color-medium);
+    margin-top: 0.5rem;
+}
+
+.duration-section {
+    border-top: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.1));
+    padding-top: 0.75rem;
+}
+
+.duration-field {
+    margin-bottom: 0.75rem;
+}
+
+.duration-label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--ion-color-medium);
+    margin-bottom: 0.25rem;
+}
+
+.duration-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.duration-input {
+    --padding-start: 0.75rem;
+    --padding-end: 0.75rem;
+    border: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.15));
+    border-radius: 0.5rem;
+    max-width: 180px;
+}
+
+.duration-suffix {
+    font-size: 0.9rem;
+    color: var(--ion-color-medium);
+}
+
+/* The phase-notification toast lives outside this component's view (see template note),
+   so its styles are global — see .pomodoro-toast in global.scss. */

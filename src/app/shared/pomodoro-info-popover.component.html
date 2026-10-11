@@ -1,0 +1,9 @@
+<div class="pomodoro-info-popover">
+    <h3>{{ title }}</h3>
+    <p>{{ description }}</p>
+    <ol>
+        @for (step of steps; track step.text) {
+            <li>{{ step.text }}<br><span class="step-detail">{{ step.detail }}</span></li>
+        }
+    </ol>
+</div>

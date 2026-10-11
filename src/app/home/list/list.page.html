@@ -4,6 +4,9 @@
     <ion-title>
       <span [ngStyle]="{'background-color': colorByFolderName(year)}">{{ year || 'Loading'}}</span>
     </ion-title>
+    <ion-buttons slot="end">
+      <app-settings-menu></app-settings-menu>
+    </ion-buttons>
   </ion-toolbar>
   <ion-toolbar>
     <ion-searchbar
