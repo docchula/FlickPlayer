@@ -32,7 +32,7 @@ import {
     IonToolbar,
     ModalController,
 } from '@ionic/angular';
-import {DomSanitizer} from '@angular/platform-browser';
+import {DomSanitizer, Title} from '@angular/platform-browser';
 import {PlayHistory} from '../../play-tracker.service';
 import {addIcons} from "ionicons";
 import {checkmarkOutline, closeOutline, documentAttachOutline, documentTextOutline, download, pauseCircleOutline} from "ionicons/icons";
@@ -97,6 +97,8 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     private modalCtrl = inject(ModalController);
     private analytics = inject(Analytics);
     private consentService = inject(ConsentService);
+    private titleService = inject(Title);
+    private originalTitle = this.titleService.getTitle();
 
     @ViewChild('videoPlayer') videoPlayerElement: ElementRef;
     videoPlayer: Player;
@@ -153,6 +155,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                         }
                         this.year = courseData.category;
                         this.course = courseData.name;
+                        this.titleService.setTitle(`${courseData.name} | ${this.originalTitle}`);
                         const videos = this.mergeVideoInfo(courseData.lectures, history?.records ?? {}, history?.evaluations ?? {});
                         // Auto-select video from global search / direct link
                         if (this.videoIdFromSearch) {
@@ -300,6 +303,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
 
     ngOnDestroy() {
         this.stopPolling$.next(true);
+        this.titleService.setTitle(this.originalTitle);
     }
 
     // video.js seeks as soon as a touch lands on the progress control, so a fingertip brushing
