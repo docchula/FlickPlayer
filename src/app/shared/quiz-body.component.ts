@@ -1,6 +1,6 @@
 import {Component, DestroyRef, EventEmitter, inject, Input, OnChanges, Output} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {IonButton, IonIcon, IonSpinner, ModalController} from '@ionic/angular';
+import {AlertController, IonButton, IonIcon, IonSpinner, ModalController} from '@ionic/angular';
 import {addIcons} from 'ionicons';
 import {
     checkmarkCircle,
@@ -71,6 +71,7 @@ export class QuizBodyComponent implements OnChanges {
     private service = inject(StudyAidsService);
     private progress = inject(StudyAidsProgressService);
     private modalCtrl = inject(ModalController);
+    private alertCtrl = inject(AlertController);
 
     @Input({required: true}) aids: StudyAids;
     @Input({required: true}) video: Lecture;
@@ -268,7 +269,11 @@ export class QuizBodyComponent implements OnChanges {
         this.announcement = '';
     }
 
-    retake(): void {
+    /** Clears the reader's answers and starts again from the first question, asking first while the quiz is unfinished. */
+    async redo(): Promise<void> {
+        if (this.answeredCount() < this.items.length && !(await this.confirmRedo())) {
+            return;
+        }
         this.progress.saveAnswers(this.aids.video_id, {});
         this.current = 0;
         this.announcement = '';
@@ -324,6 +329,20 @@ export class QuizBodyComponent implements OnChanges {
             },
         });
         await modal.present();
+    }
+
+    private async confirmRedo(): Promise<boolean> {
+        const alert = await this.alertCtrl.create({
+            header: 'Redo the quiz?',
+            message: 'Your answers so far will be cleared, and you start again from the first question.',
+            buttons: [
+                {text: 'Cancel', role: 'cancel'},
+                {text: 'Redo', role: 'confirm'},
+            ],
+        });
+        await alert.present();
+
+        return (await alert.onDidDismiss()).role === 'confirm';
     }
 
     private loadHistory(): void {

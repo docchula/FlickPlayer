@@ -1,7 +1,7 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {By} from '@angular/platform-browser';
 import {ActivatedRoute, convertToParamMap} from '@angular/router';
-import {ModalController} from '@ionic/angular';
+import {AlertController, ModalController} from '@ionic/angular';
 import {BehaviorSubject, of} from 'rxjs';
 import {LectureStudyAidsComponent} from './lecture-study-aids.component';
 import {QuizBodyComponent} from './quiz-body.component';
@@ -49,6 +49,8 @@ describe('LectureStudyAidsComponent', () => {
     let service: jasmine.SpyObj<Pick<StudyAidsService, 'watch' | 'refresh' | 'answer' | 'transcript' | 'retryTranscript' | 'profile' | 'saveTicks'>>;
     let seek: jasmine.Spy;
     let query: Record<string, string>;
+    /** How the reader answers the question before an unfinished quiz is cleared. */
+    let redoChoice: string;
 
     const element = () => fixture.nativeElement as HTMLElement;
     const text = () => element().textContent?.replace(/\s+/g, ' ') ?? '';
@@ -88,6 +90,7 @@ describe('LectureStudyAidsComponent', () => {
         ]}));
         seek = jasmine.createSpy('seek');
         query = {};
+        redoChoice = 'confirm';
         TestBed.configureTestingModule({
             imports: [LectureStudyAidsComponent],
             providers: [
@@ -96,6 +99,10 @@ describe('LectureStudyAidsComponent', () => {
                     return convertToParamMap(query);
                 }}}},
                 {provide: ModalController, useValue: jasmine.createSpyObj('ModalController', ['create'])},
+                {provide: AlertController, useValue: {create: () => Promise.resolve({
+                    present: () => Promise.resolve(),
+                    onDidDismiss: () => Promise.resolve({role: redoChoice}),
+                })}},
             ],
         });
     });
@@ -250,7 +257,7 @@ describe('LectureStudyAidsComponent', () => {
             expect(seek).toHaveBeenCalledWith(465);
         });
 
-        it('scores the quiz and lets the reader start again', () => {
+        it('scores the quiz and lets the reader start again', async () => {
             createQuiz([question('a', 2), question('b', 0)]);
             clickButton('Start quiz');
             buttons('.quiz-choice')[2].click();
@@ -262,7 +269,42 @@ describe('LectureStudyAidsComponent', () => {
 
             expect(text()).toContain('1 of 2 correct');
             expect(text()).toContain('1/2 correct');
-            clickButton('Retake quiz');
+            clickButton('Redo quiz');
+            await fixture.whenStable();
+            fixture.detectChanges();
+            expect(text()).toContain('Question 1 of 2');
+            expect(buttons('.quiz-choice.is-correct').length).toBe(0);
+        });
+
+        it('lets the reader redo an unfinished quiz once they confirm', async () => {
+            localStorage.setItem('flickQuizAnswers:7', JSON.stringify({a: 2}));
+            createQuiz([question('a', 2), question('b', 0)]);
+            redoChoice = 'cancel';
+            clickButton('Redo quiz');
+            await fixture.whenStable();
+            fixture.detectChanges();
+            expect(text()).toContain('You have answered 1 so far.');
+
+            redoChoice = 'confirm';
+            clickButton('Redo quiz');
+            await fixture.whenStable();
+            fixture.detectChanges();
+            expect(text()).toContain('Question 1 of 2');
+            expect(buttons('.quiz-choice.is-correct').length).toBe(0);
+            expect(JSON.parse(localStorage.getItem('flickQuizAnswers:7') ?? 'null')).toEqual({});
+        });
+
+        it('offers to redo the quiz from a question once one is answered', async () => {
+            createQuiz([question('a', 2), question('b', 0)]);
+            clickButton('Start quiz');
+            expect(text()).not.toContain('Redo quiz');
+
+            buttons('.quiz-choice')[2].click();
+            fixture.detectChanges();
+            clickButton('Next question');
+            clickButton('Redo quiz');
+            await fixture.whenStable();
+            fixture.detectChanges();
             expect(text()).toContain('Question 1 of 2');
             expect(buttons('.quiz-choice.is-correct').length).toBe(0);
         });

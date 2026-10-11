@@ -13,6 +13,10 @@
 
 .quiz-start ion-button {
     margin: 0.25rem 0 0;
+
+    & + ion-button {
+        margin-left: 0.5rem;
+    }
 }
 
 .quiz-progress {
@@ -30,6 +34,8 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.3rem;
+    // Keeps the dots and the Redo button together at the end of the row.
+    margin-left: auto;
 }
 
 .dot {

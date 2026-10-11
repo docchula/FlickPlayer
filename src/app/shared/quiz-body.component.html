@@ -73,6 +73,12 @@
                     <ion-button size="small" (click)="start()">
                         {{ answeredCount() ? 'Continue' : 'Start quiz' }}
                     </ion-button>
+                    @if (answeredCount()) {
+                        <ion-button size="small" fill="clear" (click)="redo()">
+                            <ion-icon slot="start" name="refresh-outline" aria-hidden="true"></ion-icon>
+                            Redo quiz
+                        </ion-button>
+                    }
                 </div>
             }
             @case ('question') {
@@ -86,6 +92,12 @@
                                   [class.dot-wrong]="isAnswered(other) && !isRight(other)"></span>
                         }
                     </span>
+                    @if (answeredCount()) {
+                        <ion-button class="small-button" size="small" fill="clear" (click)="redo()">
+                            <ion-icon slot="start" name="refresh-outline" aria-hidden="true"></ion-icon>
+                            Redo quiz
+                        </ion-button>
+                    }
                 </div>
 
                 <app-rich-text class="quiz-prompt" [html]="item.promptHtml"></app-rich-text>
@@ -156,9 +168,9 @@
                         </li>
                     }
                 </ol>
-                <ion-button size="small" fill="outline" (click)="retake()">
+                <ion-button size="small" fill="outline" (click)="redo()">
                     <ion-icon slot="start" name="refresh-outline" aria-hidden="true"></ion-icon>
-                    Retake quiz
+                    Redo quiz
                 </ion-button>
             }
         }
