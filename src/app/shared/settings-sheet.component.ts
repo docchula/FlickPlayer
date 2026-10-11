@@ -23,6 +23,7 @@ import {
     calendarOutline,
     close,
     colorPaletteOutline,
+    gridOutline,
     timerOutline,
 } from 'ionicons/icons';
 import {SettingsService} from '../settings.service';
@@ -83,7 +84,7 @@ export class SettingsSheetComponent {
     protected readonly popoverOptions = {side: 'bottom', alignment: 'end'};
 
     constructor() {
-        addIcons({close, timerOutline, calendarOutline, colorPaletteOutline});
+        addIcons({close, timerOutline, calendarOutline, gridOutline, colorPaletteOutline});
 
         // Opening the sheet is an explicit request to look at the fonts, so draw them properly,
         // and take the chance to notice any widget this build turned out to have.

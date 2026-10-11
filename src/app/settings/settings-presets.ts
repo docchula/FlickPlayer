@@ -23,6 +23,13 @@ export const WIDGETS: WidgetOption[] = [
         selectors: ['app-study-heatmap'],
     },
     {
+        key: 'activity',
+        label: 'Activity heatmap',
+        description: 'Your last 7 days of viewing, on the home page.',
+        icon: 'grid-outline',
+        selectors: ['ion-card.play-stats-card'],
+    },
+    {
         key: 'appearance',
         label: 'Theme button',
         description: 'The appearance control in the toolbar.',

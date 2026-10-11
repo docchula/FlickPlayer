@@ -10,6 +10,7 @@
  */
 html[data-hidden~='pomodoro'] app-pomodoro-timer,
 html[data-hidden~='heatmap'] app-study-heatmap,
+html[data-hidden~='activity'] ion-card.play-stats-card,
 html[data-hidden~='appearance'] app-theme-menu,
 html[data-hidden~='appearance'] app-theme-dropdown {
     display: none !important;

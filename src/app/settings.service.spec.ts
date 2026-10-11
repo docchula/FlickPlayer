@@ -8,6 +8,15 @@ import {WIDGETS} from './settings/settings-presets';
  * build loads as well. Each widget arrives in its own pull request, so this is what shows the
  * sheet still reaches every element it offers to hide, whichever order they are merged in.
  */
+/** An element the selector matches: a tag name, with any classes after it (`ion-card.play-stats-card`). */
+function elementFor(selector: string): HTMLElement {
+    const [tag, ...classes] = selector.split('.');
+    const element = document.createElement(tag);
+    element.classList.add(...classes);
+
+    return element;
+}
+
 describe('SettingsService widget switches', () => {
     beforeEach(() => {
         localStorage.removeItem(SETTINGS_STORAGE_KEY);
@@ -23,7 +32,7 @@ describe('SettingsService widget switches', () => {
         for (const selector of widget.selectors) {
             it(`hides <${selector}> while "${widget.label}" is switched off`, () => {
                 const service = TestBed.inject(SettingsService);
-                const element = document.body.appendChild(document.createElement(selector));
+                const element = document.body.appendChild(elementFor(selector));
                 try {
                     service.setVisible(widget.key, false);
                     expect(getComputedStyle(element).display).toBe('none');
@@ -42,13 +51,14 @@ describe('SettingsService widget switches', () => {
 
         expect(service.isVisible('pomodoro')).toBeFalse();
         expect(service.isVisible('heatmap')).toBeFalse();
+        expect(service.isVisible('activity')).toBeTrue();
         expect(service.isVisible('appearance')).toBeTrue();
         expect(document.documentElement.getAttribute('data-hidden')).toBe('pomodoro heatmap');
     });
 
     it('hides only the widget that was switched off', () => {
         const service = TestBed.inject(SettingsService);
-        const elements = WIDGETS.map(widget => document.body.appendChild(document.createElement(widget.selectors[0])));
+        const elements = WIDGETS.map(widget => document.body.appendChild(elementFor(widget.selectors[0])));
         try {
             WIDGETS.forEach(widget => service.setVisible(widget.key, true));
             service.setVisible(WIDGETS[0].key, false);
