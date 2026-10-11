@@ -31,7 +31,7 @@ import {RestoreDefaultsService} from '../restore-defaults.service';
 import {PomodoroSessionModeService, SessionMode} from '../pomodoro-session-mode.service';
 import {FONT_SAMPLE, fontOptionClass} from '../settings/fonts';
 import {SESSION_MODE_OPTIONS} from '../settings/settings-presets';
-import {AppSettings} from '../settings/settings.model';
+import {ActivityRange, AppSettings} from '../settings/settings.model';
 
 /** Ionic hands its payload over in `detail`, which the DOM event types do not describe. */
 function detailValue<T>(event: Event): T {
@@ -74,6 +74,7 @@ export class SettingsSheetComponent {
     protected readonly settings$ = this.settingsService.settings$;
     protected readonly availableWidgets$ = this.settingsService.availableWidgets$;
     protected readonly pomodoroAvailable$ = this.settingsService.pomodoroAvailable$;
+    protected readonly activityAvailable$ = this.settingsService.activityAvailable$;
     protected readonly font$ = this.settingsService.font$;
     protected readonly sample = FONT_SAMPLE;
     protected readonly fontOptionClass = fontOptionClass;
@@ -110,6 +111,10 @@ export class SettingsSheetComponent {
 
     onResetHourChange(event: Event): void {
         this.settingsService.setPomodoroResetHour(detailValue<number>(event));
+    }
+
+    onActivityRangeChange(event: Event): void {
+        this.settingsService.setActivityRange(detailValue<ActivityRange>(event));
     }
 
     onSessionModeChange(event: Event): void {

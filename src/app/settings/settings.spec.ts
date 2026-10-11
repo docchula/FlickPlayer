@@ -1,5 +1,5 @@
 import {sanitizeSettings} from './sanitize';
-import {defaultSettings, DEFAULT_HIDDEN, DEFAULT_RESET_HOUR} from './settings-presets';
+import {DEFAULT_ACTIVITY_RANGE, defaultSettings, DEFAULT_HIDDEN, DEFAULT_RESET_HOUR} from './settings-presets';
 import {nextResetAt, studyDayKey, toDateKey} from './day';
 
 describe('sanitizeSettings', () => {
@@ -28,6 +28,12 @@ describe('sanitizeSettings', () => {
     it('keeps only a font this build offers', () => {
         expect(sanitizeSettings({fontId: 'mali'}).fontId).toBe('mali');
         expect(sanitizeSettings({fontId: 'comic-sans'}).fontId).toBe(defaultSettings().fontId);
+    });
+
+    it('keeps only a heatmap period this build offers', () => {
+        expect(sanitizeSettings({activityRange: '6m'}).activityRange).toBe('6m');
+        expect(sanitizeSettings({activityRange: '2y'}).activityRange).toBe(DEFAULT_ACTIVITY_RANGE);
+        expect(sanitizeSettings(null).activityRange).toBe('7d');
     });
 
     it('rejects a reset hour outside the clock', () => {

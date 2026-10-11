@@ -1,5 +1,5 @@
 import {FONT_OPTIONS} from './fonts';
-import {defaultSettings, WIDGETS} from './settings-presets';
+import {ACTIVITY_RANGES, defaultSettings, WIDGETS} from './settings-presets';
 import {AppSettings} from './settings.model';
 
 /** Keep only the keys this build still knows, so a widget dropped later cleans itself up. */
@@ -23,5 +23,6 @@ export function sanitizeSettings(raw: unknown): AppSettings {
             : fallback.fontId,
         pomodoroResetHour: Number.isInteger(hour) && hour >= 0 && hour < 24 ? hour : fallback.pomodoroResetHour,
         pomodoroDayKey: typeof value.pomodoroDayKey === 'string' ? value.pomodoroDayKey : '',
+        activityRange: ACTIVITY_RANGES.find(range => range.value === value.activityRange)?.value ?? fallback.activityRange,
     };
 }

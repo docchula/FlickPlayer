@@ -92,6 +92,26 @@
             </section>
         }
 
+        @if (activityAvailable$ | async) {
+            <section class="settings-section">
+                <h2 class="section-title">Activity heatmap</h2>
+                <p class="section-hint">How much of your viewing the home page shows, on this device only.</p>
+                <ion-list lines="none" class="settings-card">
+                    <ion-item>
+                        <ion-select label="Period" labelPlacement="start" interface="popover"
+                                    [interfaceOptions]="popoverOptions"
+                                    [value]="settings.activityRange"
+                                    (ionChange)="onActivityRangeChange($event)">
+                            @for (option of settingsService.activityRanges; track option.value) {
+                                <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
+                            }
+                        </ion-select>
+                    </ion-item>
+                    <p class="card-note">{{ settings.activityRange === '7d' ? 'Each square is an hour.' : 'Each square is a day, with a column for each week.' }}</p>
+                </ion-list>
+            </section>
+        }
+
         <ion-button expand="block" fill="clear" class="quiet-button" (click)="reset()">Restore default settings</ion-button>
     }
 </ion-content>

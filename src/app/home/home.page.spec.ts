@@ -2,16 +2,19 @@ import {TestBed, fakeAsync, tick} from '@angular/core/testing';
 import {Router} from '@angular/router';
 import {AlertController, ModalController} from '@ionic/angular';
 import {Analytics} from '@angular/fire/analytics';
-import {of, throwError} from 'rxjs';
+import {BehaviorSubject, of, throwError} from 'rxjs';
 import {HomePage, SearchResults} from './home.page';
-import {ManService} from '../man.service';
+import {ManService, PlayStats} from '../man.service';
 import {AuthService} from '../auth.service';
 import {ConsentService} from '../consent.service';
+import {SettingsService} from '../settings.service';
+import {ActivityRange} from '../settings/settings.model';
 
 describe('HomePage', () => {
     let component: HomePage;
     let manService: jasmine.SpyObj<Pick<ManService, 'getVideoList' | 'getPlayStats' | 'searchVideos' | 'searchDocuments'>>;
     let router: jasmine.SpyObj<Pick<Router, 'navigate'>>;
+    let activityRange$: BehaviorSubject<ActivityRange>;
 
     const videoList = {
         years: {
@@ -26,6 +29,7 @@ describe('HomePage', () => {
         manService.getVideoList.and.returnValue(of(videoList));
         manService.getPlayStats.and.returnValue(of(null));
         router = jasmine.createSpyObj('Router', ['navigate']);
+        activityRange$ = new BehaviorSubject<ActivityRange>('7d');
 
         TestBed.configureTestingModule({
             providers: [
@@ -37,6 +41,7 @@ describe('HomePage', () => {
                 {provide: ConsentService, useValue: {current: 'unset'}},
                 {provide: ModalController, useValue: {}},
                 {provide: AlertController, useValue: {}},
+                {provide: SettingsService, useValue: {activityRange$}},
             ],
         });
         component = TestBed.inject(HomePage);
@@ -134,4 +139,41 @@ describe('HomePage', () => {
         expect(component.isSearching).toBe(false);
         expect(manService.searchVideos).not.toHaveBeenCalled();
     }));
+    describe('activity heatmap', () => {
+        const stats: PlayStats = {
+            from: '2025-10-11',
+            to: '2026-10-10',
+            updated_at: '2026-10-10T12:00:00+07:00',
+            total: {sessions: 2, video_seconds: 5400, actual_seconds: 3600},
+            days: [
+                {date: '2026-09-01', sessions: 1, video_seconds: 1800, actual_seconds: 1200},
+                {date: '2026-10-09', sessions: 1, video_seconds: 3600, actual_seconds: 2400},
+            ],
+            recent_hours: [{date: '2026-10-09', hour: 9, sessions: 1, video_seconds: 3600, actual_seconds: 2400}],
+        };
+
+        beforeEach(() => manService.getPlayStats.and.returnValue(of(stats)));
+
+        it('shows the last 7 days by the hour until a longer period is chosen', () => {
+            component.ionViewWillEnter();
+
+            expect(component.recentRows.length).toBe(7);
+            expect(component.activityWeeks).toEqual([]);
+            expect(component.recentTotals).toEqual({video: 3600, actual: 2400});
+        });
+
+        it('shows the period chosen in the settings a day a square', () => {
+            component.ionViewWillEnter();
+            activityRange$.next('1m');
+
+            expect(component.activityRange.label).toBe('Last month');
+            expect(component.recentRows).toEqual([]);
+            // 11 September to 10 October; the first of September falls outside it
+            expect(component.activityWeeks.flatMap(week => week.days).filter(day => day).length).toBe(30);
+            expect(component.recentTotals).toEqual({video: 3600, actual: 2400});
+
+            activityRange$.next('1y');
+            expect(component.recentTotals).toEqual({video: 5400, actual: 3600});
+        });
+    });
 });

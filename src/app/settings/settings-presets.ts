@@ -1,4 +1,4 @@
-import {AppSettings, ResetHourOption, SessionModeOption, WidgetOption} from './settings.model';
+import {ActivityRange, ActivityRangeOption, AppSettings, ResetHourOption, SessionModeOption, WidgetOption} from './settings.model';
 import {DEFAULT_FONT_ID} from './fonts';
 
 /**
@@ -70,6 +70,17 @@ export const RESET_HOURS: ResetHourOption[] = Array.from({length: 24}, (unused, 
     label: formatHour(hour),
 }));
 
+/** The periods the activity heatmap on the home page can cover, longest first as in the activity window. */
+export const ACTIVITY_RANGES: ActivityRangeOption[] = [
+    {value: '1y', label: 'Last year', months: 12},
+    {value: '6m', label: 'Last 6 months', months: 6},
+    {value: '1m', label: 'Last month', months: 1},
+    {value: '7d', label: 'Last 7 days', months: null},
+];
+
+/** What the home page showed before the period could be chosen. */
+export const DEFAULT_ACTIVITY_RANGE: ActivityRange = '7d';
+
 export function defaultSettings(): AppSettings {
     return {
         hidden: [...DEFAULT_HIDDEN],
@@ -77,5 +88,6 @@ export function defaultSettings(): AppSettings {
         fontId: DEFAULT_FONT_ID,
         pomodoroResetHour: DEFAULT_RESET_HOUR,
         pomodoroDayKey: '',
+        activityRange: DEFAULT_ACTIVITY_RANGE,
     };
 }

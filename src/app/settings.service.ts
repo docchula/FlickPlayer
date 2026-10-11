@@ -3,11 +3,11 @@ import {NavigationEnd, Router} from '@angular/router';
 import {BehaviorSubject, Observable} from 'rxjs';
 import {distinctUntilChanged, filter, map} from 'rxjs/operators';
 import {findFont, FONT_OPTIONS, fontHref, previewHref, previewRules} from './settings/fonts';
-import {defaultSettings, RESET_HOURS, WIDGETS} from './settings/settings-presets';
+import {ACTIVITY_RANGES, defaultSettings, RESET_HOURS, WIDGETS} from './settings/settings-presets';
 import {sanitizeSettings} from './settings/sanitize';
 import {RestoreDefaultsService} from './restore-defaults.service';
 import {DEFAULT_SESSION_MODE, PomodoroSessionModeService} from './pomodoro-session-mode.service';
-import {AppliedFont, AppSettings, FontOption, WidgetOption} from './settings/settings.model';
+import {ActivityRange, AppliedFont, AppSettings, FontOption, WidgetOption} from './settings/settings.model';
 
 /** Settings stay on the device that set them, so the key carries no account id. */
 export const SETTINGS_STORAGE_KEY = 'flickSettings';
@@ -32,6 +32,7 @@ export class SettingsService {
     readonly widgets = WIDGETS;
     readonly fonts = FONT_OPTIONS;
     readonly resetHours = RESET_HOURS;
+    readonly activityRanges = ACTIVITY_RANGES;
 
     private sessionModes = inject(PomodoroSessionModeService);
 
@@ -50,6 +51,11 @@ export class SettingsService {
         distinctUntilChanged(),
     );
     readonly pomodoroAvailable$: Observable<boolean> = this.available$('pomodoro');
+    readonly activityRange$: Observable<ActivityRange> = this.settings$.pipe(
+        map(settings => settings.activityRange),
+        distinctUntilChanged(),
+    );
+    readonly activityAvailable$: Observable<boolean> = this.available$('activity');
 
     constructor() {
         this.apply(this.readLocal(), false);
@@ -104,6 +110,10 @@ export class SettingsService {
 
     setPomodoroResetHour(pomodoroResetHour: number): void {
         this.update({pomodoroResetHour});
+    }
+
+    setActivityRange(activityRange: ActivityRange): void {
+        this.update({activityRange});
     }
 
     readPomodoroDayKey(): string {

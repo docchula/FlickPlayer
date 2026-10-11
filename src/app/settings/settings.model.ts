@@ -32,6 +32,16 @@ export interface SessionModeOption {
     hint: string;
 }
 
+/** How much of the reader's viewing the activity heatmap on the home page covers. */
+export type ActivityRange = '1y' | '6m' | '1m' | '7d';
+
+export interface ActivityRangeOption {
+    value: ActivityRange;
+    label: string;
+    /** Months back from today, as the activity window counts them; null for the last 7 days, which are shown by the hour. */
+    months: number | null;
+}
+
 /** Everything the settings sheet controls, as kept on this device. */
 export interface AppSettings {
     /**
@@ -45,6 +55,7 @@ export interface AppSettings {
     pomodoroResetHour: number;
     /** The study day the Pomodoro session count currently belongs to. */
     pomodoroDayKey: string;
+    activityRange: ActivityRange;
 }
 
 /** The resolved font, mirrored so index.html can paint it before Angular boots. */
