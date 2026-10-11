@@ -1,0 +1,127 @@
+<ion-header>
+    <ion-toolbar>
+        <ion-title>Study activity</ion-title>
+        <ion-buttons slot="end">
+            <ion-button (click)="close()" aria-label="Close" title="Close">
+                <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+        </ion-buttons>
+    </ion-toolbar>
+</ion-header>
+<ion-content class="ion-padding">
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+    <div class="root" #root (click)="hideTip()">
+    <section>
+        <ion-segment [value]="range" (ionChange)="setRange($any($event.detail.value))" aria-label="Period">
+            @for (r of ranges; track r.value) {
+                <ion-segment-button [value]="r.value">
+                    <ion-label>{{ r.label }}</ion-label>
+                </ion-segment-button>
+            }
+        </ion-segment>
+        <p class="range">{{ formatDay(rangeFrom) }} &ndash; {{ formatDay(stats.to) }}</p>
+        <div class="totals">
+            <div class="tile">
+                <div class="value">{{ hours(rangeTotal.video_seconds) }}</div>
+                <div class="label">Video hours</div>
+            </div>
+            <div class="tile">
+                <div class="value">{{ hours(rangeTotal.actual_seconds) }}</div>
+                <div class="label">Actual hours</div>
+            </div>
+            <div class="tile">
+                <div class="value">{{ speed(rangeTotal) }}</div>
+                <div class="label">Average speed</div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="year">
+            <div class="scroller" #scroller (scroll)="hideTip()">
+                <div class="weeks">
+                    @for (column of columns; track $index) {
+                        <div class="week">
+                            <span class="month">{{ column.monthLabel }}</span>
+                            @for (day of column.days; track $index) {
+                                @if (day) {
+                                    <button type="button" class="cell level-{{ day.level }}"
+                                            [attr.aria-label]="formatDay(day.date) + ', ' + (formatDuration(day.actual_seconds) || 'no activity')"
+                                            (mouseenter)="showDayTip($event, day)" (focus)="showDayTip($event, day)" (click)="showDayTip($event, day)"
+                                            (mouseleave)="hideTip()" (blur)="hideTip()"></button>
+                                } @else {
+                                    <span class="cell blank"></span>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="legend">
+            0
+            @for (l of levels; track l) {
+                <span class="cell level-{{ l }}"></span>
+            }
+            {{ formatDuration(maxDay) || '0 min' }} in a day
+        </div>
+
+    </section>
+
+    <section>
+        <h2>Last 7 days</h2>
+        <div class="totals">
+            <div class="tile">
+                <div class="value">{{ hours(week.video_seconds) }}</div>
+                <div class="label">Video hours</div>
+            </div>
+            <div class="tile">
+                <div class="value">{{ hours(week.actual_seconds) }}</div>
+                <div class="label">Actual hours</div>
+            </div>
+            <div class="tile">
+                <div class="value">{{ speed(week) }}</div>
+                <div class="label">Average speed</div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="hours">
+            <span></span>
+            @for (label of hourLabels; track $index) {
+                <span class="hour-label">{{ label }}</span>
+            }
+            @for (row of rows; track row.date) {
+                <span class="day-label">{{ row.label }}</span>
+                @for (cell of row.cells; track $index) {
+                    @if (cell) {
+                        <button type="button" class="cell level-{{ cell.level }}"
+                                [attr.aria-label]="formatDay(cell.date) + ' ' + cell.hour + ':00, ' + (formatDuration(cell.actual_seconds) || 'no activity')"
+                                (mouseenter)="showHourTip($event, cell)" (focus)="showHourTip($event, cell)" (click)="showHourTip($event, cell)"
+                                (mouseleave)="hideTip()" (blur)="hideTip()"></button>
+                    } @else {
+                        <span class="cell blank"></span>
+                    }
+                }
+            }
+        </div>
+        <div class="legend">
+            0
+            @for (l of levels; track l) {
+                <span class="cell level-{{ l }}"></span>
+            }
+            {{ formatDuration(maxHour) || '0 min' }} in an hour
+        </div>
+    </section>
+
+    <p class="updated">Updated {{ stats.updated_at | date: 'medium' }}</p>
+
+    @if (tip; as t) {
+        <div class="tip" role="tooltip" [style.left.px]="t.left" [style.top.px]="t.top">
+            <strong>{{ t.title }}</strong><br/>{{ t.text }}
+        </div>
+    }
+    </div>
+</ion-content>

@@ -52,6 +52,16 @@ export class ManService {
         return this.videoList;
     }
 
+    /**
+     * Play activity of the signed-in user. Not cached, so it can be refreshed after watching something.
+     * Emits null when there is no token or the user has not played any video yet.
+     */
+    getPlayStats(): Observable<PlayStats | null> {
+        return this.graphql<{ me: { playStats: PlayStats } | null }>(PLAY_STATS_QUERY).pipe(
+            map(data => data?.me?.playStats ?? null),
+        );
+    }
+
     getVideosInCourse(year: string | null, course: string | null, courseId: string | null) {
         return this.resolveCourseId(year, course, courseId).pipe(
             switchMap(id => id ? this.graphql<CourseQueryData>(COURSE_QUERY, {id}) : of(null)),
@@ -322,6 +332,7 @@ export class ManService {
 export const ManServiceStub: Partial<ManService> = {
     getVideosInCourse: () => of({lectures: {}, key: '', category: '', name: ''}),
     getVideoList: () => of({years: {}, last_fetched_at: '', last_played: null}),
+    getPlayStats: () => of(null),
     setIdToken: () => {},
 };
 
@@ -332,6 +343,17 @@ const HOME_QUERY = `query Home {
         lastPlayed {
             video_id end_time speed played_at
             video { id title lecturer duration course { id category name } }
+        }
+    }
+}`;
+
+const PLAY_STATS_QUERY = `query PlayStats {
+    me {
+        playStats {
+            from to updated_at
+            total { sessions video_seconds actual_seconds }
+            days { date sessions video_seconds actual_seconds }
+            recent_hours { date hour sessions video_seconds actual_seconds }
         }
     }
 }`;
@@ -497,6 +519,30 @@ export interface CourseListResponse {
     };
     last_fetched_at: string | null; // ISO 8601 with UTC offset
     last_played: { video: Lecture, played_at: string, end_time: number } | null;
+}
+
+/** Seconds of video watched (2x speed counts double) and seconds actually spent watching. */
+export interface PlayStatValues {
+    sessions: number;
+    video_seconds: number;
+    actual_seconds: number;
+}
+
+export interface PlayStatDay extends PlayStatValues {
+    date: string; // Y-m-d in the server timezone
+}
+
+export interface PlayStatHour extends PlayStatDay {
+    hour: number; // 0-23
+}
+
+export interface PlayStats {
+    from: string; // Y-m-d
+    to: string; // Y-m-d
+    updated_at: string; // ISO 8601 with UTC offset
+    total: PlayStatValues;
+    days: PlayStatDay[];
+    recent_hours: PlayStatHour[];
 }
 
 export interface EvaluationRecord {
