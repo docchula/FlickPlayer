@@ -217,6 +217,7 @@ export class HomePage implements OnInit {
         const modal = await this.modalCtrl.create({
             component: ModalPlayStatsComponent,
             componentProps: {stats: this.playStats},
+            cssClass: 'play-stats-modal',
         });
         await modal.present();
         if (this.consentService.current === 'granted') {

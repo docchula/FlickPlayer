@@ -160,6 +160,13 @@ ion-list-header {
   transform: translate(-50%, 0);
 }
 
+@media (min-width: 1024px) {
+    ion-modal.play-stats-modal {
+        --width: 80%;
+        --max-width: 60rem;
+    }
+}
+
 /* video.js adds .vjs-touch-enabled based on touch *capability* (navigator.maxTouchPoints), which
    stays true on touchscreen laptops even when the mouse is the input in use. Gate on
    (hover: none) and (pointer: coarse) too so these rules only kick in when touch is actually the
