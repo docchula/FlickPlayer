@@ -71,6 +71,7 @@ p {
 /* ── Global Search ── */
 .search-bar-row {
   display: flex;
+  width: 100%;
   align-items: center;
   gap: 0.5rem;
   padding-right: 0.5rem;
@@ -78,6 +79,7 @@ p {
   ion-searchbar {
     flex: 1;
     min-width: 0;
+    padding-block: 0;
   }
 
   // Not enough room beside the search box on small screens, so the switch goes below it
