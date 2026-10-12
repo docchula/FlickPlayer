@@ -38,7 +38,7 @@ export interface ChangeRun {
 /** A block or a question added or removed whole, partly changed, or left alone. */
 export type Change = 'added' | 'removed' | 'edited' | null;
 
-export type SummaryBlockKind = 'title' | 'heading' | 'label' | 'point' | 'html';
+export type SummaryBlockKind = 'title' | 'heading' | 'label' | 'point' | 'code' | 'html';
 
 export interface ChangedBlock {
     kind: SummaryBlockKind;
@@ -125,14 +125,18 @@ export function aiOriginal<T>(revisions: readonly Revision<T>[]): Revision<T> | 
 
 let inertDocument: Document | null = null;
 
-/** The words of rendered HTML, with pictures named so that adding or removing one shows. */
-function textOf(html: string): string {
+/**
+ * The words of rendered HTML, with pictures named so that adding or removing one shows. A code
+ * block keeps its line breaks and spacing, which draw its diagram.
+ */
+function textOf(html: string, preformatted = false): string {
     inertDocument ??= document.implementation.createHTMLDocument('');
     const holder = inertDocument.createElement('div');
     holder.innerHTML = html;
     holder.querySelectorAll(`a.${DRIVE_IMAGE_CLASS}`).forEach(picture => picture.replaceWith(`[${picture.textContent || 'image'}]`));
+    const text = holder.textContent ?? '';
 
-    return (holder.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return preformatted ? text.replace(/\n+$/, '') : text.replace(/\s+/g, ' ').trim();
 }
 
 function escapeHtml(text: string): string {
@@ -155,7 +159,7 @@ function summaryTokens(markdown: string): Token[] {
             tokens.push(...blockTokens('heading', text, {kind: 'heading', html: section.headingHtml ?? '', time: section.time}));
         }
         for (const block of section.blocks) {
-            tokens.push(...blockTokens(block.kind, textOf(block.html), {kind: block.kind, html: block.html, time: null}));
+            tokens.push(...blockTokens(block.kind, textOf(block.html, block.kind === 'code'), {kind: block.kind, html: block.html, time: null}));
         }
     }
 

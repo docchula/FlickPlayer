@@ -9,6 +9,11 @@ app-summary-changes {
         margin-top: 1rem;
     }
 
+    // An edited diagram keeps its lines as drawn rather than wrapping them.
+    .code-changes app-change-runs {
+        white-space: inherit;
+    }
+
     // Wide enough for a struck-through block to read as one, as a point does.
     .checklist-title.whole-added,
     .checklist-title.whole-removed,

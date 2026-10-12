@@ -10,6 +10,7 @@ import {DRIVE_IMAGE_CLASS, driveLink, savedDriveId} from './images';
  *   ### Label                       a small heading inside a section
  *   1. Term : fact                  every top-level list item is one numbered point
  *      1. detail                    nested items are sub-points
+ *   ```                             a diagram drawn in text, shown line for line in a fixed-width font
  *   **key term**, ==exam point==, tables and $maths$
  *
  * Points are numbered here, continuously through the whole summary, so the numbers written in
@@ -17,7 +18,7 @@ import {DRIVE_IMAGE_CLASS, driveLink, savedDriveId} from './images';
  */
 
 export interface ChecklistBlock {
-    kind: 'point' | 'label' | 'html';
+    kind: 'point' | 'label' | 'code' | 'html';
     /** Ticks are stored under a point's key, which only changes when that point's text does. */
     key: string;
     /** The point's number; null for other blocks. */
@@ -227,6 +228,8 @@ export function buildChecklist(markdown: string): Checklist {
                 checklist.pointKeys.push(key);
                 currentSection().blocks.push({kind: 'point', key, number: checklist.pointKeys.length, html: item.innerHTML.trim()});
             }
+        } else if (tag === 'PRE') {
+            addBlock('code', element.outerHTML);
         } else if (tag === 'TABLE') {
             addBlock('html', `<div class="table-scroll">${element.outerHTML}</div>`);
         } else {

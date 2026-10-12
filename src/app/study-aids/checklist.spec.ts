@@ -67,6 +67,16 @@ describe('buildChecklist', () => {
         expect(blocks.some(block => block.kind === 'html' && block.html.includes('<table>'))).toBeTrue();
     });
 
+    it('keeps a diagram drawn in a code block line for line, between the points', () => {
+        const diagram = '      [ Retromandibular v. ]\n         ├── Anterior division + Facial v. ───────► [ Internal jugular v. ]\n         │';
+        const drawn = buildChecklist(`## Veins\n\n1. **Face** : first\n\n\`\`\`\n${diagram}\n\`\`\`\n\n1. **Neck** : second\n`);
+        const blocks = drawn.sections[0].blocks;
+
+        expect(blocks.map(block => block.kind)).toEqual(['point', 'code', 'point']);
+        expect(blocks.map(block => block.number)).toEqual([1, null, 2]);
+        expect(new DOMParser().parseFromString(blocks[1].html, 'text/html').querySelector('pre')?.textContent).toBe(diagram + '\n');
+    });
+
     it('keys a point by its text, so editing another point keeps its tick', () => {
         const edited = buildChecklist(SUMMARY.replace('**SER**', '**SER (smooth ER)**'));
 

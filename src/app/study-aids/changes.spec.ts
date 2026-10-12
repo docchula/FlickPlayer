@@ -60,6 +60,17 @@ describe('summaryChanges', () => {
         expect(runs.filter(run => run.change === 'added').map(run => run.text).join('')).toMatch(/30$/);
     });
 
+    it('keeps the lines and spacing of an edited diagram', () => {
+        const drawn = '1. **Face** : veins\n\n```\n  Facial v.\n      │\n      ▼\n[ Internal jugular v. ]\n```\n';
+        const changes = summaryChanges([summary(1, null, drawn), summary(2, KAN, drawn.replace('Facial v.', 'Facial vein'))])!;
+        const diagram = changes.blocks.find(block => block.kind === 'code')!;
+        const shown = (change: ChangeRun['change']) => diagram.runs.filter(run => run.change !== change).map(run => run.text).join('');
+
+        expect(diagram.change).toBe('edited');
+        expect(shown('removed')).toBe('  Facial vein\n      │\n      ▼\n[ Internal jugular v. ]');
+        expect(shown('added')).toBe('  Facial v.\n      │\n      ▼\n[ Internal jugular v. ]');
+    });
+
     it('counts a summary an editor wrote from its first version', () => {
         const changes = summaryChanges([summary(1, KAN, '1. One'), summary(2, CHAIN, '1. One\n2. Two')])!;
 

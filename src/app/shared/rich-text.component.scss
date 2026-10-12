@@ -43,6 +43,14 @@ app-rich-text {
         font-size: 0.9em;
     }
 
+    // A code block is boxed as a whole: padding on its code would push its first line out of line.
+    pre code {
+        padding: 0;
+        border-radius: 0;
+        background: none;
+        font: inherit;
+    }
+
     .math-display {
         overflow-x: auto;
         overflow-y: hidden;

@@ -55,7 +55,9 @@
 </div>
 
 <ng-template #content let-block>
-    @if (block.change === 'edited') {
+    @if (block.change === 'edited' && block.kind === 'code') {
+        <pre class="code-changes"><app-change-runs [runs]="block.runs" [history]="changes"></app-change-runs></pre>
+    } @else if (block.change === 'edited') {
         <app-change-runs [runs]="block.runs" [history]="changes"></app-change-runs>
     } @else {
         <app-rich-text class="inline" [html]="block.html"></app-rich-text>

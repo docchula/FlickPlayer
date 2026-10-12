@@ -156,4 +156,17 @@
     .checklist-block {
         margin: 0.4rem 0;
     }
+
+    /* A diagram drawn in text: every line and space kept, scrolled sideways rather than wrapped. */
+    pre {
+        margin: 0.4rem 0;
+        padding: 0.6em 0.8em;
+        border-radius: 0.4rem;
+        background: rgba(var(--ion-text-color-rgb, 0, 0, 0), 0.05);
+        font-family: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+        font-size: 0.85em;
+        line-height: 1.2;
+        white-space: pre;
+        overflow-x: auto;
+    }
 }

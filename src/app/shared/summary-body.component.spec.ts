@@ -86,6 +86,31 @@ describe('SummaryBodyComponent', () => {
             .toEqual(['Kan +1 −1', 'Unnamed editor +2 −0']);
     });
 
+    it('draws a diagram line for line in a fixed-width font, its changes too', () => {
+        const drawn = '# Veins\n\n1. **Face** : veins\n\n```\n  Facial v.\n      │\n      ▼\n[ Internal jugular v. ]\n```\n';
+        const edited = drawn.replace('Facial v.', 'Facial vein');
+        service.summaryRevisions.and.returnValue(of([
+            {revision: 1, author: null, created_at: '2026-10-09T10:00:00+07:00', content: drawn},
+            {revision: 2, author: {key: 'e1', name: 'Kan'}, created_at: '2026-10-09T11:00:00+07:00', content: edited},
+        ]));
+        fixture.componentRef.setInput('aids', {...aids(), summary: {...aids().summary!, markdown: edited, revision: 2}});
+        fixture.detectChanges();
+        const pre = element().querySelector('pre')!;
+
+        expect(pre.textContent).toBe('  Facial vein\n      │\n      ▼\n[ Internal jugular v. ]\n');
+        expect(getComputedStyle(pre).whiteSpace).toBe('pre');
+        expect(getComputedStyle(pre).overflowX).toBe('auto');
+        expect(getComputedStyle(pre).fontFamily).toContain('Menlo');
+        expect(getComputedStyle(pre.querySelector('code')!).paddingLeft).toBe('0px');
+
+        show('Show changes');
+        const changed = element().querySelector('pre.code-changes')!;
+
+        expect(changed.querySelector('ins')?.textContent).toBe('vein');
+        expect(changed.textContent).toContain('\n      │\n      ▼\n[ Internal jugular v. ]');
+        expect(getComputedStyle(changed.querySelector('app-change-runs')!).whiteSpace).toBe('pre');
+    });
+
     it('goes back to the edited version', () => {
         show('Show changes');
         show('Edited by PS');
