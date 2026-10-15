@@ -189,21 +189,6 @@ export class ManService {
         return this.get<object>('v1/auth_check').pipe(timeout(8000), map(a => a.hasOwnProperty('success')));
     }
 
-    /** The settings synced across the user's devices (see UserSyncService), or null when they can't be fetched. */
-    getUserSettings(): Observable<object | null> {
-        return this.get<JSend<object>>('v1/user_settings').pipe(map(response => response?.data ?? null));
-    }
-
-    /** Merge a change into the synced settings. `keepalive` lets the request finish while the page closes. */
-    saveUserSettings(patch: object): Observable<JSend<null>> {
-        return this.post<JSend<null>>('v1/user_settings', patch, {keepalive: true}).pipe(map(response => {
-            if (!response) {
-                throw new Error('ManService could not send the user settings.');
-            }
-            return response;
-        }));
-    }
-
     changeEndpoint() {
         this.endpoint.push(this.endpoint.shift());
     }

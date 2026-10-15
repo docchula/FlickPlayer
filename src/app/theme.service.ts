@@ -3,7 +3,6 @@ import {BehaviorSubject, Observable} from 'rxjs';
 import {distinctUntilChanged, map} from 'rxjs/operators';
 import {ulid} from 'ulid';
 import {AuthService} from './auth.service';
-import {UserSyncService} from './user-sync.service';
 import {RestoreDefaultsService} from './restore-defaults.service';
 import {BLACK, isValidColor, parseColor, readableOn, toHex} from './theme/color';
 import {buildThemeVariables, CssVariables, shadeForColor} from './theme/palette';
@@ -124,15 +123,6 @@ function sanitizeColor(value: unknown): string | null {
     return typeof value === 'string' && isValidColor(value) ? value : null;
 }
 
-/** Which picture shows is decided on each device, since the pictures themselves stay there. */
-type DevicePicture = Pick<ThemeBackground,
-    'imageId' | 'pictureMode' | 'slideshowMinutes' | 'slideshowShuffle' | 'slideshowSince'>;
-
-function devicePicture(background: ThemeBackground): DevicePicture {
-    const {imageId, pictureMode, slideshowMinutes, slideshowShuffle, slideshowSince} = background;
-    return {imageId, pictureMode, slideshowMinutes, slideshowShuffle, slideshowSince};
-}
-
 /** The same order every time for a given seed, so a reload lands on the same picture. */
 function shuffled(ids: string[], seed: number): string[] {
     const order = [...ids];
@@ -250,7 +240,6 @@ export function sanitizeSettings(raw: unknown): ThemeSettings {
 })
 export class ThemeService {
     private imageStore = new BackgroundImageStore();
-    private sync = inject(UserSyncService);
 
     readonly modes = THEME_MODES;
     readonly templates = THEME_TEMPLATES;
@@ -528,7 +517,6 @@ export class ThemeService {
         const settings = {...this.settings, updatedAt: Date.now()};
         this.settingsSubject.next(settings);
         this.writeLocal(settings);
-        this.queueSync(settings);
     }
 
     /** The palette the custom theme renders, so the editor can show the colours it ends up with. */
@@ -656,7 +644,6 @@ export class ThemeService {
 
         if (persist) {
             this.writeLocal(settings);
-            this.queueSync(settings);
         }
     }
 
@@ -813,65 +800,13 @@ export class ThemeService {
         }
         const guestSettings = this.userId === GUEST_ID ? this.settings : null;
         this.userId = uid;
-        this.sync.attach(uid);
         const stored = this.readLocal(uid);
         const adoptGuest = guestSettings && guestSettings.updatedAt > stored.updatedAt;
         this.savedColorsSubject.next(this.readSavedColors(uid));
         this.apply(adoptGuest ? guestSettings : stored, adoptGuest);
-        void this.pullRemote(uid, !!adoptGuest);
-    }
-
-    /**
-     * Adopt the theme another device set more recently. Pictures never travel, so whatever
-     * this device shows, and how, stays in place.
-     */
-    private async pullRemote(uid: string, sending: boolean): Promise<void> {
-        const remote = await this.sync.read();
-        if (this.userId !== uid || !remote?.theme) {
-            return;
-        }
-        const incoming = sanitizeSettings(remote.theme);
-        if (incoming.updatedAt <= this.settings.updatedAt) {
-            return;
-        }
-        const settings: ThemeSettings = {
-            ...incoming,
-            custom: {
-                ...incoming.custom,
-                background: {...incoming.custom.background, ...devicePicture(this.settings.custom.background)},
-            },
-        };
-        const colors = (remote.theme as {colors?: unknown}).colors;
-        if (Array.isArray(colors)) {
-            const kept = sanitizeSavedColors(colors);
-            this.savedColorsSubject.next(kept);
-            this.writeSavedColors(kept);
-        }
-        this.apply(settings, false);
-        this.writeLocal(settings);
-        // A guest theme already on its way out is older than this one, so it must not land.
-        if (sending) {
-            this.queueSync(settings);
-        }
-    }
-
-    /** Everything but the pictures, which are too large to send and stay where they were added. */
-    private queueSync(settings: ThemeSettings): void {
-        if (this.userId === GUEST_ID) {
-            return;
-        }
-        const custom = settings.custom;
-        this.sync.queue({
-            theme: {
-                ...settings,
-                custom: {...custom, background: {...custom.background, ...devicePicture(DEFAULT_BACKGROUND)}},
-                colors: this.savedColors,
-            },
-        }, true);
     }
 
     private detachUser(): void {
-        this.sync.detach();
         this.userId = GUEST_ID;
         this.apply(this.readLocal(GUEST_ID), false);
         this.savedColorsSubject.next(this.readSavedColors(GUEST_ID));

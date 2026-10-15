@@ -9,6 +9,9 @@
  * https://ionicframework.com/docs/layout/global-stylesheets
  */
 
+@use "sass:list";
+@use "sass:string";
+
 /* Core CSS required for Ionic components to work properly */
 @import "@ionic/angular/css/core.css";
 
@@ -59,22 +62,22 @@ $theme-color-vars:
   "--flick-warning-text", "--flick-series-fallback", "--flick-series-fallback-contrast";
 
 @each $step in 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950 {
-  $theme-color-vars: append($theme-color-vars, "--ion-color-step-#{$step}", comma);
+  $theme-color-vars: list.append($theme-color-vars, "--ion-color-step-#{$step}", comma);
 }
 
 @each $role in primary, secondary, tertiary, success, warning, danger, dark, medium, light {
   @each $variant in "", "-shade", "-tint", "-contrast" {
-    $theme-color-vars: append($theme-color-vars, "--ion-color-#{$role}#{$variant}", comma);
+    $theme-color-vars: list.append($theme-color-vars, "--ion-color-#{$role}#{$variant}", comma);
   }
 }
 
 @for $index from 0 through 7 {
-  $theme-color-vars: append($theme-color-vars, "--flick-series-#{$index}", comma);
-  $theme-color-vars: append($theme-color-vars, "--flick-series-#{$index}-contrast", comma);
+  $theme-color-vars: list.append($theme-color-vars, "--flick-series-#{$index}", comma);
+  $theme-color-vars: list.append($theme-color-vars, "--flick-series-#{$index}-contrast", comma);
 }
 
 @for $level from 0 through 4 {
-  $theme-color-vars: append($theme-color-vars, "--flick-heat-#{$level}", comma);
+  $theme-color-vars: list.append($theme-color-vars, "--flick-heat-#{$level}", comma);
 }
 
 @each $name in $theme-color-vars {
@@ -93,9 +96,9 @@ html.flick-theme-animating {
   $moves: ();
 
   @each $name in $theme-color-vars {
-    $moves: append(
+    $moves: list.append(
       $moves,
-      unquote("#{$name} var(--flick-theme-transition-duration) var(--flick-theme-transition-easing)"),
+      string.unquote("#{$name} var(--flick-theme-transition-duration) var(--flick-theme-transition-easing)"),
       comma
     );
   }
@@ -158,6 +161,13 @@ ion-list-header {
 .pomodoro-fullscreen-toast.show {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+@media (min-width: 1024px) {
+    ion-modal.play-stats-modal {
+        --width: 80%;
+        --max-width: 60rem;
+    }
 }
 
 /* video.js adds .vjs-touch-enabled based on touch *capability* (navigator.maxTouchPoints), which
