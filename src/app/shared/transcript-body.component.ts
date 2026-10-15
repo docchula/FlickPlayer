@@ -2,11 +2,12 @@ import {Component, ElementRef, EventEmitter, inject, Input, NgZone, OnChanges, O
 import {AsyncPipe} from '@angular/common';
 import {IonButton, IonIcon, IonSpinner} from '@ionic/angular';
 import {addIcons} from 'ionicons';
-import {locateOutline, play} from 'ionicons/icons';
+import {downloadOutline, locateOutline, play} from 'ionicons/icons';
 import {Observable} from 'rxjs';
 import {tap} from 'rxjs/operators';
+import {Lecture} from '../man.service';
 import {StudyAidsService} from '../study-aids.service';
-import {formatClock} from '../study-aids/checklist';
+import {formatClock, formatStamp} from '../study-aids/checklist';
 import {LecturePlayback, TranscriptParagraph, TranscriptState} from '../study-aids/study-aids.model';
 
 /** A paragraph as the transcript shows it: FlickMan's stamped lines, grouped back together for reading. */
@@ -50,6 +51,23 @@ export function paragraphAt(paragraphs: readonly TranscriptParagraph[], seconds:
     return found;
 }
 
+/** The transcript as a text file: the lecture, then each paragraph after the time it starts. */
+export function transcriptText(paragraphs: readonly ReadingParagraph[], video: Pick<Lecture, 'title' | 'lecturer'>): string {
+    const head = [video.title, video.lecturer, 'Transcribed word for word by AI, which can mishear names and terms.']
+        .map(line => line?.trim())
+        .filter(Boolean);
+    const body = paragraphs.map(paragraph => `[${formatStamp(paragraph.time)}] ${paragraph.lines.map(line => line.text).join(' ')}`);
+
+    return [head.join('\n'), ...body].join('\n\n') + '\n';
+}
+
+/** Named after the lecture, without the characters file systems refuse, and short enough for any of them. */
+export function transcriptFileName(title: string): string {
+    const name = title.replace(/[\\/:*?"<>|\s]+/g, ' ').slice(0, 75).replace(/^[\s.]+|[\s.]+$/g, '');
+
+    return `${name || 'Lecture'} - Transcript.txt`;
+}
+
 /**
  * The AI's word-for-word transcript of the lecture, each paragraph with the time it starts, which
  * plays the lecture from there, as does each stamped line in it. The line being spoken is marked
@@ -68,6 +86,7 @@ export class TranscriptBodyComponent implements OnChanges, OnDestroy {
     private zone = inject(NgZone);
 
     @Input({required: true}) videoId: number;
+    @Input({required: true}) video: Lecture;
     @Input() playback: LecturePlayback | null = null;
     /** Laid out for the reading window rather than the card. */
     @Input() reader = false;
@@ -86,7 +105,7 @@ export class TranscriptBodyComponent implements OnChanges, OnDestroy {
     private readonly timer: ReturnType<typeof setInterval>;
 
     constructor() {
-        addIcons({locateOutline, play});
+        addIcons({downloadOutline, locateOutline, play});
         // Checked outside Angular, which only hears about it when another paragraph starts.
         this.timer = this.zone.runOutsideAngular(() => setInterval(() => this.follow(), 1000));
     }
@@ -110,6 +129,17 @@ export class TranscriptBodyComponent implements OnChanges, OnDestroy {
 
     retry(): void {
         this.service.retryTranscript(this.videoId);
+    }
+
+    download(): void {
+        // The byte order mark keeps editors that guess the encoding from misreading the Thai.
+        const file = new Blob(['\uFEFF' + transcriptText(this.reading, this.video)], {type: 'text/plain;charset=utf-8'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(file);
+        link.download = transcriptFileName(this.video.title);
+        link.click();
+        // Some browsers only start reading the file after the click has returned.
+        this.zone.runOutsideAngular(() => setTimeout(() => URL.revokeObjectURL(link.href), 60_000));
     }
 
     toggleFollowing(): void {

@@ -22,8 +22,8 @@
                     Select a time to play the lecture from there.
                 }
             </p>
-            @if (playback) {
-                <span class="editor-actions">
+            <span class="editor-actions">
+                @if (playback) {
                     <ion-button class="small-button" size="small" fill="clear" (click)="showNow()">
                         <ion-icon slot="start" name="locate-outline" aria-hidden="true"></ion-icon>
                         Now playing
@@ -32,8 +32,13 @@
                                 [attr.aria-pressed]="following" (click)="toggleFollowing()">
                         Follow the lecture
                     </ion-button>
-                </span>
-            }
+                }
+                <ion-button class="small-button download-button" size="small" fill="clear" (click)="download()"
+                            title="Save the transcript as a text file">
+                    <ion-icon slot="start" name="download-outline" aria-hidden="true"></ion-icon>
+                    Download .txt
+                </ion-button>
+            </span>
         </div>
         <ol class="transcript">
             @for (paragraph of reading; track $index) {

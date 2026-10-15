@@ -47,7 +47,7 @@
                                 <app-summary-body [aids]="view.aids" [playback]="playback" (seek)="seek($event)"></app-summary-body>
                             }
                             @case ('transcript') {
-                                <app-transcript-body [videoId]="view.aids.video_id" [playback]="playback" (seek)="seek($event)"></app-transcript-body>
+                                <app-transcript-body [videoId]="view.aids.video_id" [video]="view.video" [playback]="playback" (seek)="seek($event)"></app-transcript-body>
                             }
                             @case ('quiz') {
                                 <app-quiz-body [aids]="view.aids" [video]="view.video" [playback]="playback" (seek)="seek($event)"></app-quiz-body>
