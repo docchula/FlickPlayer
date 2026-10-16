@@ -23,6 +23,11 @@
                 }
             </p>
             <span class="editor-actions">
+                <ion-button class="small-button download-button" size="small" fill="clear" (click)="download()"
+                            title="Save the transcript as a text file">
+                    <ion-icon slot="start" name="download-outline" aria-hidden="true"></ion-icon>
+                    Download .txt
+                </ion-button>
                 @if (playback) {
                     <ion-button class="small-button" size="small" fill="clear" (click)="showNow()">
                         <ion-icon slot="start" name="locate-outline" aria-hidden="true"></ion-icon>
@@ -33,11 +38,6 @@
                         Follow the lecture
                     </ion-button>
                 }
-                <ion-button class="small-button download-button" size="small" fill="clear" (click)="download()"
-                            title="Save the transcript as a text file">
-                    <ion-icon slot="start" name="download-outline" aria-hidden="true"></ion-icon>
-                    Download .txt
-                </ion-button>
             </span>
         </div>
         <ol class="transcript">
