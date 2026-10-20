@@ -9,6 +9,16 @@
         "**/node_modules/**",
         "*.js.map"
       ],
+      "headers": [
+        {
+          "source": "**/@(chunk|main|polyfills)-*.js",
+          "headers": [{"key": "Cache-Control", "value": "public, max-age=31536000, immutable"}]
+        },
+        {
+          "source": "**/styles-*.css",
+          "headers": [{"key": "Cache-Control", "value": "public, max-age=31536000, immutable"}]
+        }
+      ],
       "rewrites": [
         {
           "source": "**",

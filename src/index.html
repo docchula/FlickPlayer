@@ -34,6 +34,11 @@
 
   <link rel="icon" type="image/png" href="assets/icon/favicon.png"/>
 
+  <!-- Firebase refreshes and checks the saved sign-in, then the page asks FlickMan for its data: connect while the app downloads -->
+  <link rel="preconnect" href="https://securetoken.googleapis.com" crossorigin/>
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin/>
+  <link rel="preconnect" href="https://flick-man-app.docchula.com" crossorigin/>
+
   <!-- add to homescreen for ios -->
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
