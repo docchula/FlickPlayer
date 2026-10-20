@@ -4,8 +4,8 @@ import {environment} from './environments/environment';
 import {RouteReuseStrategy} from '@angular/router';
 import {IonicRouteStrategy, provideIonicAngular} from '@ionic/angular';
 import {DEBUG_MODE} from '@angular/fire/compat/analytics';
-import {initializeApp, provideFirebaseApp} from '@angular/fire/app';
-import {getAuth, provideAuth} from '@angular/fire/auth';
+import {getApp, initializeApp, provideFirebaseApp} from '@angular/fire/app';
+import {browserLocalPersistence, browserSessionPersistence, indexedDBLocalPersistence, initializeAuth, provideAuth} from '@angular/fire/auth';
 import {getAnalytics, provideAnalytics, ScreenTrackingService, UserTrackingService} from '@angular/fire/analytics';
 import {getPerformance, providePerformance} from '@angular/fire/performance';
 import {provideHttpClient, withFetch, withInterceptorsFromDi} from '@angular/common/http';
@@ -18,6 +18,7 @@ import {ServiceWorkerModule} from '@angular/service-worker';
 import {AppComponent} from './app/app.component';
 import Aura from '@primeuix/themes/aura';
 import {ThemeService} from './app/theme.service';
+import {DeferredPopupRedirectResolver} from './app/auth/deferred-popup-redirect-resolver';
 
 if (environment.production) {
   enableProdMode();
@@ -35,7 +36,11 @@ bootstrapApplication(AppComponent, {
         {provide: DEBUG_MODE, useValue: !environment.production},
         provideIonicAngular(),
         provideFirebaseApp(() => initializeApp(environment.firebase)),
-        provideAuth(() => getAuth()),
+        // What getAuth() sets up, but with a popup and redirect handler that does not hold up the start (see the class)
+        provideAuth(() => initializeAuth(getApp(), {
+            persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
+            popupRedirectResolver: DeferredPopupRedirectResolver,
+        })),
         provideAnalytics(() => getAnalytics()),
         providePerformance(() => getPerformance()),
         provideHttpClient(withFetch(), withInterceptorsFromDi()),

@@ -1,6 +1,7 @@
 import {inject, Injectable} from '@angular/core';
 import {Auth, getRedirectResult, GoogleAuthProvider, idToken, signInWithPopup, signInWithRedirect, signOut, user, User} from '@angular/fire/auth';
 import {BehaviorSubject, Subscription} from 'rxjs';
+import {rememberSignedIn} from './auth/deferred-popup-redirect-resolver';
 
 @Injectable({
     providedIn: 'root'
@@ -23,6 +24,7 @@ export class AuthService {
             this.idTokenSubject.next(token);
         });
         this.userSubscription = this.user$.subscribe((aUser: User | null) => {
+            rememberSignedIn(!!aUser);
             this.userSubject.next(aUser);
         });
         getRedirectResult(this.auth).catch((error) => console.error('getRedirectResult failed', error));
