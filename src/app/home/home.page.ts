@@ -37,7 +37,7 @@ import {AsyncPipe, DatePipe, NgStyle} from '@angular/common';
 import {ThemeMenuComponent} from '../shared/theme-menu.component';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../consent.service';
-import {confirmAiDisclaimer, ModalDocumentComponent} from './course/modal-document.component';
+import {confirmAiDisclaimer} from './course/ai-disclaimer';
 import {ModalPlayStatsComponent} from './modal-play-stats.component';
 import {buildRecentGrid, formatDay, RecentRow, serverNow} from './play-stats';
 
@@ -191,6 +191,8 @@ export class HomePage implements OnInit {
         if (!await confirmAiDisclaimer(this.alertController)) {
             return;
         }
+        // Loaded when needed: it brings the Markdown and math renderers
+        const {ModalDocumentComponent} = await import('./course/modal-document.component');
         const modal = await this.modalCtrl.create({
             component: ModalDocumentComponent,
             cssClass: 'modal-document',

@@ -20,7 +20,6 @@ import {
 import {ulid} from 'ulid';
 import {ThemeService} from '../theme.service';
 import {ThemeMode} from '../theme/theme.model';
-import {ThemeEditorComponent} from './theme-editor.component';
 
 @Component({
     selector: 'app-theme-menu',
@@ -47,6 +46,8 @@ export class ThemeMenuComponent {
     }
 
     private async openEditor(): Promise<void> {
+        // Loaded when first opened, so that the controls only it uses (select, range, toggle) are not part of every start
+        const {ThemeEditorComponent} = await import('./theme-editor.component');
         const modal = await this.modalCtrl.create({
             component: ThemeEditorComponent,
             breakpoints: [0, 0.9],

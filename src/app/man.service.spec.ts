@@ -21,7 +21,7 @@ describe('ManService', () => {
                 provideHttpClient(),
                 provideHttpClientTesting(),
                 // AuthService can't be constructed without real Firebase (see plan);
-                // PlayTrackerService opens a real websocket in its constructor.
+                // PlayTrackerService opens a real websocket once asked for updates.
                 // Both are stubbed so ManService's own logic can be tested in isolation.
                 {provide: AuthService, useValue: {idToken: of(null)}},
                 // Reads playTrackerUpdate at call time so individual tests can vary

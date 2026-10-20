@@ -3,9 +3,6 @@ import {combineLatest, EMPTY, fromEvent, mergeAll, Observable, of, pairwise, sta
 import {ActivatedRoute, Router} from '@angular/router';
 import {CourseMembers, EvaluationRecord, Lecture, ManService} from '../../man.service';
 import {first, map, switchMap} from 'rxjs/operators';
-import videojs from 'video.js';
-import 'videojs-hotkeys';
-import 'videojs-youtube';
 import {
     AlertController,
     IonBackButton,
@@ -36,11 +33,12 @@ import {DomSanitizer, Title} from '@angular/platform-browser';
 import {PlayHistory} from '../../play-tracker.service';
 import {addIcons} from "ionicons";
 import {checkmarkOutline, closeOutline, documentAttachOutline, documentTextOutline, download, pauseCircleOutline} from "ionicons/icons";
+import type VideoJs from 'video.js';
 import type Player from 'video.js/dist/types/player';
 import {ulid} from 'ulid';
 import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
 import {ModalEvaluationComponent} from './modal-evaluation.component';
-import {confirmAiDisclaimer, ModalDocumentComponent} from './modal-document.component';
+import {confirmAiDisclaimer} from './ai-disclaimer';
 import {PomodoroTimerComponent} from '../../shared/pomodoro-timer.component';
 import {ThemeMenuComponent} from '../../shared/theme-menu.component';
 import {Analytics, logEvent} from '@angular/fire/analytics';
@@ -102,6 +100,8 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
 
     @ViewChild('videoPlayer') videoPlayerElement: ElementRef;
     videoPlayer: Player;
+    private videojs: typeof VideoJs;
+    private destroyed = false;
     currentVideo: Lecture;
     year: string;
     course: string;
@@ -186,6 +186,30 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     ngAfterViewInit() {
+        this.initPlayer().catch(async error => {
+            console.error('Cannot load the video player', error);
+            const alert = await this.alertController.create({
+                header: 'Cannot load the video player',
+                message: 'Please check your internet connection and refresh the page.',
+                buttons: ['OK'],
+            });
+            await alert.present();
+        });
+    }
+
+    // video.js is most of this page's code and the lecture list does not need it, so it downloads while the list is
+    // fetched instead of holding the page back. viewVideo() keeps a lecture picked before it is ready for the ready callback.
+    private async initPlayer() {
+        const [{default: videojs}] = await Promise.all([
+            import('video.js'),
+            // The plugins import video.js themselves and register with it
+            import('videojs-hotkeys'),
+            import('videojs-youtube'),
+        ]);
+        if (this.destroyed) {
+            return;
+        }
+        this.videojs = videojs;
         this.videoPlayer = videojs(this.videoPlayerElement.nativeElement, {
             controlBar: {
                 skipButtons: {
@@ -302,6 +326,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     ngOnDestroy() {
+        this.destroyed = true;
         this.stopPolling$.next(true);
         this.titleService.setTitle(this.originalTitle);
     }
@@ -425,10 +450,14 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     viewVideo(video: Lecture) {
+        if (!this.isPlayerReady) {
+            this.pendingVideoToPlay = video;
+            return;
+        }
         video.sources = video.sources.filter(source => {
             if (source.type === 'video/youtube') {
                 return true;
-            } else if (videojs.browser.IS_SAFARI
+            } else if (this.videojs.browser.IS_SAFARI
                 && (source.type.startsWith('application/dash+xml') || source.type.startsWith('video/webm'))) {
                 return false;
             } /* else if (/Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) && source.type.startsWith('application/x-mpegURL')) {
@@ -496,6 +525,8 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         if (!await confirmAiDisclaimer(this.alertController)) {
             return;
         }
+        // Loaded when needed: it brings the Markdown and math renderers
+        const {ModalDocumentComponent} = await import('./modal-document.component');
         const modal = await this.modalCtrl.create({
             component: ModalDocumentComponent,
             cssClass: 'modal-document',
