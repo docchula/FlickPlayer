@@ -201,6 +201,63 @@ ion-list-header {
   }
 }
 
+/* Live captions (home/course/live-captions.ts) sit where video.js puts its own captions. */
+.video-js .vjs-live-captions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 3.5em;
+  display: flex;
+  justify-content: center;
+  padding: 0 1em;
+  pointer-events: none;
+}
+
+.video-js.vjs-user-inactive.vjs-playing .vjs-live-captions {
+  bottom: 1em;
+}
+
+/* Two lines, the newest at the bottom: older lines are pushed out of the top as the lecture goes on. */
+.video-js .vjs-live-captions-lines {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: min(100%, 36em);
+  max-height: 2.8em;
+  overflow: hidden;
+  font-size: 1.8em;
+  line-height: 1.4;
+}
+
+.video-js.vjs-fullscreen .vjs-live-captions-lines {
+  font-size: 2.8em;
+}
+
+.video-js .vjs-live-captions-text {
+  padding: 0 0.3em;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.video-js .vjs-live-captions-notice .vjs-live-captions-text {
+  font-style: italic;
+}
+
+/* Underlined while on, as YouTube's captions button is. */
+.video-js .vjs-live-captions-button.vjs-live-captions-on::after {
+  content: '';
+  position: absolute;
+  left: 32%;
+  right: 32%;
+  bottom: 22%;
+  height: 0.2em;
+  border-radius: 0.1em;
+  background: var(--ion-color-primary, currentColor);
+  pointer-events: none;
+}
+
 /* An item inside a coloured card keeps its own background, so it needs the page's text
    colour rather than the card's contrast colour, which is meant for the card itself. */
 ion-card.ion-color ion-item {

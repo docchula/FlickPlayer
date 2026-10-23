@@ -45,6 +45,7 @@ import {PomodoroTimerComponent} from '../../shared/pomodoro-timer.component';
 import {ThemeMenuComponent} from '../../shared/theme-menu.component';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../../consent.service';
+import {LiveCaptions} from './live-captions';
 
 // The video.js SeekBar handlers wrapped by CoursePage.requireDragToSeekOnTouch()
 interface SeekBarPointerHandlers {
@@ -102,6 +103,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
 
     @ViewChild('videoPlayer') videoPlayerElement: ElementRef;
     videoPlayer: Player;
+    private liveCaptions: LiveCaptions | null = null;
     currentVideo: Lecture;
     year: string;
     course: string;
@@ -213,6 +215,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 enableVolumeScroll: false,
             });
             this.requireDragToSeekOnTouch();
+            this.liveCaptions = LiveCaptions.attach(this.videoPlayer);
             this.videoPlayer.on('ended', () => {
                 this.updatePlayRecord();
                 if (!this.currentVideo.is_evaluated && !this.isEvaluated) {
@@ -302,6 +305,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     ngOnDestroy() {
+        this.liveCaptions?.dispose();
         this.stopPolling$.next(true);
         this.titleService.setTitle(this.originalTitle);
     }
