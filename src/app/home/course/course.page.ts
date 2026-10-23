@@ -213,6 +213,13 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 enableVolumeScroll: false,
             });
             this.requireDragToSeekOnTouch();
+            this.videoPlayer.on('error', () => {
+                const error = this.videoPlayer.error();
+                // MEDIA_ERR_SRC_NOT_SUPPORTED
+                if (error?.code === 4) {
+                    this.logMediaNotSupported(error.code, error.message);
+                }
+            });
             this.videoPlayer.on('ended', () => {
                 this.updatePlayRecord();
                 if (!this.currentVideo.is_evaluated && !this.isEvaluated) {
@@ -442,6 +449,9 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         });
         this.videoPlayer.src(video.sources);
         this.currentVideo = video;
+        if (video.sources.length === 0) {
+            this.logMediaNotSupported(null, 'No source type supported by the browser');
+        }
         this.videoPlayerElement.nativeElement.focus();
         this.expectVideoTimeJump = true;
         this.isEvaluated = false;
@@ -528,6 +538,14 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         return String(hours).padStart(2, "0") + ':'
             + String(minutes).padStart(2, "0") + ':'
             + String(seconds).padStart(2, "0");
+    }
+
+    private logMediaNotSupported(code: number | null, message: string | null) {
+        if (!this.currentVideo?.id) {
+            return;
+        }
+        const sourceTypes = (this.currentVideo.sources ?? []).map(source => source.type);
+        this.manService.logPlayerError(this.currentVideo.id, code, message, sourceTypes).subscribe();
     }
 
     protected updatePlayRecord() {
