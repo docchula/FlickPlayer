@@ -34,6 +34,7 @@ import {
 } from '@ionic/angular';
 import {DomSanitizer, Title} from '@angular/platform-browser';
 import {PlayHistory} from '../../play-tracker.service';
+import {showControlsOnHover} from './player/hover-controls';
 import {addIcons} from "ionicons";
 import {checkmarkOutline, closeOutline, documentAttachOutline, documentTextOutline, download, pauseCircleOutline} from "ionicons/icons";
 import type Player from 'video.js/dist/types/player';
@@ -239,6 +240,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 }
                 this.expectVideoTimeJump = false;
             });
+            showControlsOnHover(this.videoPlayer);
 
             // Listen for video time updates
             let lastUpdated = 0;

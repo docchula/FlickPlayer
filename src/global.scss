@@ -248,3 +248,8 @@ body.flick-has-background-image {
   }
 }
 
+/* video.js keeps the control bar hidden until the first play. Show it while a mouse is over the
+   player, so the length and seek bar are there before pressing play (hover-controls.ts). */
+.video-js.vjs-mouse-over:not(.vjs-has-started) .vjs-control-bar {
+  display: flex;
+}
