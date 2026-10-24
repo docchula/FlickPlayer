@@ -201,6 +201,14 @@ ion-list-header {
   }
 }
 
+/* A fullscreen player puts the seek bar on the bottom edge of the screen, where iPadOS takes swipes
+   for going home and switching apps. Lift the bar clear of that strip, which the seek bar ignores
+   touches from (SYSTEM_GESTURE_EDGE_PX in seek-bar-touch-guard.ts). Unlike the rules above, this
+   one holds while a trackpad is attached too, as the screen still takes touches then. */
+.video-js.vjs-touch-enabled.vjs-fullscreen .vjs-control-bar {
+  bottom: 24px;
+}
+
 /* An item inside a coloured card keeps its own background, so it needs the page's text
    colour rather than the card's contrast colour, which is meant for the card itself. */
 ion-card.ion-color ion-item {
