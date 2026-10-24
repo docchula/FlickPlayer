@@ -184,8 +184,9 @@ ion-list-header {
   gap: 0.3em;
   color: #fff;
   font-size: 1.4em;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
-  background: rgba(255, 255, 255, 0.15);
+  font-weight: 600;
+  /* Dark enough to read over a white slide, light enough to see the video through */
+  background: rgba(0, 0, 0, 0.4);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
