@@ -449,8 +449,10 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             ) !== '';
         });
         if (video.sources.length === 0) {
-            // Every source failed the codec support check; try H.264 anyway, as canPlayType can be unreliable
-            video.sources = allSources.filter(source => /\b(avc[13]|h\.?264)\b/i.test(source.type));
+            // Every source failed the codec support check; try H.264 anyway, as canPlayType can be unreliable.
+            // As a last resort, offer all sources and let the player try them.
+            const h264Sources = allSources.filter(source => /\b(avc[13]|h\.?264)\b/i.test(source.type));
+            video.sources = h264Sources.length > 0 ? h264Sources : allSources;
         }
         this.videoPlayer.src(video.sources);
         this.currentVideo = video;
