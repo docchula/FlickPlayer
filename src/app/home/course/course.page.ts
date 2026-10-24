@@ -6,6 +6,7 @@ import {first, map, switchMap} from 'rxjs/operators';
 import videojs from 'video.js';
 import 'videojs-hotkeys';
 import 'videojs-youtube';
+import {enableSeekGestures} from './player/seek-gestures';
 import {
     AlertController,
     IonBackButton,
@@ -220,6 +221,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                     this.logMediaNotSupported(error.code, error.message);
                 }
             });
+            enableSeekGestures(this.videoPlayer);
             this.videoPlayer.on('ended', () => {
                 this.updatePlayRecord();
                 if (!this.currentVideo.is_evaluated && !this.isEvaluated) {

@@ -163,6 +163,76 @@ ion-list-header {
   transform: translate(-50%, 0);
 }
 
+/* Double-tap seeking and press-and-hold speed-up on the video (seek-gestures.ts) */
+.video-js {
+  /* Keep iOS from zooming the page on a double tap, or showing a callout on a long press */
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.video-js .vjs-seek-feedback {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 33%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3em;
+  color: #fff;
+  font-size: 1.4em;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+  background: rgba(255, 255, 255, 0.15);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.video-js .vjs-seek-feedback-rewind {
+  left: 0;
+  border-radius: 0 50% 50% 0 / 0 50% 50% 0;
+}
+
+.video-js .vjs-seek-feedback-forward {
+  right: 0;
+  border-radius: 50% 0 0 50% / 50% 0 0 50%;
+}
+
+.video-js .vjs-seek-feedback.vjs-seek-feedback-visible {
+  opacity: 1;
+  transition-duration: 0.1s;
+}
+
+.video-js .vjs-seek-feedback-icon {
+  font-size: 2.2em;
+  line-height: 1;
+}
+
+.video-js .vjs-speed-boost-indicator {
+  position: absolute;
+  top: 1em;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 0.2em;
+  padding: 0.3em 0.8em;
+  border-radius: 1em;
+  color: #fff;
+  font-size: 1.4em;
+  background: rgba(0, 0, 0, 0.6);
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.video-js.vjs-speed-boost .vjs-speed-boost-indicator {
+  opacity: 1;
+}
+
 @media (min-width: 1024px) {
     ion-modal.play-stats-modal {
         --width: 80%;
