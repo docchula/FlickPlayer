@@ -1,22 +1,19 @@
-import videojs from 'video.js';
 import type Player from 'video.js/dist/types/player';
+import type Button from 'video.js/dist/types/button';
 import type Component from 'video.js/dist/types/component';
-import type MenuButton from 'video.js/dist/types/menu/menu-button';
-import type MenuItem from 'video.js/dist/types/menu/menu-item';
 
 /*
  * Captions written live from the lecture's sound. A website cannot switch on Chrome's own Live Caption,
  * but from Chrome 135 on computers the Web Speech API can listen to a video instead of the microphone.
- * Chrome then recognises the speech on the device, with the engine behind Live Caption, when it has the
- * language, and with Google's online speech service otherwise.
+ * Chrome then recognises the speech on the device, with the engine behind Live Caption, when it has Thai,
+ * and with Google's online speech service otherwise.
  */
 
-export type CaptionLanguage = 'th-TH' | 'en-US';
+/** Lectures are given in Thai, with the English terms said along the way. */
+const LANG = 'th-TH';
 
-const LANGUAGES: {lang: CaptionLanguage, label: string}[] = [
-    {lang: 'th-TH', label: 'Thai'},
-    {lang: 'en-US', label: 'English'},
-];
+/** Chrome's recognizer on the device puts a space between Thai words, which Thai is not written with. */
+const THAI_WORD_GAP = /([฀-๿]) +(?=[฀-๿])/g;
 
 const STORAGE_KEY = 'liveCaptions';
 /** Finished phrases kept for the two lines on screen. */
@@ -27,7 +24,7 @@ const RETRY_AFTER_MS = 5000;
 
 const FAILURES: Record<string, string> = {
     'audio-capture': 'Live captions cannot hear this video',
-    'language-not-supported': 'Live captions are not available in this language',
+    'language-not-supported': 'Live captions are not available in Thai in this browser',
     'not-allowed': 'This browser does not allow live captions',
     'service-not-allowed': 'This browser does not allow live captions',
 };
@@ -90,7 +87,7 @@ export function readResults(resultIndex: number, results: SpeechRecognitionResul
     const finished: string[] = [];
     const hearing: string[] = [];
     for (let i = resultIndex; i < results.length; i++) {
-        const transcript = results[i][0]?.transcript.trim();
+        const transcript = results[i][0]?.transcript.replace(THAI_WORD_GAP, '$1').trim();
         if (transcript) {
             (results[i].isFinal ? finished : hearing).push(transcript);
         }
@@ -99,41 +96,39 @@ export function readResults(resultIndex: number, results: SpeechRecognitionResul
     return {finished, hearing: hearing.join(' ')};
 }
 
-async function onDevice(lang: CaptionLanguage): Promise<boolean> {
+async function onDevice(): Promise<boolean> {
     try {
-        return await recognitionClass()?.available?.({langs: [lang], processLocally: true}) === 'available';
+        return await recognitionClass()?.available?.({langs: [LANG], processLocally: true}) === 'available';
     } catch {
         return false;
     }
 }
 
 /** Chrome keeps one copy of each language for every site, as for its own Live Caption. */
-async function download(lang: CaptionLanguage): Promise<void> {
+async function download(): Promise<void> {
     const Recognition = recognitionClass();
-    const options = {langs: [lang], processLocally: true};
+    const options = {langs: [LANG], processLocally: true};
     try {
         if (await Recognition?.available?.(options) === 'downloadable') {
             await Recognition.install?.(options);
         }
     } catch {
-        // The online service is used until the language is on the device
+        // The online service is used until Thai is on the device
     }
 }
 
-function readLanguage(): CaptionLanguage | null {
+function readOn(): boolean {
     try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-
-        return LANGUAGES.find(language => language.lang === stored)?.lang ?? null;
+        return localStorage.getItem(STORAGE_KEY) === 'on';
     } catch {
-        return null;
+        return false;
     }
 }
 
-function writeLanguage(lang: CaptionLanguage | null): void {
+function writeOn(on: boolean): void {
     try {
-        if (lang) {
-            localStorage.setItem(STORAGE_KEY, lang);
+        if (on) {
+            localStorage.setItem(STORAGE_KEY, 'on');
         } else {
             localStorage.removeItem(STORAGE_KEY);
         }
@@ -142,23 +137,12 @@ function writeLanguage(lang: CaptionLanguage | null): void {
     }
 }
 
-const VjsMenuButton = videojs.getComponent('MenuButton') as unknown as typeof MenuButton;
-const VjsMenuItem = videojs.getComponent('MenuItem') as unknown as typeof MenuItem;
-
-class LanguageMenuItem extends VjsMenuItem {
-    handleClick(): void {
-        this.options_.choose();
-    }
-}
-
-/** The live captions menu in the player's control bar, and the captions it writes over the video. */
+/** The live captions button in the player's control bar, and the captions it writes over the video. */
 export class LiveCaptions {
     private readonly box: HTMLElement;
-    private readonly lines: HTMLElement;
     private readonly text: HTMLElement;
-    private readonly button: MenuButton;
-    private readonly items: {lang: CaptionLanguage | null, item: MenuItem}[];
-    private language = readLanguage();
+    private readonly button: Button;
+    private on = readOn();
     private recognition: Recognition | null = null;
     /** Bumped whenever listening stops, so a start still waiting on Chrome is dropped. */
     private attempt = 0;
@@ -171,7 +155,7 @@ export class LiveCaptions {
     private retryTimer: ReturnType<typeof setTimeout> | undefined;
 
     private readonly onPlaying = () => {
-        if (this.language && this.failure) {
+        if (this.on && this.failure) {
             this.notify(this.failure);
         }
         this.clearLater();
@@ -200,29 +184,24 @@ export class LiveCaptions {
 
     constructor(private readonly player: Player) {
         const controlBar = player.getChild('ControlBar') as Component;
-        this.button = new VjsMenuButton(player, {title: 'Live captions'});
-        this.button.addClass('vjs-live-captions-button');
-        this.button.el().querySelector('.vjs-icon-placeholder')?.classList.add('vjs-icon-captions');
-        this.items = [{lang: null, label: 'Off'}, ...LANGUAGES].map(({lang, label}) => {
-            const item = new LanguageMenuItem(player, {label, selectable: true, choose: () => this.choose(lang)});
-            this.button.menu.addItem(item);
-
-            return {lang, item};
-        });
-        // Where video.js puts its own captions menu
+        // Where video.js puts its own captions button
         const next = controlBar.getChild('PictureInPictureToggle') ?? controlBar.getChild('FullscreenToggle');
-        controlBar.addChild(this.button, {}, next ? controlBar.children().indexOf(next) : undefined);
+        this.button = controlBar.addChild('button', {
+            className: 'vjs-live-captions-button',
+            clickHandler: () => this.toggle(),
+        }, next ? controlBar.children().indexOf(next) : undefined) as Button;
 
         this.box = document.createElement('div');
         this.box.className = 'vjs-live-captions vjs-hidden';
-        this.lines = document.createElement('div');
-        this.lines.className = 'vjs-live-captions-lines';
+        const lines = document.createElement('div');
+        lines.className = 'vjs-live-captions-lines';
+        lines.lang = 'th';
+        const line = document.createElement('div');
         this.text = document.createElement('span');
         this.text.className = 'vjs-live-captions-text';
-        const line = document.createElement('div');
         line.append(this.text);
-        this.lines.append(line);
-        this.box.append(this.lines);
+        lines.append(line);
+        this.box.append(lines);
         // Under the control bar, so its menus open over the captions
         player.el().insertBefore(this.box, controlBar.el());
 
@@ -230,7 +209,7 @@ export class LiveCaptions {
         player.on('pause', this.onPause);
         player.on('seeking', this.onSeeking);
         player.on('loadstart', this.onLoadStart);
-        this.showChoice();
+        this.render();
     }
 
     dispose(): void {
@@ -246,52 +225,47 @@ export class LiveCaptions {
         this.button.dispose();
     }
 
-    private choose(lang: CaptionLanguage | null): void {
-        this.language = lang;
-        writeLanguage(lang);
-        this.showChoice();
+    private toggle(): void {
+        this.on = !this.on;
+        writeOn(this.on);
+        this.render();
         this.stopListening();
         this.failure = null;
         this.clear();
-        if (lang) {
-            download(lang);
+        if (this.on) {
+            download();
             this.listen();
         }
     }
 
-    private showChoice(): void {
-        for (const {lang, item} of this.items) {
-            item.selected(lang === this.language);
-        }
-        const label = LANGUAGES.find(language => language.lang === this.language)?.label;
-        this.button.toggleClass('vjs-live-captions-on', !!label);
-        this.button.controlText(label ? `Live captions (${label})` : 'Live captions');
-        this.lines.lang = this.language?.slice(0, 2) ?? '';
+    private render(): void {
+        this.button.toggleClass('vjs-live-captions-on', this.on);
+        this.button.el().setAttribute('aria-pressed', String(this.on));
+        this.button.controlText(this.on ? 'Turn live captions off' : 'Turn live captions on');
     }
 
     private listen(): void {
-        const lang = this.language;
-        if (!lang || this.failure || this.recognition || this.player.paused()) {
+        if (!this.on || this.failure || this.recognition || this.player.paused()) {
             return;
         }
         clearTimeout(this.retryTimer);
         const attempt = ++this.attempt;
-        onDevice(lang).then(local => {
+        onDevice().then(local => {
             if (attempt !== this.attempt || this.recognition || this.player.paused()) {
                 return;
             }
             const track = this.audioTrack();
             if (track) {
-                this.recognize(lang, local, track);
+                this.recognize(local, track);
             } else {
                 this.fail(FAILURES['audio-capture']);
             }
         });
     }
 
-    private recognize(lang: CaptionLanguage, local: boolean, track: MediaStreamTrack): void {
+    private recognize(local: boolean, track: MediaStreamTrack): void {
         const recognition = new (recognitionClass())();
-        recognition.lang = lang;
+        recognition.lang = LANG;
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.processLocally = local;

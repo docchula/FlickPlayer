@@ -214,8 +214,8 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 enableModifiersForNumbers: false,
                 enableVolumeScroll: false,
             });
-            this.requireDragToSeekOnTouch();
             this.liveCaptions = LiveCaptions.attach(this.videoPlayer);
+            this.requireDragToSeekOnTouch();
             this.videoPlayer.on('ended', () => {
                 this.updatePlayRecord();
                 if (!this.currentVideo.is_evaluated && !this.isEvaluated) {

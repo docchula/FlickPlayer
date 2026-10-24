@@ -75,9 +75,15 @@ describe('canCaptionVideo', () => {
 
 describe('readResults', () => {
     it('separates finished phrases from the words still being heard', () => {
-        const list = results({transcript: 'old', isFinal: true}, {transcript: ' cardiac output', isFinal: true}, {transcript: ' equals'}, {transcript: ' stroke'});
+        const list = results({transcript: 'เก่า', isFinal: true}, {transcript: ' cardiac output', isFinal: true}, {transcript: ' เท่ากับ'}, {transcript: ' stroke volume'});
 
-        expect(readResults(1, list)).toEqual({finished: ['cardiac output'], hearing: 'equals stroke'});
+        expect(readResults(1, list)).toEqual({finished: ['cardiac output'], hearing: 'เท่ากับ stroke volume'});
+    });
+
+    it('writes Thai words together, keeping the spaces around English and numbers', () => {
+        const list = results({transcript: 'หัว ใจ มี 4 ห้อง เรียก ว่า cardiac output นะ ครับ', isFinal: true});
+
+        expect(readResults(0, list).finished).toEqual(['หัวใจมี 4 ห้องเรียกว่า cardiac output นะครับ']);
     });
 });
 
@@ -90,8 +96,7 @@ describe('LiveCaptions', () => {
     const saved = (window as unknown as {SpeechRecognition: unknown}).SpeechRecognition;
     const flush = () => new Promise(resolve => setTimeout(resolve));
     const box = () => player.el().querySelector('.vjs-live-captions');
-    const menuItems = () => Array.from(player.el().querySelectorAll('.vjs-live-captions-button .vjs-menu-item'));
-    const choose = (label: string) => (menuItems().find(item => item.textContent.includes(label)) as HTMLElement).click();
+    const button = () => player.el().querySelector('.vjs-live-captions-button') as HTMLElement;
 
     beforeEach(() => {
         localStorage.removeItem('liveCaptions');
@@ -126,16 +131,16 @@ describe('LiveCaptions', () => {
         await flush();
     }
 
-    it('offers Off, Thai and English, off at first', () => {
-        expect(menuItems().map(item => item.textContent)).toEqual([jasmine.stringContaining('Off'), jasmine.stringContaining('Thai'), jasmine.stringContaining('English')]);
-        expect(menuItems()[0].classList).toContain('vjs-selected');
+    it('offers a captions button, off at first', () => {
+        expect(button().getAttribute('aria-pressed')).toBe('false');
+        expect(button().textContent).toContain('Turn live captions on');
     });
 
-    it('listens to the video, not the microphone, once a language is chosen', async () => {
+    it('listens to the video in Thai, not the microphone, once turned on', async () => {
         await play();
         expect(FakeRecognition.instances.length).toBe(0);
 
-        choose('Thai');
+        button().click();
         await flush();
 
         const recognition = FakeRecognition.instances[0];
@@ -143,28 +148,29 @@ describe('LiveCaptions', () => {
         expect(recognition.continuous).toBe(true);
         expect(recognition.interimResults).toBe(true);
         expect(recognition.track.kind).toBe('audio');
-        expect(localStorage.getItem('liveCaptions')).toBe('th-TH');
+        expect(button().getAttribute('aria-pressed')).toBe('true');
+        expect(localStorage.getItem('liveCaptions')).toBe('on');
     });
 
     it('shows what is said, and nothing once turned off', async () => {
-        localStorage.setItem('liveCaptions', 'en-US');
+        localStorage.setItem('liveCaptions', 'on');
         captions.dispose();
         captions = new LiveCaptions(player);
         await play();
         const recognition = FakeRecognition.instances[0];
 
-        recognition.hear({transcript: 'The heart', isFinal: true}, {transcript: ' has four'});
-        expect(box().textContent).toBe('The heart has four');
+        recognition.hear({transcript: 'หัวใจมี', isFinal: true}, {transcript: ' 4 ห้อง'});
+        expect(box().textContent).toBe('หัวใจมี 4 ห้อง');
         expect(box().classList).not.toContain('vjs-hidden');
 
-        choose('Off');
+        button().click();
         expect(recognition.aborted).toBe(true);
         expect(box().classList).toContain('vjs-hidden');
         expect(localStorage.getItem('liveCaptions')).toBeNull();
     });
 
     it('stops while paused and starts again on play', async () => {
-        choose('English');
+        button().click();
         await play();
         const first = FakeRecognition.instances[0];
 
@@ -177,7 +183,7 @@ describe('LiveCaptions', () => {
     });
 
     it('carries on when Chrome ends a session while the video plays', async () => {
-        choose('English');
+        button().click();
         await play();
         spyOn(Date, 'now').and.returnValue(Date.now() + 60_000);
 
@@ -188,18 +194,18 @@ describe('LiveCaptions', () => {
         expect(FakeRecognition.instances.length).toBe(2);
     });
 
-    it('uses the recognizer on the device when Chrome has the language', async () => {
+    it('uses the recognizer on the device when Chrome has Thai', async () => {
         FakeRecognition.availability = 'available';
-        choose('English');
+        button().click();
         await play();
 
         expect(FakeRecognition.instances[0].processLocally).toBe(true);
     });
 
-    it('downloads the language when chosen, using the online service meanwhile', async () => {
+    it('downloads Thai when turned on, using the online service meanwhile', async () => {
         FakeRecognition.availability = 'downloadable';
         await play();
-        choose('Thai');
+        button().click();
         await flush();
 
         expect(FakeRecognition.install).toHaveBeenCalledWith({langs: ['th-TH'], processLocally: true});
@@ -207,8 +213,8 @@ describe('LiveCaptions', () => {
     });
 
     it('says so when it cannot hear a video from another site', async () => {
-        captureStream.and.throwError(new DOMException('Cannot capture from element with cross-origin data', 'NotSupportedError'));
-        choose('Thai');
+        captureStream.and.throwError(new DOMException('Cannot capture from element with cross-origin data', 'SecurityError'));
+        button().click();
         await play();
 
         expect(FakeRecognition.instances.length).toBe(0);
@@ -216,7 +222,7 @@ describe('LiveCaptions', () => {
     });
 
     it('gives up for the video when the browser refuses', async () => {
-        choose('Thai');
+        button().click();
         await play();
         const recognition = FakeRecognition.instances[0];
 

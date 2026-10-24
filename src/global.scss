@@ -245,17 +245,27 @@ ion-list-header {
   font-style: italic;
 }
 
-/* Underlined while on, as YouTube's captions button is. */
-.video-js .vjs-live-captions-button.vjs-live-captions-on::after {
-  content: '';
-  position: absolute;
-  left: 32%;
-  right: 32%;
-  bottom: 22%;
-  height: 0.2em;
-  border-radius: 0.1em;
-  background: var(--ion-color-primary, currentColor);
-  pointer-events: none;
+/* A CC box like YouTube's: outlined while off, filled white while on. */
+.video-js .vjs-live-captions-button .vjs-icon-placeholder::before {
+  content: 'CC';
+  top: 50%;
+  left: 50%;
+  width: auto;
+  height: auto;
+  padding: 0.05em 0.3em;
+  border: 0.15em solid currentColor;
+  border-radius: 0.3em;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 1.05em;
+  font-weight: 700;
+  line-height: 1.25;
+  transform: translate(-50%, -50%);
+}
+
+.video-js .vjs-live-captions-button.vjs-live-captions-on .vjs-icon-placeholder::before {
+  border-color: #fff;
+  background-color: #fff;
+  color: #000;
 }
 
 /* An item inside a coloured card keeps its own background, so it needs the page's text
