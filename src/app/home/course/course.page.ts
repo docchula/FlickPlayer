@@ -432,7 +432,8 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     viewVideo(video: Lecture) {
-        video.sources = video.sources.filter(source => {
+        const allSources = video.sources;
+        video.sources = allSources.filter(source => {
             if (source.type === 'video/youtube') {
                 return true;
             } else if (videojs.browser.IS_SAFARI
@@ -447,6 +448,10 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                     .replace('application/x-mpegURL', 'video/mp4')
             ) !== '';
         });
+        if (video.sources.length === 0) {
+            // Every source failed the codec support check; try H.264 anyway, as canPlayType can be unreliable
+            video.sources = allSources.filter(source => /\b(avc[13]|h\.?264)\b/i.test(source.type));
+        }
         this.videoPlayer.src(video.sources);
         this.currentVideo = video;
         if (video.sources.length === 0) {
