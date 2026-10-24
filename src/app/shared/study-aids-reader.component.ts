@@ -22,7 +22,6 @@ import {StudyAidsService} from '../study-aids.service';
 import {SummaryBodyComponent} from './summary-body.component';
 import {TranscriptBodyComponent} from './transcript-body.component';
 import {QuizBodyComponent} from './quiz-body.component';
-import {PartView} from './version-switch.component';
 import {Checklist, checklistFor, formatClock} from '../study-aids/checklist';
 import {isStudyTab, StudyTab, studyTabs, TAB_LABELS} from '../study-aids/tabs';
 import {LecturePlayback, StudyAids, StudyAidsState} from '../study-aids/study-aids.model';
@@ -81,8 +80,6 @@ export class StudyAidsReaderComponent implements OnInit {
 
     protected state$: Observable<StudyAidsState>;
     protected activeSection = 0;
-    /** The version of the summary on show; its sections are only listed for the edited one. */
-    protected summaryView: PartView = 'current';
     protected readonly formatClock = formatClock;
     protected readonly tabLabels = TAB_LABELS;
     protected readonly tabsOf = studyTabs;

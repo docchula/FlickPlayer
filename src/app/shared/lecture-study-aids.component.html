@@ -6,8 +6,8 @@
                 <button type="button" class="card-toggle" (click)="toggle()" [attr.aria-expanded]="!collapsed">
                     <span class="card-heading">
                         <span class="card-title">Summary &amp; Transcription</span>
-                        @if (badge(view); as label) {
-                            <span class="card-badge" [class.is-verified]="label.verified">{{ label.text }}</span>
+                        @if (view.aids) {
+                            <span class="card-badge">AI-generated</span>
                         }
                     </span>
                     @if (progressOf(view); as progress) {

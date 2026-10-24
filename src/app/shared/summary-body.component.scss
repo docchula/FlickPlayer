@@ -21,7 +21,6 @@
     cursor: pointer;
 }
 
-:host(.reader) app-checklist-view,
-:host(.reader) app-summary-changes {
+:host(.reader) app-checklist-view {
     font-size: 1.05rem;
 }

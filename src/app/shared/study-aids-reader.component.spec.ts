@@ -13,15 +13,12 @@ const MARKDOWN = '# Organelles\n\n## Nucleus [00:01:10]\n\n1. **Barr body** : X 
 
 const AIDS: StudyAids = {
     video_id: 7,
-    can_edit: false,
-    can_manage: false,
     generation: 'ready',
     has_transcript: true,
     my_ticks: null,
-    summary: {markdown: MARKDOWN, revision: 1, origin: 'ai', edited: false, contributors: [], updated_at: null, verified: null},
+    summary: {markdown: MARKDOWN},
     quiz: {
         questions: [{id: 'a', prompt: 'Which cell?', choices: ['Plasma cell', 'Leydig cell'], answer: 1, explanation: null, time: 465, stats: null, mine: null}],
-        revision: 1, origin: 'ai', edited: false, contributors: [], updated_at: null, verified: null,
     },
 };
 
@@ -60,7 +57,6 @@ describe('StudyAidsReaderComponent', () => {
                 {provide: StudyAidsService, useValue: {
                     watch: () => new BehaviorSubject<StudyAidsState>({status: 'loading'}),
                     transcript: () => of(TRANSCRIPT),
-                    profile: () => of(null),
                     saveTicks: (videoId: number, ticks: string[]) => of(ticks),
                 }},
                 {provide: ModalController, useValue: modalCtrl},

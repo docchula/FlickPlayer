@@ -60,10 +60,6 @@
     font-size: 0.7rem;
     font-weight: 600;
     white-space: nowrap;
-
-    &.is-verified {
-        background: rgba(var(--ion-color-success-rgb), 0.22);
-    }
 }
 
 .card-meta {

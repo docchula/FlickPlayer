@@ -2,7 +2,7 @@ import {isStudyTab, StudyTab} from './tabs';
 
 /*
  * What a reader does with the summary and quiz stays on the device: ticks, quiz answers in
- * progress, whether the card is folded away, which tab is open and whether captions are on.
+ * progress, whether the card is folded away and which tab is open.
  * Storage may be unavailable (private browsing), in which case everything still works for the visit.
  */
 
@@ -12,8 +12,6 @@ const UNSYNCED_TICKS_KEY = 'flickSummaryTicksUnsynced';
 const ANSWERS_PREFIX = 'flickQuizAnswers:';
 const COLLAPSED_KEY = 'flickStudyAidsCollapsed';
 const TAB_KEY = 'flickStudyAidsTab';
-const CREDIT_KEY = 'flickStudyAidsCredit';
-const CAPTIONS_KEY = 'flickCaptions';
 
 function read(key: string): unknown {
     try {
@@ -91,21 +89,4 @@ export function readTab(): StudyTab {
 
 export function writeTab(tab: StudyTab): void {
     write(TAB_KEY, tab);
-}
-
-/** The co-author box starts as the editor last left it. */
-export function readCredit(): boolean {
-    return read(CREDIT_KEY) === true;
-}
-
-export function writeCredit(credit: boolean): void {
-    write(CREDIT_KEY, credit);
-}
-
-export function readCaptions(): boolean {
-    return read(CAPTIONS_KEY) === true;
-}
-
-export function writeCaptions(on: boolean): void {
-    write(CAPTIONS_KEY, on);
 }

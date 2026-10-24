@@ -1,6 +1,5 @@
 import {Marked, MarkedExtension} from 'marked';
 import {mathExtension} from '../home/course/markdown-math';
-import {DRIVE_IMAGE_CLASS, driveLink, savedDriveId} from './images';
 
 /*
  * A summary is Markdown written to these conventions (FlickMan's AI follows them too):
@@ -14,7 +13,7 @@ import {DRIVE_IMAGE_CLASS, driveLink, savedDriveId} from './images';
  *   **key term**, ==exam point==, tables and $maths$
  *
  * Points are numbered here, continuously through the whole summary, so the numbers written in
- * the Markdown never matter and an editor can add a point anywhere without renumbering.
+ * the Markdown never matter.
  */
 
 export interface ChecklistBlock {
@@ -142,10 +141,8 @@ function openInNewTab(link: Element): void {
 }
 
 /**
- * Links open in a new tab, so following one never takes the reader away from the lecture. A Drive
- * picture becomes a link to it, which the page turns into the picture once it is shown (Angular's
- * sanitizer would drop the lazy loading an <img> needs). Any other image is only a link: loading
- * it would tell a third party who is reading.
+ * Links open in a new tab, so following one never takes the reader away from the lecture. An image
+ * is only a link: FlickMan never serves one, and loading it would tell a third party who is reading.
  */
 function finishHtml(html: string): string {
     const body = new DOMParser().parseFromString(html, 'text/html').body;
@@ -155,13 +152,9 @@ function finishHtml(html: string): string {
             image.remove();
             continue;
         }
-        const driveId = savedDriveId(src);
         const link = body.ownerDocument.createElement('a');
-        link.setAttribute('href', driveId ? driveLink(driveId) : src);
+        link.setAttribute('href', src);
         link.textContent = image.getAttribute('alt') || 'Image';
-        if (driveId) {
-            link.className = DRIVE_IMAGE_CLASS;
-        }
         image.replaceWith(link);
     }
     body.querySelectorAll('a[href]').forEach(openInNewTab);

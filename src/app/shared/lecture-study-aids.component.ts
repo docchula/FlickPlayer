@@ -14,7 +14,6 @@ import {TranscriptBodyComponent} from './transcript-body.component';
 import {QUIZ_LINK_PARAM, QuizBodyComponent} from './quiz-body.component';
 import {openReader} from './study-aids-reader.component';
 import {checklistFor} from '../study-aids/checklist';
-import {isAiDraft, verifiedState} from '../study-aids/byline';
 import {displayed} from '../study-aids/displayed';
 import {readCollapsed, readTab, writeCollapsed, writeTab} from '../study-aids/local-store';
 import {effectiveAnswers, score} from '../study-aids/quiz';
@@ -110,20 +109,6 @@ export class LectureStudyAidsComponent {
             this.tab = value;
             writeTab(value);
         }
-    }
-
-    /** "AI draft" or "Verified", for the summary or the quiz on show. */
-    badge(view: CardView): {text: string; verified: boolean} | null {
-        const tab = this.activeTab(view);
-        const part = tab === 'summary' ? view.aids?.summary : tab === 'quiz' && view.questions ? view.aids?.quiz : null;
-        if (!part) {
-            return null;
-        }
-        if (verifiedState(part) === 'current') {
-            return {text: 'Verified', verified: true};
-        }
-
-        return isAiDraft(part) ? {text: 'AI draft', verified: false} : null;
     }
 
     /** How far the reader has got with the tab on show. */

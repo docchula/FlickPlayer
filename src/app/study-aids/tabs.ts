@@ -8,16 +8,16 @@ export const TAB_LABELS: Record<StudyTab, string> = {
     quiz: 'Quiz',
 };
 
-/** The tabs with something in them for this reader: editors also get the ones they can fill. */
+/** The tabs with something in them, or that the AI is still writing. */
 export function studyTabs(aids: StudyAids): StudyTab[] {
     const tabs: StudyTab[] = [];
-    if (aids.summary || aids.can_edit || aids.generation === 'pending') {
+    if (aids.summary || aids.generation === 'pending') {
         tabs.push('summary');
     }
     if (aids.has_transcript) {
         tabs.push('transcript');
     }
-    if (aids.quiz?.questions.length || aids.can_edit || (aids.generation === 'pending' && !aids.quiz)) {
+    if (aids.quiz?.questions.length || (aids.generation === 'pending' && !aids.quiz)) {
         tabs.push('quiz');
     }
 

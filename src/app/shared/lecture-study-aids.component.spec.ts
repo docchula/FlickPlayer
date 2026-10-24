@@ -29,24 +29,22 @@ function question(id: string, answer: number, mine: number | null = null): QuizQ
 function aids(changes: Partial<StudyAids> = {}): StudyAids {
     return {
         video_id: 7,
-        can_edit: false,
-        can_manage: false,
         generation: 'ready',
         has_transcript: false,
         my_ticks: null,
-        summary: {markdown: MARKDOWN, revision: 1, origin: 'ai', edited: false, contributors: [], updated_at: null, verified: null},
+        summary: {markdown: MARKDOWN},
         quiz: null,
         ...changes,
     };
 }
 
 function quiz(questions: QuizQuestion[]): StudyAids['quiz'] {
-    return {questions, revision: 2, origin: 'ai', edited: true, contributors: [{name: 'Kan & Chain'}], updated_at: null, verified: null};
+    return {questions};
 }
 
 describe('LectureStudyAidsComponent', () => {
     let fixture: ComponentFixture<LectureStudyAidsComponent>;
-    let service: jasmine.SpyObj<Pick<StudyAidsService, 'watch' | 'refresh' | 'answer' | 'transcript' | 'retryTranscript' | 'profile' | 'saveTicks'>>;
+    let service: jasmine.SpyObj<Pick<StudyAidsService, 'watch' | 'refresh' | 'answer' | 'transcript' | 'retryTranscript' | 'saveTicks'>>;
     let seek: jasmine.Spy;
     let query: Record<string, string>;
     /** How the reader answers the question before an unfinished quiz is cleared. */
@@ -80,10 +78,9 @@ describe('LectureStudyAidsComponent', () => {
         for (const key of ['flickSummaryTicks:7', 'flickQuizAnswers:7', 'flickStudyAidsCollapsed', 'flickStudyAidsTab', 'flickSummaryTicksUnsynced']) {
             localStorage.removeItem(key);
         }
-        service = jasmine.createSpyObj('StudyAidsService', ['watch', 'refresh', 'answer', 'transcript', 'retryTranscript', 'profile', 'saveTicks']);
+        service = jasmine.createSpyObj('StudyAidsService', ['watch', 'refresh', 'answer', 'transcript', 'retryTranscript', 'saveTicks']);
         service.saveTicks.and.callFake((videoId, ticks) => of(ticks));
         service.answer.and.returnValue(of({answered: 13, correct: 11}));
-        service.profile.and.returnValue(of(null));
         service.transcript.and.returnValue(of<TranscriptState>({status: 'ready', paragraphs: [
             {time: 5, text: 'สวัสดีครับ วันนี้เราจะคุยเรื่อง organelles'},
             {time: 70, text: 'The smooth ER stores Ca²⁺.'},
@@ -114,12 +111,12 @@ describe('LectureStudyAidsComponent', () => {
     });
 
     describe('summary', () => {
-        it('shows the AI draft as a numbered checklist', () => {
+        it('shows the AI summary as a numbered checklist', () => {
             create({status: 'ready', aids: aids()});
 
             expect(text()).toContain('Summary & Transcription');
-            expect(text()).toContain('AI draft');
-            expect(text()).toContain('Not verified by an editor yet.');
+            expect(element().querySelector('.card-badge')?.textContent).toBe('AI-generated');
+            expect(text()).toContain('Written by AI from the lecture recording.');
             expect(Array.from(element().querySelectorAll('.point-number')).map(number => number.textContent)).toEqual(['1.', '2.']);
             expect(element().querySelector('ion-segment')).toBeNull();
         });
@@ -143,21 +140,6 @@ describe('LectureStudyAidsComponent', () => {
             expect(JSON.parse(localStorage.getItem('flickSummaryTicks:7') ?? '[]').length).toBe(1);
         });
 
-        it('names the editors who chose to be credited and who verified it', () => {
-            create({status: 'ready', aids: aids({summary: {
-                ...aids().summary!,
-                origin: 'editor',
-                edited: true,
-                revision: 3,
-                contributors: [{name: 'Kan'}, {name: 'Chain'}],
-                verified: {revision: 3, by: [{name: 'Ajarn Dev'}], at: '2026-10-09T16:52:22+00:00'},
-            }})});
-
-            expect(text()).toContain('By Kan and Chain');
-            expect(text()).toContain('Verified by Ajarn Dev.');
-            expect(element().querySelector('.card-badge')?.textContent).toBe('Verified');
-        });
-
         it('shows nothing when there is nothing for a reader', () => {
             create({status: 'ready', aids: aids({summary: null})});
 
@@ -174,12 +156,6 @@ describe('LectureStudyAidsComponent', () => {
             create({status: 'ready', aids: aids({summary: null, generation: 'pending'})});
 
             expect(text()).toContain('The AI is still writing a summary of this lecture.');
-        });
-
-        it('lets editors write one', () => {
-            create({status: 'ready', aids: aids({summary: null, can_edit: true})});
-
-            expect(text()).toContain('Write a summary');
         });
     });
 
@@ -214,16 +190,16 @@ describe('LectureStudyAidsComponent', () => {
     });
 
     describe('quiz', () => {
-        const createQuiz = (questions: QuizQuestion[], canEdit = false) => {
+        const createQuiz = (questions: QuizQuestion[]) => {
             localStorage.setItem('flickStudyAidsTab', '"quiz"');
-            create({status: 'ready', aids: aids({summary: null, can_edit: canEdit, quiz: quiz(questions)})});
+            create({status: 'ready', aids: aids({summary: null, quiz: quiz(questions)})});
         };
 
         it('offers to start, then shows the first question', () => {
             createQuiz([question('a', 2), question('b', 0)]);
 
             expect(text()).toContain('2 single-best-answer questions');
-            expect(text()).toContain('AI draft, edited by Kan & Chain');
+            expect(text()).toContain('Written by AI from the lecture recording.');
             clickButton('Start quiz');
 
             expect(text()).toContain('Question 1 of 2');
@@ -323,13 +299,6 @@ describe('LectureStudyAidsComponent', () => {
             expect(text()).toContain('You have answered 1 so far.');
             clickButton('Continue');
             expect(text()).toContain('Question 2 of 2');
-        });
-
-        it('offers editors to add questions', () => {
-            createQuiz([], true);
-
-            expect(text()).toContain('There are no questions for this lecture yet.');
-            expect(text()).toContain('Add questions');
         });
 
         it('builds a link that opens this lecture\'s quiz', () => {

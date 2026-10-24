@@ -1,132 +1,87 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {ModalController} from '@ionic/angular';
-import {of, throwError} from 'rxjs';
+import {of} from 'rxjs';
 import {SummaryBodyComponent} from './summary-body.component';
 import {StudyAidsService} from '../study-aids.service';
-import {StudyAids, SummaryRevision} from '../study-aids/study-aids.model';
+import {StudyAids} from '../study-aids/study-aids.model';
 
-const AI = '# Organelles\n\n## Lysosome [00:21:40]\n\n1. **Lysosome** : pH 5\n2. **Gaucher** : glucocerebrosidase\n';
-const EDITED = '# Organelles\n\n## Lysosome [00:21:40]\n\n1. **Lysosome** : pH 4.5\n2. **Gaucher** : glucocerebrosidase\n3. **Fabry** : galactosidase\n';
+const SUMMARY = '# Organelles\n\n## Lysosome [00:21:40]\n\n1. **Lysosome** : pH 5\n2. **Gaucher** : glucocerebrosidase\n';
 
-const REVISIONS: SummaryRevision[] = [
-    {revision: 1, author: null, created_at: '2026-10-09T10:00:00+07:00', content: AI},
-    {revision: 2, author: {key: 'e1', name: 'Kan'}, created_at: '2026-10-09T11:00:00+07:00', content: AI.replace('pH 5', 'pH 4.5')},
-    {revision: 3, author: {key: 'e2', name: null}, created_at: '2026-10-09T12:00:00+07:00', content: EDITED},
-];
-
-function aids(): StudyAids {
+function aids(changes: Partial<StudyAids> = {}): StudyAids {
     return {
         video_id: 7,
-        can_edit: false,
-        can_manage: false,
         generation: 'ready',
         has_transcript: false,
         my_ticks: null,
-        summary: {markdown: EDITED, revision: 3, origin: 'ai', edited: true, contributors: [{name: 'Kan'}], updated_at: null, verified: null},
+        summary: {markdown: SUMMARY},
         quiz: null,
+        ...changes,
     };
 }
 
 describe('SummaryBodyComponent', () => {
     let fixture: ComponentFixture<SummaryBodyComponent>;
-    let service: jasmine.SpyObj<Pick<StudyAidsService, 'summaryRevisions' | 'profile' | 'watch' | 'saveTicks'>>;
+    let service: jasmine.SpyObj<Pick<StudyAidsService, 'watch' | 'saveTicks'>>;
 
     const element = () => fixture.nativeElement as HTMLElement;
     const text = () => element().textContent?.replace(/\s+/g, ' ') ?? '';
-    const show = (label: string) => {
-        Array.from(element().querySelectorAll<HTMLButtonElement>('.version-switch button'))
-            .find(button => button.textContent?.trim() === label)?.click();
+
+    function show(value: StudyAids): void {
+        fixture.componentRef.setInput('aids', value);
         fixture.detectChanges();
-    };
+    }
 
     beforeEach(() => {
         localStorage.removeItem('flickSummaryTicks:7');
-        service = jasmine.createSpyObj('StudyAidsService', ['summaryRevisions', 'profile', 'watch', 'saveTicks']);
+        service = jasmine.createSpyObj('StudyAidsService', ['watch', 'saveTicks']);
         service.watch.and.returnValue(of({status: 'loading'}));
-        service.summaryRevisions.and.returnValue(of(REVISIONS));
-        service.profile.and.returnValue(of(null));
+        service.saveTicks.and.callFake((videoId, ticks) => of(ticks));
         TestBed.configureTestingModule({
             imports: [SummaryBodyComponent],
-            providers: [
-                {provide: StudyAidsService, useValue: service},
-                {provide: ModalController, useValue: jasmine.createSpyObj('ModalController', ['create'])},
-            ],
+            providers: [{provide: StudyAidsService, useValue: service}],
         });
         fixture = TestBed.createComponent(SummaryBodyComponent);
-        fixture.componentRef.setInput('aids', aids());
+    });
+
+    afterEach(() => localStorage.removeItem('flickSummaryTicks:7'));
+
+    it('says the AI wrote the summary, and shows it as a checklist to tick', () => {
+        show(aids());
+
+        expect(text()).toContain('Written by AI from the lecture recording. Check it against the lecture.');
+        expect(text()).toContain('Tick each point once you know it.');
+        expect(element().querySelectorAll('.point-tick').length).toBe(2);
+    });
+
+    it('counts the ticked points and clears them', () => {
+        show(aids());
+        const box = element().querySelector<HTMLInputElement>('.point-tick')!;
+        box.checked = true;
+        box.dispatchEvent(new Event('change'));
         fixture.detectChanges();
-    });
 
-    it('shows the edited version first and only fetches others when asked', () => {
-        expect(text()).toContain('pH 4.5');
-        expect(element().querySelectorAll('.point-tick').length).toBe(3);
-        expect(service.summaryRevisions).not.toHaveBeenCalled();
-    });
+        expect(text()).toContain('1 of 2 points ticked.');
 
-    it('shows the AI\'s own draft, without ticks', () => {
-        show('AI original');
-
-        expect(service.summaryRevisions).toHaveBeenCalledWith(7, 3);
-        expect(text()).toContain('The summary as the AI wrote it on 9 Oct 2026');
-        expect(text()).toContain('pH 5');
-        expect(text()).not.toContain('Fabry');
-        expect(element().querySelectorAll('.point-tick').length).toBe(0);
-    });
-
-    it('marks every change with the editor who made it', () => {
-        show('Show changes');
-        const added = Array.from(element().querySelectorAll('.changes-body ins')).map(mark => [mark.textContent, mark.getAttribute('title')]);
-        const removed = Array.from(element().querySelectorAll('.changes-body del')).map(mark => [mark.textContent, mark.getAttribute('title')]);
-
-        expect(added).toEqual([['4.5', 'Added by Kan on 9 Oct 2026']]);
-        expect(removed).toEqual([['5', 'Removed by Kan on 9 Oct 2026']]);
-        expect(element().querySelector('.whole-added')?.textContent).toContain('Fabry');
-        expect(text()).toContain('Added by an unnamed editor on 9 Oct 2026');
-        expect(Array.from(element().querySelectorAll('.change-legend li')).map(entry => entry.textContent?.replace(/\s+/g, ' ').trim()))
-            .toEqual(['Kan +1 −1', 'Unnamed editor +2 −0']);
-    });
-
-    it('draws a diagram line for line in a fixed-width font, its changes too', () => {
-        const drawn = '# Veins\n\n1. **Face** : veins\n\n```\n  Facial v.\n      │\n      ▼\n[ Internal jugular v. ]\n```\n';
-        const edited = drawn.replace('Facial v.', 'Facial vein');
-        service.summaryRevisions.and.returnValue(of([
-            {revision: 1, author: null, created_at: '2026-10-09T10:00:00+07:00', content: drawn},
-            {revision: 2, author: {key: 'e1', name: 'Kan'}, created_at: '2026-10-09T11:00:00+07:00', content: edited},
-        ]));
-        fixture.componentRef.setInput('aids', {...aids(), summary: {...aids().summary!, markdown: edited, revision: 2}});
+        element().querySelector<HTMLButtonElement>('.link-button')!.click();
         fixture.detectChanges();
+        expect(text()).toContain('Tick each point once you know it.');
+    });
+
+    it('draws a diagram line for line in a fixed-width font', () => {
+        show(aids({summary: {markdown: '# Veins\n\n1. **Face** : veins\n\n```\n  Facial v.\n      │\n      ▼\n[ Internal jugular v. ]\n```\n'}}));
         const pre = element().querySelector('pre')!;
 
-        expect(pre.textContent).toBe('  Facial vein\n      │\n      ▼\n[ Internal jugular v. ]\n');
+        expect(pre.textContent).toBe('  Facial v.\n      │\n      ▼\n[ Internal jugular v. ]\n');
         expect(getComputedStyle(pre).whiteSpace).toBe('pre');
         expect(getComputedStyle(pre).overflowX).toBe('auto');
         expect(getComputedStyle(pre).fontFamily).toContain('Menlo');
         expect(getComputedStyle(pre.querySelector('code')!).paddingLeft).toBe('0px');
-
-        show('Show changes');
-        const changed = element().querySelector('pre.code-changes')!;
-
-        expect(changed.querySelector('ins')?.textContent).toBe('vein');
-        expect(changed.textContent).toContain('\n      │\n      ▼\n[ Internal jugular v. ]');
-        expect(getComputedStyle(changed.querySelector('app-change-runs')!).whiteSpace).toBe('pre');
     });
 
-    it('goes back to the edited version', () => {
-        show('Show changes');
-        show('Edited by PS');
+    it('says when the AI is still writing the summary, or there is none', () => {
+        show(aids({summary: null, generation: 'pending'}));
+        expect(text()).toContain('The AI is still writing a summary of this lecture.');
 
-        expect(element().querySelector('app-summary-changes')).toBeNull();
-        expect(element().querySelectorAll('.point-tick').length).toBe(3);
-    });
-
-    it('offers to try again when the versions could not be loaded', () => {
-        service.summaryRevisions.and.returnValue(throwError(() => ({kind: 'network'})));
-        show('Show changes');
-
-        expect(text()).toContain('The earlier versions could not be loaded.');
-        service.summaryRevisions.and.returnValue(of(REVISIONS));
-        Array.from(element().querySelectorAll<HTMLElement>('ion-button')).find(button => button.textContent?.trim() === 'Try again')?.click();
-        fixture.detectChanges();
-        expect(element().querySelector('app-summary-changes')).not.toBeNull();
+        show(aids({summary: null, generation: 'failed'}));
+        expect(text()).toContain('There is no summary of this lecture.');
     });
 });

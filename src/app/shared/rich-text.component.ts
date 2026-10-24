@@ -1,10 +1,9 @@
 import {afterNextRender, Component, ElementRef, inject, Injector, Input, OnChanges, ViewEncapsulation} from '@angular/core';
 import {renderMath} from '../home/course/markdown-math';
-import {drawDriveImages} from '../study-aids/images';
 
 /**
  * HTML rendered from a summary's or a question's Markdown. Angular sanitizes it on the way in, and
- * the maths and the Drive pictures are drawn afterwards, as neither would survive the sanitizer.
+ * the maths is drawn afterwards, as KaTeX's output would not survive the sanitizer.
  */
 @Component({
     selector: 'app-rich-text',
@@ -20,9 +19,6 @@ export class RichTextComponent implements OnChanges {
     @Input() html = '';
 
     ngOnChanges() {
-        afterNextRender(() => {
-            renderMath(this.host.nativeElement);
-            drawDriveImages(this.host.nativeElement);
-        }, {injector: this.injector});
+        afterNextRender(() => renderMath(this.host.nativeElement), {injector: this.injector});
     }
 }

@@ -6,7 +6,7 @@ import {StudyAids, StudyAidsState} from './study-aids/study-aids.model';
 
 function lecture(myTicks: string[] | null): StudyAidsState {
     return {status: 'ready', aids: {
-        video_id: 7, can_edit: false, can_manage: false, generation: 'ready', has_transcript: false, my_ticks: myTicks, summary: null, quiz: null,
+        video_id: 7, generation: 'ready', has_transcript: false, my_ticks: myTicks, summary: null, quiz: null,
     } as StudyAids};
 }
 

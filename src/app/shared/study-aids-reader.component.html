@@ -37,7 +37,7 @@
             } @else if (aidsOf(state); as aids) {
                 @switch (activeTab(aids)) {
                     @case ('summary') {
-                        @let outlineEntries = summaryView === 'current' ? outline(aids) : [];
+                        @let outlineEntries = outline(aids);
                         <div class="reader-summary" [class.with-outline]="outlineEntries.length">
                             @if (outlineEntries.length) {
                                 <nav class="reader-outline" aria-label="Sections">
@@ -54,7 +54,7 @@
                                 </nav>
                             }
                             <app-summary-body class="reader-column" [aids]="aids" [playback]="playback" [reader]="true"
-                                              (seek)="watch($event)" (viewChange)="summaryView = $event"></app-summary-body>
+                                              (seek)="watch($event)"></app-summary-body>
                         </div>
                     }
                     @case ('transcript') {
