@@ -37,6 +37,7 @@ import {PlayHistory} from '../../play-tracker.service';
 import {addIcons} from "ionicons";
 import {checkmarkOutline, closeOutline, documentAttachOutline, documentTextOutline, download, pauseCircleOutline} from "ionicons/icons";
 import type Player from 'video.js/dist/types/player';
+import {enableVideoZoom} from './player/video-zoom';
 import {ulid} from 'ulid';
 import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
 import {ModalEvaluationComponent} from './modal-evaluation.component';
@@ -227,6 +228,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                     this.isEvaluated = true;
                 }
             });
+            enableVideoZoom(this.videoPlayer);
             this.videoPlayer.on('loadedmetadata', () => {
                 if (!this.currentVideo.duration) {
                     this.currentVideo.duration = this.videoPlayer.duration();

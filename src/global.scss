@@ -170,6 +170,69 @@ ion-list-header {
     }
 }
 
+/* Zooming into the video (video-zoom.ts) */
+.video-js .vjs-tech {
+  /* A pinch on the video zooms the video, not the page */
+  touch-action: pan-x pan-y;
+}
+
+.video-js.vjs-zoomed {
+  overflow: hidden;
+}
+
+.video-js.vjs-zoomed .vjs-tech {
+  /* One finger moves around the zoomed video instead of scrolling the page */
+  touch-action: none;
+  cursor: grab;
+}
+
+.video-js.vjs-zoomed.vjs-zoom-dragging .vjs-tech {
+  cursor: grabbing;
+}
+
+.video-js.vjs-zoomed.vjs-user-inactive.vjs-playing .vjs-tech {
+  cursor: none;
+}
+
+.video-js.vjs-zoom-animating .vjs-tech {
+  transition: transform 0.2s ease;
+}
+
+.video-js .vjs-zoom-control .vjs-icon-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.video-js .vjs-zoom-control svg {
+  width: 1.8em;
+  height: 1.8em;
+}
+
+.video-js.vjs-zoomed .vjs-zoom-control-plus {
+  display: none;
+}
+
+.video-js .vjs-zoom-level {
+  position: absolute;
+  top: 1em;
+  right: 1em;
+  padding: 0.3em 0.7em;
+  border-radius: 1em;
+  color: #fff;
+  font-size: 1.3em;
+  font-variant-numeric: tabular-nums;
+  background: rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.video-js .vjs-zoom-level.vjs-zoom-level-visible {
+  opacity: 1;
+}
+
 /* video.js adds .vjs-touch-enabled based on touch *capability* (navigator.maxTouchPoints), which
    stays true on touchscreen laptops even when the mouse is the input in use. Gate on
    (hover: none) and (pointer: coarse) too so these rules only kick in when touch is actually the
