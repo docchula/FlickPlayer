@@ -432,21 +432,25 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     viewVideo(video: Lecture) {
-        video.sources = video.sources.filter(source => {
+        const allSources = video.sources;
+        video.sources = allSources.filter(source => {
             if (source.type === 'video/youtube') {
                 return true;
             } else if (videojs.browser.IS_SAFARI
                 && (source.type.startsWith('application/dash+xml') || source.type.startsWith('video/webm'))) {
                 return false;
-            } /* else if (/Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) && source.type.startsWith('application/x-mpegURL')) {
-                // Don't play HLS on Safari
-                return false;
-            } */
+            }
             return this.videoPlayerElement.nativeElement.canPlayType(
                 source.type.replace('application/dash+xml', 'video/mp4')
                     .replace('application/x-mpegURL', 'video/mp4')
             ) !== '';
         });
+        if (video.sources.length === 0) {
+            // Every source failed the codec support check; try H.264 anyway, as canPlayType can be unreliable.
+            // As a last resort, offer all sources and let the player try them.
+            const h264Sources = allSources.filter(source => /\b(avc[13]|h\.?264)\b/i.test(source.type));
+            video.sources = h264Sources.length > 0 ? h264Sources : allSources;
+        }
         this.videoPlayer.src(video.sources);
         this.currentVideo = video;
         if (video.sources.length === 0) {
