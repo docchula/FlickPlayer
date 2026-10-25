@@ -39,6 +39,8 @@ import {checkmarkOutline, closeOutline, documentAttachOutline, documentTextOutli
 import type Player from 'video.js/dist/types/player';
 import {ulid} from 'ulid';
 import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
+import {LectureStudyAidsComponent} from '../../shared/lecture-study-aids.component';
+import {LecturePlayback} from '../../study-aids/study-aids.model';
 import {ModalEvaluationComponent} from './modal-evaluation.component';
 import {confirmAiDisclaimer, ModalDocumentComponent} from './modal-document.component';
 import {PomodoroTimerComponent} from '../../shared/pomodoro-timer.component';
@@ -83,6 +85,7 @@ interface SeekBarPointerHandlers {
         NgClass,
         IonProgressBar,
         AsyncPipe,
+        LectureStudyAidsComponent,
         DecimalPipe,
         DatePipe,
         PomodoroTimerComponent,
@@ -130,6 +133,12 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
 
     pendingVideoToPlay: Lecture | null = null;
     isPlayerReady = false;
+
+    // Lets the summary and quiz read the video's time and jump to where a topic is taught
+    readonly playback: LecturePlayback = {
+        currentTime: () => this.videoPlayer?.currentTime() ?? 0,
+        seek: seconds => this.seekTo(seconds),
+    };
 
     constructor() {
         addIcons({ download, documentAttachOutline, documentTextOutline, checkmarkOutline, closeOutline, pauseCircleOutline });
@@ -461,6 +470,17 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         this.isEvaluated = false;
         this.sessionUid = ulid();
         this.playLog = [];
+    }
+
+    private seekTo(seconds: number) {
+        if (!this.videoPlayer || !this.currentVideo) {
+            return;
+        }
+        // A jump asked for before the metadata arrives must not be undone by resuming the last position
+        this.expectVideoTimeJump = false;
+        this.videoPlayer.currentTime(seconds);
+        this.videoPlayer.play()?.catch(() => undefined);
+        this.videoPlayer.el().scrollIntoView({behavior: 'smooth', block: 'nearest'});
     }
 
     async setPlaybackSpeed() {
