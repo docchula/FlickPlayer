@@ -60,6 +60,13 @@
                             Transcript
                         </ion-button>
                         }
+                        @if (chromeLiveCaption) {
+                        <ion-button [href]="chromeLiveCaptionHelp" target="_blank" rel="noopener" fill="outline" size="small"
+                            class="set-playback-speed-button" title="How to turn on Chrome's own Live Caption">
+                            <ion-icon slot="start" name="logo-closed-captioning"></ion-icon>
+                            Live captions
+                        </ion-button>
+                        }
                         @if (currentVideo.sourceExternal?.includes('1.mp4')) {
                         <span>
                             | <a [href]="sanitize('//player.docchula.com/?url='+currentVideo.sourceExternal)"

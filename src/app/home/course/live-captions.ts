@@ -120,6 +120,18 @@ export function canCaptionVideo(
         && !!recognitionClass();
 }
 
+/** Google's page on turning Chrome's own Live Caption on and off, as no page can open Chrome's settings. */
+export const CHROME_LIVE_CAPTION_HELP = 'https://support.google.com/chrome/answer/10538231?co=GENIE.Platform%3DDesktop';
+
+/** Chrome's own Live Caption, which hears any video, comes only with Google Chrome on a computer. */
+export function hasChromeLiveCaption(
+    userAgentData = (navigator as Navigator & {userAgentData?: UserAgentData}).userAgentData,
+): boolean {
+    return !!userAgentData && !userAgentData.mobile
+        && ['macOS', 'Windows'].includes(userAgentData.platform)
+        && userAgentData.brands.some(brand => brand.brand === 'Google Chrome');
+}
+
 /** The phrases a result event finished, and the words still being heard after them. */
 export function readResults(resultIndex: number, results: SpeechRecognitionResultList): {finished: string[], hearing: string} {
     const finished: string[] = [];

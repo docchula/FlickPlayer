@@ -1,6 +1,6 @@
 import videojs from 'video.js';
 import type Player from 'video.js/dist/types/player';
-import {canCaptionVideo, LiveCaptions, readResults, UserAgentData} from './live-captions';
+import {canCaptionVideo, hasChromeLiveCaption, LiveCaptions, readResults, UserAgentData} from './live-captions';
 
 class FakeRecognition {
     static instances: FakeRecognition[] = [];
@@ -70,6 +70,21 @@ describe('canCaptionVideo', () => {
         scope.webkitSpeechRecognition = undefined;
 
         expect(canCaptionVideo(chrome)).toBe(false);
+    });
+});
+
+describe('hasChromeLiveCaption', () => {
+    it('is true for Google Chrome on a Mac or a Windows computer', () => {
+        expect(hasChromeLiveCaption(chrome)).toBe(true);
+        expect(hasChromeLiveCaption({...chrome, platform: 'Windows'})).toBe(true);
+    });
+
+    it('is false on phones, iPads and other browsers', () => {
+        expect(hasChromeLiveCaption({...chrome, mobile: true, platform: 'Android'})).toBe(false);
+        expect(hasChromeLiveCaption({...chrome, platform: 'Linux'})).toBe(false);
+        expect(hasChromeLiveCaption({...chrome, brands: [{brand: 'Chromium', version: '141'}, {brand: 'Microsoft Edge', version: '141'}]})).toBe(false);
+        // Safari, Firefox and every browser on an iPad have no userAgentData
+        expect(hasChromeLiveCaption(null)).toBe(false);
     });
 });
 
