@@ -93,6 +93,9 @@ describe('LiveCaptions', () => {
     let paused: boolean;
     let audio: AudioContext;
     let captureStream: jasmine.Spy;
+    /** What Chrome gives when the user shares this tab: its sound, and a picture that is not wanted. */
+    let tab: MediaStream;
+    let getDisplayMedia: jasmine.Spy;
     const saved = (window as unknown as {SpeechRecognition: unknown}).SpeechRecognition;
     const flush = () => new Promise(resolve => setTimeout(resolve));
     const box = () => player.el().querySelector('.vjs-live-captions');
@@ -114,11 +117,17 @@ describe('LiveCaptions', () => {
         audio = new AudioContext();
         const element = player.tech(true).el() as HTMLMediaElement & {captureStream: () => MediaStream};
         captureStream = spyOn(element, 'captureStream').and.callFake(() => audio.createMediaStreamDestination().stream);
+        tab = new MediaStream([
+            ...audio.createMediaStreamDestination().stream.getAudioTracks(),
+            ...document.createElement('canvas').captureStream().getVideoTracks(),
+        ]);
+        getDisplayMedia = spyOn(navigator.mediaDevices, 'getDisplayMedia').and.callFake(() => Promise.resolve(tab));
         captions = new LiveCaptions(player);
     });
 
     afterEach(async () => {
         captions.dispose();
+        tab.getTracks().forEach(track => track.stop());
         player.dispose();
         await audio.close();
         (window as unknown as {SpeechRecognition: unknown}).SpeechRecognition = saved;
@@ -148,6 +157,7 @@ describe('LiveCaptions', () => {
         expect(recognition.continuous).toBe(true);
         expect(recognition.interimResults).toBe(true);
         expect(recognition.track.kind).toBe('audio');
+        expect(getDisplayMedia).not.toHaveBeenCalled();
         expect(button().getAttribute('aria-pressed')).toBe('true');
         expect(localStorage.getItem('liveCaptions')).toBe('on');
     });
@@ -212,13 +222,114 @@ describe('LiveCaptions', () => {
         expect(FakeRecognition.instances[0].processLocally).toBe(false);
     });
 
-    it('says so when it cannot hear a video from another site', async () => {
-        captureStream.and.throwError(new DOMException('Cannot capture from element with cross-origin data', 'SecurityError'));
-        button().click();
-        await play();
+    describe('for a video from a server that does not let this site hear it', () => {
+        const refuse = (name: string) => getDisplayMedia.and.callFake(() => Promise.reject(new DOMException('', name)));
 
-        expect(FakeRecognition.instances.length).toBe(0);
-        expect(box().textContent).toBe('Live captions cannot hear this video');
+        beforeEach(() => captureStream.and.throwError(new DOMException('Cannot capture from element with cross-origin data', 'SecurityError')));
+
+        it('listens to this tab instead, once the user shares it', async () => {
+            button().click();
+            await play();
+
+            expect(getDisplayMedia).toHaveBeenCalledOnceWith(jasmine.objectContaining({audio: true, preferCurrentTab: true}));
+            expect(FakeRecognition.instances[0].track).toBe(tab.getAudioTracks()[0]);
+            expect(tab.getVideoTracks()[0].readyState).toBe('ended');
+        });
+
+        it('keeps hearing the tab from one lecture to the next, and stops sharing it once turned off', async () => {
+            button().click();
+            await play();
+            player.trigger('loadstart');
+            await play();
+
+            expect(getDisplayMedia).toHaveBeenCalledTimes(1);
+            expect(FakeRecognition.instances.length).toBe(2);
+
+            button().click();
+            expect(tab.getAudioTracks()[0].readyState).toBe('ended');
+        });
+
+        it('waits for a click on CC when Chrome needs one before it asks', async () => {
+            let asked = 0;
+            getDisplayMedia.and.callFake(() => ++asked === 1 ? Promise.reject(new DOMException('', 'InvalidStateError')) : Promise.resolve(tab));
+            localStorage.setItem('liveCaptions', 'on');
+            captions.dispose();
+            captions = new LiveCaptions(player);
+            await play();
+
+            expect(box().textContent).toBe('Click CC to let live captions hear this tab');
+            expect(FakeRecognition.instances.length).toBe(0);
+
+            button().click();
+            await flush();
+
+            expect(button().getAttribute('aria-pressed')).toBe('true');
+            expect(FakeRecognition.instances[0].track).toBe(tab.getAudioTracks()[0]);
+            expect(box().classList).toContain('vjs-hidden');
+        });
+
+        it('turns off when Chrome still will not ask after that click', async () => {
+            refuse('InvalidStateError');
+            button().click();
+            await play();
+            button().click();
+            await flush();
+
+            expect(button().getAttribute('aria-pressed')).toBe('false');
+            expect(box().classList).toContain('vjs-hidden');
+        });
+
+        it('turns off when the tab is not shared', async () => {
+            refuse('NotAllowedError');
+            button().click();
+            await play();
+
+            expect(button().getAttribute('aria-pressed')).toBe('false');
+            expect(localStorage.getItem('liveCaptions')).toBeNull();
+            expect(box().textContent).toBe('Live captions need to hear this tab');
+        });
+
+        it('turns off when the tab is shared without its audio', async () => {
+            getDisplayMedia.and.callFake(() => Promise.resolve(new MediaStream(tab.getVideoTracks())));
+            button().click();
+            await play();
+
+            expect(FakeRecognition.instances.length).toBe(0);
+            expect(tab.getVideoTracks()[0].readyState).toBe('ended');
+            expect(button().getAttribute('aria-pressed')).toBe('false');
+            expect(box().textContent).toBe('Live captions need the tab shared with its audio');
+        });
+
+        it('turns off when the user stops sharing the tab', async () => {
+            button().click();
+            await play();
+            const recognition = FakeRecognition.instances[0];
+
+            tab.getAudioTracks()[0].dispatchEvent(new Event('ended'));
+
+            expect(recognition.aborted).toBe(true);
+            expect(button().getAttribute('aria-pressed')).toBe('false');
+        });
+
+        it('says when a muted video leaves the tab nothing to hear', async () => {
+            const muted = spyOn(player, 'muted').and.returnValue(true);
+            button().click();
+            await play();
+            expect(box().textContent).toBe('Live captions cannot hear a muted video');
+
+            muted.and.returnValue(false);
+            player.trigger('volumechange');
+            expect(box().classList).toContain('vjs-hidden');
+        });
+
+        it('says so when Chrome cannot share the tab either', async () => {
+            refuse('NotFoundError');
+            button().click();
+            await play();
+
+            expect(FakeRecognition.instances.length).toBe(0);
+            expect(box().textContent).toBe('Live captions cannot hear this video');
+        });
     });
 
     it('gives up for the video when the browser refuses', async () => {

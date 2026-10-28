@@ -7,6 +7,10 @@ import type Component from 'video.js/dist/types/component';
  * but from Chrome 135 on computers the Web Speech API can listen to a video instead of the microphone.
  * Chrome then recognises the speech on the device, with the engine behind Live Caption, when it has Thai,
  * and with Google's online speech service otherwise.
+ *
+ * A page cannot listen to a video from a server that does not let other sites read it, as the faculty's
+ * video server does not, nor to one on YouTube. For those Chrome is asked to share this tab's sound
+ * instead, which the user allows each time the captions are turned on.
  */
 
 /** Lectures are given in Thai, with the English terms said along the way. */
@@ -27,6 +31,31 @@ const FAILURES: Record<string, string> = {
     'language-not-supported': 'Live captions are not available in Thai in this browser',
     'not-allowed': 'This browser does not allow live captions',
     'service-not-allowed': 'This browser does not allow live captions',
+};
+/** Chrome asks to share the tab only straight after a click or a key press. */
+const CLICK_TO_SHARE = 'Click CC to let live captions hear this tab';
+const NOT_SHARED = 'Live captions need to hear this tab';
+const NO_TAB_AUDIO = 'Live captions need the tab shared with its audio';
+/** The tab's sound is what it plays, so a muted video leaves nothing to hear. */
+const MUTED = 'Live captions cannot hear a muted video';
+
+/** Chrome's options for sharing a tab, which TypeScript does not know yet. */
+interface TabShareOptions extends DisplayMediaStreamOptions {
+    preferCurrentTab: boolean;
+    selfBrowserSurface: 'include' | 'exclude';
+    surfaceSwitching: 'include' | 'exclude';
+    monitorTypeSurfaces: 'include' | 'exclude';
+}
+
+/** This tab only, without offering other tabs, windows or screens. */
+const TAB_SHARE: TabShareOptions = {
+    // Chrome shares no sound without the picture, which is stopped as soon as it comes
+    video: true,
+    audio: true,
+    preferCurrentTab: true,
+    selfBrowserSurface: 'include',
+    surfaceSwitching: 'exclude',
+    monitorTypeSurfaces: 'exclude',
 };
 
 interface RecognitionResultEvent extends Event {
@@ -125,6 +154,10 @@ function readOn(): boolean {
     }
 }
 
+function stop(stream: MediaStream | null): void {
+    stream?.getTracks().forEach(track => track.stop());
+}
+
 function writeOn(on: boolean): void {
     try {
         if (on) {
@@ -147,6 +180,12 @@ export class LiveCaptions {
     /** Bumped whenever listening stops, so a start still waiting on Chrome is dropped. */
     private attempt = 0;
     private stream: MediaStream | null = null;
+    /** This tab's sound, kept from one lecture to the next until the captions are turned off. */
+    private tab: MediaStream | null = null;
+    private sharing: Promise<MediaStreamTrack | null> | null = null;
+    /** Chrome needs a click before it asks to share the tab, and the next click on CC is that click. */
+    private waitingForShare = false;
+    private disposed = false;
     private phrases: string[] = [];
     private hearing = '';
     /** Why the captions that are on cannot be written for this video. */
@@ -174,7 +213,18 @@ export class LiveCaptions {
         this.stopListening();
         this.releaseStream();
         this.failure = null;
+        this.waitingForShare = false;
         this.clear();
+    };
+    private readonly onVolumeChange = () => {
+        if (!this.on || !this.tab) {
+            return;
+        }
+        if (this.player.muted() || this.player.volume() === 0) {
+            this.notify(MUTED);
+        } else if (this.text.textContent === MUTED) {
+            this.clear();
+        }
     };
 
     /** Live captions for the player, where the browser can write them. */
@@ -209,16 +259,20 @@ export class LiveCaptions {
         player.on('pause', this.onPause);
         player.on('seeking', this.onSeeking);
         player.on('loadstart', this.onLoadStart);
+        player.on('volumechange', this.onVolumeChange);
         this.render();
     }
 
     dispose(): void {
+        this.disposed = true;
         this.player.off('playing', this.onPlaying);
         this.player.off('pause', this.onPause);
         this.player.off('seeking', this.onSeeking);
         this.player.off('loadstart', this.onLoadStart);
+        this.player.off('volumechange', this.onVolumeChange);
         this.stopListening();
         this.releaseStream();
+        this.releaseTab();
         this.clear();
         this.box.remove();
         this.player.getChild('ControlBar')?.removeChild(this.button);
@@ -226,15 +280,42 @@ export class LiveCaptions {
     }
 
     private toggle(): void {
-        this.on = !this.on;
-        writeOn(this.on);
+        if (this.on && this.waitingForShare) {
+            this.waitingForShare = false;
+            this.clear();
+            this.shareTab().then(track => {
+                if (track) {
+                    this.listen();
+                } else if (this.waitingForShare) {
+                    // Chrome would not ask even now, so CC must not keep asking to be clicked
+                    this.turnOff();
+                }
+            });
+            return;
+        }
+        this.switchTo(!this.on);
+    }
+
+    private switchTo(on: boolean): void {
+        this.on = on;
+        writeOn(on);
         this.render();
         this.stopListening();
         this.failure = null;
+        this.waitingForShare = false;
         this.clear();
-        if (this.on) {
+        if (on) {
             download();
             this.listen();
+        } else {
+            this.releaseTab();
+        }
+    }
+
+    private turnOff(notice?: string): void {
+        this.switchTo(false);
+        if (notice) {
+            this.notify(notice);
         }
     }
 
@@ -250,15 +331,15 @@ export class LiveCaptions {
         }
         clearTimeout(this.retryTimer);
         const attempt = ++this.attempt;
-        onDevice().then(local => {
+        onDevice().then(async local => {
             if (attempt !== this.attempt || this.recognition || this.player.paused()) {
                 return;
             }
-            const track = this.audioTrack();
-            if (track) {
+            const track = await this.audioTrack();
+            // The user may have paused or seeked while Chrome asked to share the tab
+            if (track && attempt === this.attempt && !this.recognition && !this.player.paused()) {
                 this.recognize(local, track);
-            } else {
-                this.fail(FAILURES['audio-capture']);
+                this.onVolumeChange();
             }
         });
     }
@@ -327,8 +408,10 @@ export class LiveCaptions {
         }
     }
 
-    private audioTrack(): MediaStreamTrack | null {
-        const live = this.stream?.getAudioTracks().find(track => track.readyState === 'live');
+    /** The video's sound, or null when there is none to hear. */
+    private async audioTrack(): Promise<MediaStreamTrack | null> {
+        const live = [this.tab, this.stream].flatMap(stream => stream?.getAudioTracks() ?? [])
+            .find(track => track.readyState === 'live');
         if (live) {
             return live;
         }
@@ -338,16 +421,76 @@ export class LiveCaptions {
             this.stream = video?.captureStream?.() ?? null;
         } catch {
             // Video from a server that does not let this site read it
+        }
+        if (!this.stream) {
+            return this.shareTab();
+        }
+        this.stream.getVideoTracks().forEach(track => track.stop());
+        const track = this.stream.getAudioTracks()[0] ?? null;
+        if (!track) {
+            this.fail(FAILURES['audio-capture']);
+        }
+
+        return track;
+    }
+
+    /** One request at a time, however often the video plays or seeks while Chrome asks. */
+    private shareTab(): Promise<MediaStreamTrack | null> {
+        this.sharing ??= this.requestTab().finally(() => this.sharing = null);
+
+        return this.sharing;
+    }
+
+    private async requestTab(): Promise<MediaStreamTrack | null> {
+        let stream: MediaStream;
+        try {
+            stream = await navigator.mediaDevices.getDisplayMedia(TAB_SHARE);
+        } catch (error) {
+            if (this.disposed || !this.on) {
+                return null;
+            }
+            const name = (error as DOMException | undefined)?.name;
+            if (name === 'InvalidStateError') {
+                this.waitingForShare = true;
+                this.notify(CLICK_TO_SHARE);
+            } else if (name === 'NotAllowedError') {
+                this.turnOff(NOT_SHARED);
+            } else {
+                this.fail(FAILURES['audio-capture']);
+            }
             return null;
         }
-        this.stream?.getVideoTracks().forEach(track => track.stop());
+        stream.getVideoTracks().forEach(track => track.stop());
+        if (this.disposed || !this.on) {
+            stop(stream);
+            return null;
+        }
+        const track = stream.getAudioTracks()[0];
+        if (!track) {
+            stop(stream);
+            this.turnOff(NO_TAB_AUDIO);
+            return null;
+        }
+        this.tab = stream;
+        this.waitingForShare = false;
+        // Chrome's "Stop sharing"
+        track.addEventListener('ended', () => {
+            if (this.tab === stream) {
+                this.turnOff();
+            }
+        });
 
-        return this.stream?.getAudioTracks()[0] ?? null;
+        return track;
     }
 
     private releaseStream(): void {
-        this.stream?.getTracks().forEach(track => track.stop());
+        stop(this.stream);
         this.stream = null;
+    }
+
+    private releaseTab(): void {
+        stop(this.tab);
+        this.tab = null;
     }
 
     private fail(message: string): void {
@@ -373,7 +516,8 @@ export class LiveCaptions {
 
     private clearLater(): void {
         clearTimeout(this.clearTimer);
-        if (this.text.textContent) {
+        // Asking for a click stays up until it comes
+        if (this.text.textContent && !this.waitingForShare) {
             this.clearTimer = setTimeout(() => this.clear(), CLEAR_AFTER_MS);
         }
     }
