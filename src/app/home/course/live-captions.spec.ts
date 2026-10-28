@@ -100,9 +100,12 @@ describe('LiveCaptions', () => {
     const flush = () => new Promise(resolve => setTimeout(resolve));
     const box = () => player.el().querySelector('.vjs-live-captions');
     const button = () => player.el().querySelector('.vjs-live-captions-button') as HTMLElement;
+    const alwaysAllow = () => button().parentElement.querySelector('.vjs-menu-item') as HTMLElement;
+    const blockVideo = () => captureStream.and.throwError(new DOMException('Cannot capture from element with cross-origin data', 'SecurityError'));
 
     beforeEach(() => {
         localStorage.removeItem('liveCaptions');
+        localStorage.removeItem('liveCaptionsAlwaysAllow');
         FakeRecognition.instances = [];
         FakeRecognition.availability = 'unavailable';
         FakeRecognition.available.calls.reset();
@@ -128,10 +131,14 @@ describe('LiveCaptions', () => {
     afterEach(async () => {
         captions.dispose();
         tab.getTracks().forEach(track => track.stop());
+        if (player.isFullWindow) {
+            player.exitFullWindow();
+        }
         player.dispose();
         await audio.close();
         (window as unknown as {SpeechRecognition: unknown}).SpeechRecognition = saved;
         localStorage.removeItem('liveCaptions');
+        localStorage.removeItem('liveCaptionsAlwaysAllow');
     });
 
     async function play() {
@@ -225,7 +232,7 @@ describe('LiveCaptions', () => {
     describe('for a video from a server that does not let this site hear it', () => {
         const refuse = (name: string) => getDisplayMedia.and.callFake(() => Promise.reject(new DOMException('', name)));
 
-        beforeEach(() => captureStream.and.throwError(new DOMException('Cannot capture from element with cross-origin data', 'SecurityError')));
+        beforeEach(blockVideo);
 
         it('listens to this tab instead, once the user shares it', async () => {
             button().click();
@@ -329,6 +336,102 @@ describe('LiveCaptions', () => {
 
             expect(FakeRecognition.instances.length).toBe(0);
             expect(box().textContent).toBe('Live captions cannot hear this video');
+        });
+    });
+
+    describe('with "Always allow"', () => {
+        beforeEach(blockVideo);
+
+        it('offers it in a menu on CC, off at first', () => {
+            expect(alwaysAllow().textContent).toContain('Always allow');
+            expect(alwaysAllow().getAttribute('role')).toBe('menuitemcheckbox');
+            expect(alwaysAllow().getAttribute('aria-checked')).toBe('false');
+
+            alwaysAllow().click();
+
+            expect(alwaysAllow().getAttribute('aria-checked')).toBe('true');
+            expect(localStorage.getItem('liveCaptionsAlwaysAllow')).toBe('on');
+            expect(box().textContent).toBe('Chrome will ask to share this tab once each time Flick is opened');
+        });
+
+        it('keeps the tab shared when the captions are turned off, so turning them on does not ask again', async () => {
+            alwaysAllow().click();
+            button().click();
+            await play();
+            button().click();
+            expect(tab.getAudioTracks()[0].readyState).toBe('live');
+
+            button().click();
+            await flush();
+
+            expect(getDisplayMedia).toHaveBeenCalledTimes(1);
+            expect(FakeRecognition.instances[1].track).toBe(tab.getAudioTracks()[0]);
+        });
+
+        it('keeps the tab shared for the next course page', async () => {
+            alwaysAllow().click();
+            button().click();
+            await play();
+            captions.dispose();
+            expect(tab.getAudioTracks()[0].readyState).toBe('live');
+
+            captions = new LiveCaptions(player);
+            await play();
+
+            expect(getDisplayMedia).toHaveBeenCalledTimes(1);
+            expect(FakeRecognition.instances[1].track).toBe(tab.getAudioTracks()[0]);
+        });
+
+        it('stops sharing once it is turned off while the captions are off', async () => {
+            alwaysAllow().click();
+            button().click();
+            await play();
+            button().click();
+
+            alwaysAllow().click();
+
+            expect(tab.getAudioTracks()[0].readyState).toBe('ended');
+        });
+    });
+
+    describe('fullscreen', () => {
+        it('stays the browser\'s own while nothing is shared', async () => {
+            button().click();
+            await play();
+            await player.requestFullscreen().catch(() => undefined);
+
+            expect(player.isFullWindow).toBeFalsy();
+        });
+
+        it('fills the window instead while the tab is shared, as Chrome would squeeze it', async () => {
+            blockVideo();
+            button().click();
+            await play();
+
+            await player.requestFullscreen();
+            expect(player.isFullWindow).toBeTrue();
+            expect(player.isFullscreen()).toBeTrue();
+            expect(document.fullscreenElement).toBeNull();
+
+            await player.exitFullscreen();
+            expect(player.isFullWindow).toBeFalse();
+            expect(player.isFullscreen()).toBeFalse();
+        });
+
+        it('moves to filling the window when sharing starts in fullscreen', async () => {
+            spyOnProperty(document, 'fullscreenElement').and.returnValue(player.el());
+            const exit = spyOn(document, 'exitFullscreen').and.callFake(() => {
+                document.dispatchEvent(new Event('fullscreenchange'));
+                return Promise.resolve();
+            });
+            blockVideo();
+            button().click();
+            await play();
+            await flush();
+
+            expect(exit).toHaveBeenCalled();
+            expect(player.isFullWindow).toBeTrue();
+            expect(player.isFullscreen()).toBeTrue();
         });
     });
 

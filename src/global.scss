@@ -268,6 +268,12 @@ ion-list-header {
   color: #000;
 }
 
+/* While live captions hear the shared tab, the player fills the window instead of going fullscreen.
+   Ionic's scroll area stacks itself under the page header, which would cover the player's top. */
+body.vjs-full-window ion-content::part(scroll) {
+  z-index: auto;
+}
+
 /* An item inside a coloured card keeps its own background, so it needs the page's text
    colour rather than the card's contrast colour, which is meant for the card itself. */
 ion-card.ion-color ion-item {

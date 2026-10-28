@@ -1,6 +1,8 @@
 import type Player from 'video.js/dist/types/player';
-import type Button from 'video.js/dist/types/button';
 import type Component from 'video.js/dist/types/component';
+import type FullscreenToggle from 'video.js/dist/types/control-bar/fullscreen-toggle';
+import type MenuButton from 'video.js/dist/types/menu/menu-button';
+import type MenuItem from 'video.js/dist/types/menu/menu-item';
 
 /*
  * Captions written live from the lecture's sound. A website cannot switch on Chrome's own Live Caption,
@@ -10,7 +12,8 @@ import type Component from 'video.js/dist/types/component';
  *
  * A page cannot listen to a video from a server that does not let other sites read it, as the faculty's
  * video server does not, nor to one on YouTube. For those Chrome is asked to share this tab's sound
- * instead, which the user allows each time the captions are turned on.
+ * instead, which the user allows each time the captions are turned on, or once a visit with "Always allow".
+ * Chrome never remembers that permission once the page is opened anew.
  */
 
 /** Lectures are given in Thai, with the English terms said along the way. */
@@ -20,6 +23,7 @@ const LANG = 'th-TH';
 const THAI_WORD_GAP = /([฀-๿]) +(?=[฀-๿])/g;
 
 const STORAGE_KEY = 'liveCaptions';
+const ALWAYS_ALLOW_KEY = 'liveCaptionsAlwaysAllow';
 /** Finished phrases kept for the two lines on screen. */
 const KEPT_PHRASES = 6;
 /** Captions clear once nothing has been said for this long, as Chrome's do. */
@@ -38,6 +42,7 @@ const NOT_SHARED = 'Live captions need to hear this tab';
 const NO_TAB_AUDIO = 'Live captions need the tab shared with its audio';
 /** The tab's sound is what it plays, so a muted video leaves nothing to hear. */
 const MUTED = 'Live captions cannot hear a muted video';
+const ASK_ONCE = 'Chrome will ask to share this tab once each time Flick is opened';
 
 /** Chrome's options for sharing a tab, which TypeScript does not know yet. */
 interface TabShareOptions extends DisplayMediaStreamOptions {
@@ -146,9 +151,9 @@ async function download(): Promise<void> {
     }
 }
 
-function readOn(): boolean {
+function readOn(key: string): boolean {
     try {
-        return localStorage.getItem(STORAGE_KEY) === 'on';
+        return localStorage.getItem(key) === 'on';
     } catch {
         return false;
     }
@@ -158,31 +163,87 @@ function stop(stream: MediaStream | null): void {
     stream?.getTracks().forEach(track => track.stop());
 }
 
-function writeOn(on: boolean): void {
+function writeOn(key: string, on: boolean): void {
     try {
         if (on) {
-            localStorage.setItem(STORAGE_KEY, 'on');
+            localStorage.setItem(key, 'on');
         } else {
-            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(key);
         }
     } catch {
         // Ignore storage errors
     }
 }
 
+/** This tab's sound once shared. With "Always allow" it outlives turning the captions off and the course page. */
+let sharedTab: MediaStream | null = null;
+
+function tabTrack(): MediaStreamTrack | null {
+    return sharedTab?.getAudioTracks().find(track => track.readyState === 'live') ?? null;
+}
+
+function releaseTab(): void {
+    stop(sharedTab);
+    sharedTab = null;
+}
+
+/** Chrome's own full screen, which sharing the tab does not hold back. */
+function fullScreenHint(
+    userAgentData = (navigator as Navigator & {userAgentData?: UserAgentData}).userAgentData,
+): string {
+    return `Press ${userAgentData?.platform === 'macOS' ? '⌃⌘F' : 'F11'} for full screen`;
+}
+
+/** video.js is loaded when first needed, so its classes come from the player rather than an import. */
+function componentClass<T>(player: Player, name: string): T {
+    return (player.constructor as unknown as {getComponent(name: string): T}).getComponent(name);
+}
+
+/** CC, with a menu like the playback rate's for always allowing the tab to be heard. */
+function createButton(player: Player, toggle: () => void, allow: (always: boolean) => void, always: boolean): MenuButton {
+    const Base = componentClass<typeof MenuButton>(player, 'MenuButton');
+    const Item = componentClass<typeof MenuItem>(player, 'MenuItem');
+
+    class AlwaysAllowItem extends Item {
+        handleClick(): void {
+            this.selected(!this.isSelected_);
+            allow(this.isSelected_);
+        }
+    }
+
+    class LiveCaptionsButton extends Base {
+        buildCSSClass(): string {
+            return `vjs-live-captions-button ${super.buildCSSClass()}`;
+        }
+
+        createItems(): MenuItem[] {
+            return [new AlwaysAllowItem(player, {label: 'Always allow', selectable: true, multiSelectable: true, selected: always})];
+        }
+
+        handleClick(): void {
+            toggle();
+        }
+    }
+
+    return new LiveCaptionsButton(player, {title: 'Live captions'});
+}
+
 /** The live captions button in the player's control bar, and the captions it writes over the video. */
 export class LiveCaptions {
     private readonly box: HTMLElement;
     private readonly text: HTMLElement;
-    private readonly button: Button;
-    private on = readOn();
+    private readonly button: MenuButton;
+    private readonly requestFullscreen: Player['requestFullscreen'];
+    private readonly exitFullscreen: Player['exitFullscreen'];
+    private on = readOn(STORAGE_KEY);
+    private alwaysAllow = readOn(ALWAYS_ALLOW_KEY);
     private recognition: Recognition | null = null;
     /** Bumped whenever listening stops, so a start still waiting on Chrome is dropped. */
     private attempt = 0;
     private stream: MediaStream | null = null;
-    /** This tab's sound, kept from one lecture to the next until the captions are turned off. */
-    private tab: MediaStream | null = null;
     private sharing: Promise<MediaStreamTrack | null> | null = null;
+    /** The shared tab's sound this player listens to, for Chrome's "Stop sharing". */
+    private watched: MediaStreamTrack | null = null;
     /** Chrome needs a click before it asks to share the tab, and the next click on CC is that click. */
     private waitingForShare = false;
     private disposed = false;
@@ -217,7 +278,7 @@ export class LiveCaptions {
         this.clear();
     };
     private readonly onVolumeChange = () => {
-        if (!this.on || !this.tab) {
+        if (!this.on || !tabTrack()) {
             return;
         }
         if (this.player.muted() || this.player.volume() === 0) {
@@ -225,6 +286,17 @@ export class LiveCaptions {
         } else if (this.text.textContent === MUTED) {
             this.clear();
         }
+    };
+    private readonly onTabEnded = () => {
+        releaseTab();
+        this.watch(null);
+        if (this.on) {
+            this.turnOff();
+        }
+    };
+    /** video.js announces a full window only where fullscreen is prefixed, so its button is told here. */
+    private readonly onFullWindow = () => {
+        (this.player.getChild('ControlBar')?.getChild('FullscreenToggle') as FullscreenToggle | undefined)?.handleFullscreenChange();
     };
 
     /** Live captions for the player, where the browser can write them. */
@@ -236,10 +308,8 @@ export class LiveCaptions {
         const controlBar = player.getChild('ControlBar') as Component;
         // Where video.js puts its own captions button
         const next = controlBar.getChild('PictureInPictureToggle') ?? controlBar.getChild('FullscreenToggle');
-        this.button = controlBar.addChild('button', {
-            className: 'vjs-live-captions-button',
-            clickHandler: () => this.toggle(),
-        }, next ? controlBar.children().indexOf(next) : undefined) as Button;
+        this.button = createButton(player, () => this.toggle(), always => this.setAlwaysAllow(always), this.alwaysAllow);
+        controlBar.addChild(this.button, {}, next ? controlBar.children().indexOf(next) : undefined);
 
         this.box = document.createElement('div');
         this.box.className = 'vjs-live-captions vjs-hidden';
@@ -260,6 +330,13 @@ export class LiveCaptions {
         player.on('seeking', this.onSeeking);
         player.on('loadstart', this.onLoadStart);
         player.on('volumechange', this.onVolumeChange);
+        player.on(['enterFullWindow', 'exitFullWindow'], this.onFullWindow);
+
+        // The fullscreen button, the F key and a double click all come through these
+        this.requestFullscreen = player.requestFullscreen;
+        this.exitFullscreen = player.exitFullscreen;
+        player.requestFullscreen = options => tabTrack() ? this.fillWindow() : this.requestFullscreen.call(player, options);
+        player.exitFullscreen = () => player.isFullWindow ? this.leaveWindow() : this.exitFullscreen.call(player);
         this.render();
     }
 
@@ -270,9 +347,15 @@ export class LiveCaptions {
         this.player.off('seeking', this.onSeeking);
         this.player.off('loadstart', this.onLoadStart);
         this.player.off('volumechange', this.onVolumeChange);
+        this.player.off(['enterFullWindow', 'exitFullWindow'], this.onFullWindow);
+        this.player.requestFullscreen = this.requestFullscreen;
+        this.player.exitFullscreen = this.exitFullscreen;
         this.stopListening();
         this.releaseStream();
-        this.releaseTab();
+        this.watch(null);
+        if (!this.alwaysAllow) {
+            releaseTab();
+        }
         this.clear();
         this.box.remove();
         this.player.getChild('ControlBar')?.removeChild(this.button);
@@ -298,7 +381,7 @@ export class LiveCaptions {
 
     private switchTo(on: boolean): void {
         this.on = on;
-        writeOn(on);
+        writeOn(STORAGE_KEY, on);
         this.render();
         this.stopListening();
         this.failure = null;
@@ -307,8 +390,20 @@ export class LiveCaptions {
         if (on) {
             download();
             this.listen();
-        } else {
-            this.releaseTab();
+        } else if (!this.alwaysAllow) {
+            this.watch(null);
+            releaseTab();
+        }
+    }
+
+    private setAlwaysAllow(always: boolean): void {
+        this.alwaysAllow = always;
+        writeOn(ALWAYS_ALLOW_KEY, always);
+        if (always) {
+            this.notify(ASK_ONCE);
+        } else if (!this.on) {
+            this.watch(null);
+            releaseTab();
         }
     }
 
@@ -320,9 +415,40 @@ export class LiveCaptions {
     }
 
     private render(): void {
-        this.button.toggleClass('vjs-live-captions-on', this.on);
-        this.button.el().setAttribute('aria-pressed', String(this.on));
+        this.button.menuButton_.toggleClass('vjs-live-captions-on', this.on);
+        this.button.menuButton_.el().setAttribute('aria-pressed', String(this.on));
         this.button.controlText(this.on ? 'Turn live captions off' : 'Turn live captions on');
+    }
+
+    /**
+     * While any of this tab is shared, Chrome keeps a page's fullscreen inside the tab and squeezes it to the
+     * shape of the capture. Filling the window instead keeps the player's size and its seek bar, and Chrome's
+     * own full screen is not held back.
+     */
+    private fillWindow(): Promise<void> {
+        this.player.enterFullWindow();
+        if (outerWidth < screen.width || outerHeight < screen.height) {
+            this.notify(fullScreenHint());
+        }
+
+        return Promise.resolve();
+    }
+
+    private leaveWindow(): Promise<void> {
+        this.player.exitFullWindow();
+
+        return Promise.resolve();
+    }
+
+    /** A share that starts in fullscreen squeezes it straight away, so the player fills the window instead. */
+    private moveToWindow(): void {
+        if (document.fullscreenElement !== this.player.el()) {
+            return;
+        }
+        // Once video.js has seen fullscreen end
+        const fill = () => setTimeout(() => this.fillWindow());
+        document.addEventListener('fullscreenchange', fill, {once: true});
+        document.exitFullscreen().catch(() => document.removeEventListener('fullscreenchange', fill));
     }
 
     private listen(): void {
@@ -410,10 +536,14 @@ export class LiveCaptions {
 
     /** The video's sound, or null when there is none to hear. */
     private async audioTrack(): Promise<MediaStreamTrack | null> {
-        const live = [this.tab, this.stream].flatMap(stream => stream?.getAudioTracks() ?? [])
-            .find(track => track.readyState === 'live');
-        if (live) {
-            return live;
+        const tab = tabTrack();
+        if (tab) {
+            this.watch(tab);
+            return tab;
+        }
+        const own = this.stream?.getAudioTracks().find(track => track.readyState === 'live');
+        if (own) {
+            return own;
         }
         this.releaseStream();
         const video = this.player.tech(true)?.el() as HTMLMediaElement & {captureStream?: () => MediaStream};
@@ -461,36 +591,39 @@ export class LiveCaptions {
             return null;
         }
         stream.getVideoTracks().forEach(track => track.stop());
-        if (this.disposed || !this.on) {
-            stop(stream);
-            return null;
-        }
         const track = stream.getAudioTracks()[0];
         if (!track) {
             stop(stream);
-            this.turnOff(NO_TAB_AUDIO);
+            if (!this.disposed && this.on) {
+                this.turnOff(NO_TAB_AUDIO);
+            }
             return null;
         }
-        this.tab = stream;
-        this.waitingForShare = false;
-        // Chrome's "Stop sharing"
-        track.addEventListener('ended', () => {
-            if (this.tab === stream) {
-                this.turnOff();
+        releaseTab();
+        sharedTab = stream;
+        if (this.disposed || !this.on) {
+            // Turned off or left while Chrome asked
+            if (!this.alwaysAllow) {
+                releaseTab();
             }
-        });
+            return null;
+        }
+        this.watch(track);
+        this.waitingForShare = false;
+        this.moveToWindow();
 
         return track;
+    }
+
+    private watch(track: MediaStreamTrack | null): void {
+        this.watched?.removeEventListener('ended', this.onTabEnded);
+        this.watched = track;
+        track?.addEventListener('ended', this.onTabEnded);
     }
 
     private releaseStream(): void {
         stop(this.stream);
         this.stream = null;
-    }
-
-    private releaseTab(): void {
-        stop(this.tab);
-        this.tab = null;
     }
 
     private fail(message: string): void {
