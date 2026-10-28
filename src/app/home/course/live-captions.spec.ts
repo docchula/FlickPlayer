@@ -110,6 +110,7 @@ describe('LiveCaptions', () => {
         FakeRecognition.availability = 'unavailable';
         FakeRecognition.available.calls.reset();
         FakeRecognition.install.calls.reset();
+        FakeRecognition.install.and.returnValue(Promise.resolve(true));
         (window as unknown as {SpeechRecognition: unknown}).SpeechRecognition = FakeRecognition;
 
         const video = document.createElement('video');
@@ -227,6 +228,33 @@ describe('LiveCaptions', () => {
 
         expect(FakeRecognition.install).toHaveBeenCalledWith({langs: ['th-TH'], processLocally: true});
         expect(FakeRecognition.instances[0].processLocally).toBe(false);
+    });
+
+    it('uses the recognizer on the device from the start once the site has asked for Thai', async () => {
+        FakeRecognition.availability = 'downloadable';
+        FakeRecognition.install.and.callFake(() => {
+            FakeRecognition.availability = 'available';
+            return Promise.resolve(true);
+        });
+        localStorage.setItem('liveCaptions', 'on');
+        captions.dispose();
+        captions = new LiveCaptions(player);
+        await play();
+
+        expect(FakeRecognition.instances[0].processLocally).toBe(true);
+    });
+
+    it('says when the video is too fast for it to keep up', async () => {
+        const rate = spyOn(player, 'playbackRate').and.returnValue(1.5);
+        button().click();
+        await play();
+        player.trigger('ratechange');
+        expect(box().classList).toContain('vjs-hidden');
+
+        rate.and.returnValue(2);
+        player.trigger('ratechange');
+
+        expect(box().textContent).toBe('Live captions cannot keep up above 1.5× speed');
     });
 
     describe('for a video from a server that does not let this site hear it', () => {

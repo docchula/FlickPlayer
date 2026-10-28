@@ -29,6 +29,9 @@ const KEPT_PHRASES = 6;
 /** Captions clear once nothing has been said for this long, as Chrome's do. */
 const CLEAR_AFTER_MS = 8000;
 const RETRY_AFTER_MS = 5000;
+const INSTALL_WAIT_MS = 3000;
+/** Chrome's recognizer falls behind faster speech, and from 1.75× it heard nothing of a test lecture. */
+const MAX_RATE = 1.5;
 
 const FAILURES: Record<string, string> = {
     'audio-capture': 'Live captions cannot hear this video',
@@ -43,6 +46,7 @@ const NO_TAB_AUDIO = 'Live captions need the tab shared with its audio';
 /** The tab's sound is what it plays, so a muted video leaves nothing to hear. */
 const MUTED = 'Live captions cannot hear a muted video';
 const ASK_ONCE = 'Chrome will ask to share this tab once each time Flick is opened';
+const TOO_FAST = 'Live captions cannot keep up above 1.5× speed';
 
 /** Chrome's options for sharing a tab, which TypeScript does not know yet. */
 interface TabShareOptions extends DisplayMediaStreamOptions {
@@ -130,9 +134,21 @@ export function readResults(resultIndex: number, results: SpeechRecognitionResul
     return {finished, hearing: hearing.join(' ')};
 }
 
+/**
+ * Whether Chrome's recognizer on the device, the engine behind its own Live Caption, can be used. Each site has to
+ * ask for Thai once, even when Chrome already has it, and until then Google's online service is used.
+ */
 async function onDevice(): Promise<boolean> {
+    const Recognition = recognitionClass();
+    const options = {langs: [LANG], processLocally: true};
     try {
-        return await recognitionClass()?.available?.({langs: [LANG], processLocally: true}) === 'available';
+        const availability = await Recognition?.available?.(options);
+        if (availability === 'downloadable' || availability === 'downloading') {
+            // Thai Chrome already has comes at once; a first download carries on behind the online service
+            await Promise.race([Recognition.install?.(options), new Promise(resolve => setTimeout(resolve, INSTALL_WAIT_MS))]);
+        }
+
+        return await Recognition?.available?.(options) === 'available';
     } catch {
         return false;
     }
@@ -287,6 +303,11 @@ export class LiveCaptions {
             this.clear();
         }
     };
+    private readonly onRateChange = () => {
+        if (this.on && this.player.playbackRate() > MAX_RATE) {
+            this.notify(TOO_FAST);
+        }
+    };
     private readonly onTabEnded = () => {
         releaseTab();
         this.watch(null);
@@ -330,6 +351,7 @@ export class LiveCaptions {
         player.on('seeking', this.onSeeking);
         player.on('loadstart', this.onLoadStart);
         player.on('volumechange', this.onVolumeChange);
+        player.on('ratechange', this.onRateChange);
         player.on(['enterFullWindow', 'exitFullWindow'], this.onFullWindow);
 
         // The fullscreen button, the F key and a double click all come through these
@@ -347,6 +369,7 @@ export class LiveCaptions {
         this.player.off('seeking', this.onSeeking);
         this.player.off('loadstart', this.onLoadStart);
         this.player.off('volumechange', this.onVolumeChange);
+        this.player.off('ratechange', this.onRateChange);
         this.player.off(['enterFullWindow', 'exitFullWindow'], this.onFullWindow);
         this.player.requestFullscreen = this.requestFullscreen;
         this.player.exitFullscreen = this.exitFullscreen;
@@ -390,6 +413,7 @@ export class LiveCaptions {
         if (on) {
             download();
             this.listen();
+            this.onRateChange();
         } else if (!this.alwaysAllow) {
             this.watch(null);
             releaseTab();
@@ -457,11 +481,8 @@ export class LiveCaptions {
         }
         clearTimeout(this.retryTimer);
         const attempt = ++this.attempt;
-        onDevice().then(async local => {
-            if (attempt !== this.attempt || this.recognition || this.player.paused()) {
-                return;
-            }
-            const track = await this.audioTrack();
+        // The sound first: Chrome asks to share the tab only soon after the click that started the captions
+        Promise.all([this.audioTrack(), onDevice()]).then(([track, local]) => {
             // The user may have paused or seeked while Chrome asked to share the tab
             if (track && attempt === this.attempt && !this.recognition && !this.player.paused()) {
                 this.recognize(local, track);
