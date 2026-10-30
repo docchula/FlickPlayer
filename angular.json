@@ -16,9 +16,6 @@
                           "base": "www"
                         },
                         "index": "src/index.html",
-                        "polyfills": [
-                            "zone.js"
-                        ],
                         "tsConfig": "tsconfig.app.json",
                         "assets": [
                             {
@@ -117,10 +114,6 @@
                 "test": {
                     "builder": "@angular/build:karma",
                     "options": {
-                        "polyfills": [
-                            "zone.js",
-                            "zone.js/testing"
-                        ],
                         "tsConfig": "tsconfig.spec.json",
                         "karmaConfig": "karma.conf.js",
                         "styles": [],

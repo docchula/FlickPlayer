@@ -74,9 +74,6 @@ importers:
       videojs-youtube:
         specifier: ^3.0.1
         version: 3.0.1(video.js@8.24.1)
-      zone.js:
-        specifier: ^0.15.1
-        version: 0.15.1
     devDependencies:
       '@angular-devkit/architect':
         specifier: ^0.2102.29
@@ -8474,4 +8471,5 @@ snapshots:
 
   zod@4.6.6: {}
 
-  zone.js@0.15.1: {}
+  zone.js@0.15.1:
+    optional: true

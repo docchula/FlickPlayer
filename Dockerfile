@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install -g @angular/cli@19
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install -g @angular/cli@21
 COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm build
 
