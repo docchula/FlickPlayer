@@ -7,6 +7,7 @@ import {HomePage, SearchResults} from './home.page';
 import {ManService} from '../man.service';
 import {AuthService} from '../auth.service';
 import {ConsentService} from '../consent.service';
+import { provideZonelessChangeDetection } from '@angular/core';
 
 describe('HomePage', () => {
     let component: HomePage;
@@ -29,6 +30,7 @@ describe('HomePage', () => {
 
         TestBed.configureTestingModule({
             providers: [
+                provideZonelessChangeDetection,
                 HomePage,
                 {provide: Router, useValue: router},
                 {provide: ManService, useValue: manService},

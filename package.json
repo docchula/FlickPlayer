@@ -37,7 +37,8 @@
     "ulid": "^3.0.2",
     "video.js": "^8.24.2",
     "videojs-hotkeys": "^0.2.30",
-    "videojs-youtube": "^3.0.1"
+    "videojs-youtube": "^3.0.1",
+    "zone.js": "^0.16.3"
   },
   "devDependencies": {
     "@angular-eslint/builder": "^20.7.0",
