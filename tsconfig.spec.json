@@ -7,9 +7,6 @@
       "node"
     ]
   },
-  "files": [
-    "src/zone-flags.ts"
-  ],
   "include": [
     "src/**/*.spec.ts",
     "src/**/*.d.ts"
