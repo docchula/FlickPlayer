@@ -32,7 +32,7 @@ describe('ModalDocumentComponent', () => {
         await fixture.whenStable();
         TestBed.inject(ApplicationRef).tick();
 
-        expect(fixture.componentInstance.activeHeading).toBe(2);
+        expect(fixture.componentInstance.activeHeading()).toBe(2);
         expect(fixture.nativeElement.querySelector('.doc-outline a.active')?.textContent).toBe('Mitral valve');
     });
 
@@ -40,7 +40,7 @@ describe('ModalDocumentComponent', () => {
         fixture.detectChanges();
         await fixture.whenStable();
 
-        expect(fixture.componentInstance.activeHeading).toBe(0);
+        expect(fixture.componentInstance.activeHeading()).toBe(0);
     });
 });
 

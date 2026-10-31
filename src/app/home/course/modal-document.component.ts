@@ -1,4 +1,4 @@
-import {afterNextRender, Component, ElementRef, inject, Injector, Input, OnInit, ViewEncapsulation} from '@angular/core';
+import {afterNextRender, Component, signal, ElementRef, inject, Injector, Input, OnInit, ViewEncapsulation} from '@angular/core';
 import {
     AlertController, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonNote, IonSpinner, IonTitle, IonToolbar, ModalController,
 } from '@ionic/angular';
@@ -123,27 +123,28 @@ export class ModalDocumentComponent implements OnInit {
         addIcons({closeOutline, playOutline});
     }
 
-    loading = true;
-    error = false;
+    // Signals, so updates from the HTTP callback re-render the view under zoneless change detection.
+    loading = signal(true);
+    error = signal(false);
     // Angular's [innerHTML] sanitizes this before rendering.
-    html = '';
-    models: {transcription: string | null, article: string | null} = {transcription: null, article: null};
-    headings: DocHeading[] = [];
-    activeHeading = -1;
+    html = signal('');
+    models = signal<{transcription: string | null, article: string | null}>({transcription: null, article: null});
+    headings = signal<DocHeading[]>([]);
+    activeHeading = signal(-1);
 
     ngOnInit() {
         this.manService.getVideo(String(this.video.id)).subscribe({
             next: info => {
                 const document = info?.document?.trim();
                 if (document) {
-                    this.models = extractModels(document);
-                    ({html: this.html, headings: this.headings} = this.addHeadingIds(
-                        markedWithMath.parse(stripFrontmatter(document), {async: false}),
-                    ));
+                    const parsed = this.addHeadingIds(markedWithMath.parse(stripFrontmatter(document), {async: false}));
+                    this.models.set(extractModels(document));
+                    this.html.set(parsed.html);
+                    this.headings.set(parsed.headings);
                     const target = this.findHeading(this.headingPath);
                     // Set before rendering: changing it in the render callback below would trip Angular's
                     // ExpressionChangedAfterItHasBeenChecked check.
-                    this.activeHeading = target ?? (this.headings.length ? 0 : -1);
+                    this.activeHeading.set(target ?? (parsed.headings.length ? 0 : -1));
                     // The math placeholders only exist in the DOM once the sanitized HTML has been rendered.
                     afterNextRender(() => {
                         renderMath(this.host.nativeElement);
@@ -152,11 +153,11 @@ export class ModalDocumentComponent implements OnInit {
                         }
                     }, {injector: this.injector});
                 }
-                this.loading = false;
+                this.loading.set(false);
             },
             error: () => {
-                this.error = true;
-                this.loading = false;
+                this.error.set(true);
+                this.loading.set(false);
             },
         });
     }
@@ -175,7 +176,7 @@ export class ModalDocumentComponent implements OnInit {
     private findHeading(headingPath?: string): number | null {
         const segments = (headingPath ?? '').split(' > ').map(normalizeHeading).filter(Boolean);
         for (const segment of segments.reverse()) {
-            const heading = this.headings.find(h => normalizeHeading(h.text) === segment);
+            const heading = this.headings().find(h => normalizeHeading(h.text) === segment);
             if (heading) {
                 return heading.index;
             }
@@ -200,20 +201,20 @@ export class ModalDocumentComponent implements OnInit {
     }
 
     scrollTo(index: number) {
-        this.activeHeading = index;
+        this.activeHeading.set(index);
         this.renderedHeadings()[index]?.scrollIntoView({behavior: 'smooth', block: 'start'});
     }
 
     // Highlight the last heading that has scrolled past the top of the content area.
     onScroll(event: Event) {
         const top = (event.target as HTMLElement).getBoundingClientRect().top + 60;
-        let active = this.headings.length ? 0 : -1;
+        let active = this.headings().length ? 0 : -1;
         this.renderedHeadings().forEach((el, i) => {
             if (el.getBoundingClientRect().top <= top) {
                 active = i;
             }
         });
-        this.activeHeading = active;
+        this.activeHeading.set(active);
     }
 
     close() {
