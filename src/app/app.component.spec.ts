@@ -4,6 +4,7 @@ import {BehaviorSubject} from 'rxjs';
 import {ScreenTrackingService, UserTrackingService} from '@angular/fire/analytics';
 import {AppComponent} from './app.component';
 import {ConsentService, ConsentStatus} from './consent.service';
+import { provideZonelessChangeDetection } from '@angular/core';
 
 describe('AppComponent (lazy analytics guard)', () => {
     let status$: BehaviorSubject<ConsentStatus>;
@@ -18,6 +19,7 @@ describe('AppComponent (lazy analytics guard)', () => {
         TestBed.configureTestingModule({
             imports: [AppComponent],
             providers: [
+                provideZonelessChangeDetection,
                 provideRouter([]),
                 {provide: ConsentService, useValue: {status$}},
                 // Providers are lazily instantiated on first Injector.get(), so counting

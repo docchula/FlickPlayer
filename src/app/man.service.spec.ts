@@ -5,6 +5,7 @@ import {of, Subject} from 'rxjs';
 import {ManService} from './man.service';
 import {AuthService} from './auth.service';
 import {PlayTrackerService} from './play-tracker.service';
+import { provideZonelessChangeDetection } from '@angular/core';
 
 describe('ManService', () => {
     let service: ManService;
@@ -18,6 +19,7 @@ describe('ManService', () => {
         playTrackerUpdate = null;
         TestBed.configureTestingModule({
             providers: [
+                provideZonelessChangeDetection,
                 provideHttpClient(),
                 provideHttpClientTesting(),
                 // AuthService can't be constructed without real Firebase (see plan);
