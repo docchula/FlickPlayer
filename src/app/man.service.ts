@@ -1,7 +1,7 @@
 import {inject, Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders} from '@angular/common/http';
 import {combineLatestWith, Observable, of, startWith, takeUntil, timer} from 'rxjs';
-import {map, shareReplay, switchMap, take, timeout} from 'rxjs/operators';
+import {catchError, map, shareReplay, switchMap, take, timeout} from 'rxjs/operators';
 import {PlayHistory, PlayHistoryValue, PlayTrackerService} from './play-tracker.service';
 import {AuthService} from './auth.service';
 
@@ -171,6 +171,22 @@ export class ManService {
             speed,
             log,
         }).pipe(map(data => data ? {status: 'success'} : null));
+    }
+
+    /**
+     * Reports a video the player could not play, e.g. because no source type is supported by the browser.
+     * Fire and forget: failures to report are ignored.
+     */
+    logPlayerError(video_id: string | number, code: number | null, message: string | null, sourceTypes: string[]): Observable<boolean> {
+        return this.graphql<{ logPlayerError: boolean }>(LOG_PLAYER_ERROR, {
+            video_id: String(video_id),
+            code,
+            message,
+            source_types: sourceTypes,
+        }).pipe(
+            map(data => !!data?.logPlayerError),
+            catchError(() => of(false)),
+        );
     }
 
     sendEvaluation(type: string, video: string | number, result: {
@@ -394,6 +410,10 @@ const PROGRESS_QUERY = `query CourseProgress($id: ID!) {
 
 const UPDATE_PLAY_RECORD = `mutation UpdatePlayRecord($uid: String!, $video_id: ID!, $progress: Float!, $speed: Float!, $log: [PlayLogEntryInput!]) {
     updatePlayRecord(uid: $uid, video_id: $video_id, progress: $progress, speed: $speed, log: $log) { video_id }
+}`;
+
+const LOG_PLAYER_ERROR = `mutation LogPlayerError($video_id: ID!, $code: Int, $message: String, $source_types: [String!]) {
+    logPlayerError(video_id: $video_id, code: $code, message: $message, source_types: $source_types)
 }`;
 
 const UPDATE_VIDEO_EVALUATION = `mutation UpdateVideoEvaluation($video_id: ID!, $type: String!, $result: Mixed) {
