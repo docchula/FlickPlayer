@@ -1,6 +1,6 @@
 import videojs from 'video.js';
 import type Player from 'video.js/dist/types/player';
-import {BUTTON_ZOOM, enableVideoZoom, MAX_ZOOM} from './video-zoom';
+import {enableVideoZoom, MAX_ZOOM} from './video-zoom';
 
 describe('enableVideoZoom', () => {
     let host: HTMLElement;
@@ -112,10 +112,11 @@ describe('enableVideoZoom', () => {
         (player.el().querySelector('.vjs-zoom-control') as HTMLElement).click();
         const before = view();
         touches('touchstart', [at(0.5, 0.5)]);
-        const move = touches('touchmove', [at(0.4, 0.5)]);
+        // The slide is at the right edge, so only a drag to the right moves the view
+        const move = touches('touchmove', [at(0.6, 0.5)]);
 
         expect(move.defaultPrevented).toBeTrue();
-        expect(view().x).toBeLessThan(before.x);
+        expect(view().x).toBeGreaterThan(before.x);
     });
 
     it('pans on a mouse drag while zoomed in, without the release pausing the video', () => {
@@ -130,17 +131,37 @@ describe('enableVideoZoom', () => {
         expect(player.pause).not.toHaveBeenCalled();
     });
 
-    it(`zooms to ${BUTTON_ZOOM}x and back with the control bar button`, () => {
+    it('zooms the control bar button straight to the slide, and back', () => {
         const button = player.el().querySelector('.vjs-zoom-control') as HTMLElement;
         expect(button.nextElementSibling.classList).toContain('vjs-fullscreen-control');
 
         button.click();
-        expect(view().scale).toBe(BUTTON_ZOOM);
+        // The player is 2:1 and the video, without metadata, fills it: the slide is the right two thirds
+        // of the width and the middle two thirds of the height, so it fills the width at 1.5x
+        const {scale, x, y} = view();
+        expect(scale).toBeCloseTo(1.5, 5);
+        expect(x).toBeCloseTo(-50, 5);
+        expect(y).toBeCloseTo(-25, 5);
         expect(button.textContent).toContain('Reset zoom');
 
         button.click();
         expect(view().scale).toBe(1);
-        expect(button.textContent).toContain('Zoom in');
+        expect(button.textContent).toContain('Zoom to slide');
+    });
+
+    it('finds the slide in a 16:9 video letterboxed in a taller player', () => {
+        const tech = video as HTMLVideoElement;
+        spyOnProperty(tech, 'videoWidth').and.returnValue(1920);
+        spyOnProperty(tech, 'videoHeight').and.returnValue(1080);
+        player.dimensions(640, 400);
+        rect = player.el().getBoundingClientRect();
+
+        (player.el().querySelector('.vjs-zoom-control') as HTMLElement).click();
+
+        const {scale, y} = view();
+        expect(scale).toBeCloseTo(1.5, 5);
+        // The slide's middle, halfway down the frame, stays halfway down the player
+        expect((50 - y) / scale).toBeCloseTo(50, 5);
     });
 
     it('zooms on Safari trackpad pinches, but leaves touch pinches to the touch handler', () => {

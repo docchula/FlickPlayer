@@ -2,8 +2,9 @@ import type Player from 'video.js/dist/types/player';
 import type Component from 'video.js/dist/types/component';
 
 export const MAX_ZOOM = 4;
-// The zoom the control bar button and the keyboard step towards
-export const BUTTON_ZOOM = 2;
+// Where the slide sits in a lecture recording, as fractions of the frame: the lecturer and the
+// faculty's seal take the left third, and the screen the rest, a 16:9 picture centred top to bottom
+export const SLIDE = {left: 1 / 3, top: 1 / 6, width: 2 / 3, height: 2 / 3};
 const KEY_ZOOM_STEP = 1.25;
 // A pinch on a trackpad arrives as ctrl+wheel events whose deltaY is 100x the log of the scale
 // change. A mouse wheel notch is much larger, so cap each event to keep one notch near 1.2x.
@@ -27,8 +28,8 @@ interface GestureEvent extends UIEvent {
  * - iPad: pinch with two fingers. Once zoomed in, drag with one finger to move around.
  * - Trackpad (macOS, Windows): pinch, and scroll with two fingers to move around.
  * - Mouse: Ctrl/⌘ + wheel, and drag to move around.
- * - Everyone: the magnifier button in the control bar zooms to 2x and back, and + / - step the
- *   zoom while the player has focus.
+ * - Everyone: the magnifier button in the control bar zooms straight to the slide and back, and
+ *   + / - step the zoom while the player has focus.
  *
  * The zoom is kept as fractions of the player's size, so it holds through fullscreen, and resets
  * when another video is loaded.
@@ -50,7 +51,7 @@ export function enableVideoZoom(player: Player) {
         if (scale > 1) {
             zoomTo(1, 0.5, 0.5, true);
         } else {
-            zoomTo(BUTTON_ZOOM, 0.5, 0.5, true);
+            zoomToSlide();
         }
     });
 
@@ -78,7 +79,7 @@ export function enableVideoZoom(player: Player) {
             : '';
         if (player.hasClass('vjs-zoomed') !== scale > 1) {
             player.toggleClass('vjs-zoomed', scale > 1);
-            button.controlText(scale > 1 ? 'Reset zoom' : 'Zoom in');
+            button.controlText(scale > 1 ? 'Reset zoom' : 'Zoom to slide');
         }
     };
 
@@ -111,6 +112,30 @@ export function enableVideoZoom(player: Player) {
         scale = newScale;
         clampOffsets();
         render(animate);
+        showLevel();
+    }
+
+    // Fill the player with the slide: the frame is letterboxed or pillarboxed when the player's
+    // shape is not the video's, so the slide is found in the frame first
+    function zoomToSlide() {
+        const rect = playerEl.getBoundingClientRect();
+        const tech = techEl() as HTMLVideoElement | undefined;
+        const videoRatio = tech?.videoWidth && tech.videoHeight ? tech.videoWidth / tech.videoHeight : rect.width / rect.height;
+        const playerRatio = rect.width / rect.height;
+        const frame = videoRatio > playerRatio
+            ? {width: 1, height: playerRatio / videoRatio}
+            : {width: videoRatio / playerRatio, height: 1};
+        const slide = {
+            u: (1 - frame.width) / 2 + frame.width * (SLIDE.left + SLIDE.width / 2),
+            v: (1 - frame.height) / 2 + frame.height * (SLIDE.top + SLIDE.height / 2),
+            width: frame.width * SLIDE.width,
+            height: frame.height * SLIDE.height,
+        };
+        scale = Math.min(MAX_ZOOM, 1 / slide.width, 1 / slide.height);
+        offsetX = 0.5 - slide.u * scale;
+        offsetY = 0.5 - slide.v * scale;
+        clampOffsets();
+        render(true);
         showLevel();
     }
 
@@ -297,7 +322,7 @@ function addZoomButton(player: Player, onClick: () => void) {
     const index = fullscreenToggle ? controlBar.children().indexOf(fullscreenToggle) : undefined;
     const button = controlBar.addChild('button', {
         className: 'vjs-zoom-control',
-        controlText: 'Zoom in',
+        controlText: 'Zoom to slide',
         clickHandler: onClick,
     }, index) as Component & { controlText(text?: string): string };
 
