@@ -38,6 +38,7 @@ import {addIcons} from "ionicons";
 import {checkmarkOutline, closeOutline, documentAttachOutline, documentTextOutline, download, pauseCircleOutline} from "ionicons/icons";
 import type Player from 'video.js/dist/types/player';
 import {ulid} from 'ulid';
+import {rememberPlaybackRate} from './player/playback-rate-memory';
 import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
 import {ModalEvaluationComponent} from './modal-evaluation.component';
 import {confirmAiDisclaimer, ModalDocumentComponent} from './modal-document.component';
@@ -200,6 +201,8 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             },
             techOrder: ['html5', 'youtube'],
         }, () => {
+            // Before the first source is set, so it starts at the saved speed
+            rememberPlaybackRate(this.videoPlayer);
             this.isPlayerReady = true;
             if (this.pendingVideoToPlay) {
                 this.viewVideo(this.pendingVideoToPlay);
