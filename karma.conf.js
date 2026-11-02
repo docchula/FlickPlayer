@@ -3,28 +3,24 @@
 
 module.exports = function (config) {
   config.set({
-    basePath: '',
-    frameworks: ['jasmine'],
-    plugins: [
-      require('karma-jasmine'),
-      require('karma-chrome-launcher'),
-      
-    ],
+    basePath: "",
+    frameworks: ["jasmine"],
+    plugins: [require("karma-jasmine"), require("karma-chrome-launcher")],
     client: {
-      clearContext: false // leave Jasmine Spec Runner output visible in browser
+      clearContext: false, // leave Jasmine Spec Runner output visible in browser
     },
-    reporters: ['progress'],
+    reporters: ["progress"],
     port: 9876,
     colors: true,
     logLevel: config.LOG_INFO,
     autoWatch: true,
     customLaunchers: {
       ChromeHeadlessCI: {
-        base: 'ChromeHeadless',
-        flags: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage']
-      }
+        base: "ChromeHeadless",
+        flags: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
+      },
     },
-    browsers: ['Chrome'],
-    singleRun: false
+    browsers: ["Chrome"],
+    singleRun: false,
   });
 };
