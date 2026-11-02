@@ -1,4 +1,4 @@
-import {enableProdMode, importProvidersFrom, inject, provideAppInitializer, provideZoneChangeDetection} from '@angular/core';
+import {enableProdMode, importProvidersFrom, inject, provideAppInitializer } from '@angular/core';
 
 import {environment} from './environments/environment';
 import {RouteReuseStrategy} from '@angular/router';
@@ -29,7 +29,6 @@ if (environment.production) {
 
 bootstrapApplication(AppComponent, {
     providers: [
-        provideZoneChangeDetection(),
         importProvidersFrom(BrowserModule, AppRoutingModule, WelcomePageModule, ServiceWorkerModule.register('ngsw-worker.js', {enabled: environment.production})),
         {provide: RouteReuseStrategy, useClass: IonicRouteStrategy},
         // Start theming before the first page renders, so the saved theme is live from the outset.
