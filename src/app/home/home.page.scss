@@ -78,6 +78,7 @@ p {
 
   ion-searchbar {
     flex: 1;
+    width: auto;
     min-width: 0;
     padding-block: 0;
   }
@@ -85,6 +86,7 @@ p {
   // Not enough room beside the search box on small screens, so the switch goes below it
   @media (max-width: 575px) {
     flex-wrap: wrap;
+    width: 100%;
     gap: 0;
     padding: 0 0.75rem 0.5rem 0;
 
