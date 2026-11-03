@@ -1,208 +1,197 @@
+import 'videojs-mobile-ui';
 import type Player from 'video.js/dist/types/player';
 
 export const SEEK_STEP_SECONDS = 10;
-// Longest gap between the two taps, or clicks, of a double tap
+// Longest gap between the taps, or clicks, of a double tap
 export const DOUBLE_TAP_MS = 300;
-// After a double tap, each further tap on the same side within this long seeks again, as on YouTube
-export const SEEK_STREAK_MS = 800;
-// How long a press on the right of the video lasts before playback speeds up to BOOST_RATE
+// How long a press on a playing video lasts before playback speeds up to BOOST_RATE
 export const HOLD_MS = 500;
 export const BOOST_RATE = 2;
 
+// The left and right 40% of the video seek, as in videojs-mobile-ui; the middle goes fullscreen
+const SIDE_FRACTION = 0.4;
 // Travel that makes a press a drag rather than a tap or a hold
 const TAP_SLOP_PX = 10;
-// Longest touch still counted as a tap
-const TAP_MAX_MS = 250;
 // How long the seek feedback stays up after the last seek
 const FEEDBACK_MS = 700;
 
-// The video is split into thirds: the left third rewinds, the right third goes forward and holds
-// to speed up, and the middle keeps video.js's own behaviour (double click for fullscreen).
-type Zone = 'rewind' | 'middle' | 'forward';
+type Side = 'rewind' | 'forward';
+
+interface MobileUiPlayer {
+    mobileUi(options: object): void;
+}
+
+// videojs-mobile-ui's overlay that takes the taps on phones and tablets
+interface TouchOverlay {
+    el(): Element;
+    enable(): void;
+    disable(): void;
+}
 
 /**
- * YouTube-style gestures on the video itself.
+ * YouTube-style gestures on the video.
  *
- * - Double tap or double click the left or right third to go back or forward 10 seconds. Each
- *   further tap on the same side, while the first double tap is still showing, adds 10 seconds more.
- * - Press and hold the right third of a playing video to watch at 2x until you let go.
- *
- * On touch, a single tap still shows and hides the controls straight away; a double tap leaves
- * them as they were. With a mouse, a single click on either side plays or pauses once it is clear
- * no second click is coming, so a double click seeks without pausing in between.
+ * - Phones and tablets: videojs-mobile-ui. Double tap the left or right of the video to go back or
+ *   forward 10 seconds, and tap once for a large play/pause button.
+ * - Mouse and trackpad (Windows, macOS): double click the left or right for the same. A single
+ *   click there plays or pauses once it is clear no second click is coming; a double click in the
+ *   middle still toggles fullscreen. videojs-mobile-ui only runs on Android and iOS, so this part
+ *   is ours.
+ * - Everyone: press and hold a playing video to watch at 2x until you let go.
  */
 export function enableSeekGestures(player: Player) {
-    const playerEl = player.el() as HTMLElement;
-    const feedback = {
-        rewind: createSeekFeedback(playerEl, 'rewind'),
-        forward: createSeekFeedback(playerEl, 'forward'),
-    };
-    createBoostIndicator(playerEl);
+    (player as unknown as MobileUiPlayer).mobileUi({
+        fullscreen: {disabled: true},
+        touchControls: {seekSeconds: SEEK_STEP_SECONDS, tapTimeout: DOUBLE_TAP_MS},
+    });
 
-    let streak: { zone: Zone, time: number, seconds: number } | null = null;
-    let feedbackTimer: number | null = null;
-    // Touch: the first tap of a possible double tap, which video.js has already acted on
-    let lastTap: { zone: Zone, time: number, wasActive: boolean } | null = null;
-    let touchStart: { x: number, y: number, time: number } | null = null;
-    // Mouse: a click on either side, held back in case a second click follows
-    let pendingClick: { zone: Zone, timer: number } | null = null;
-    let pointerDownAt: { x: number, y: number } | null = null;
-    let suppressClick = false;
-    // Press and hold on the right
-    let hold: { pointerId: number, x: number, y: number, timer: number | null, savedRate: number | null } | null = null;
-
+    const touchOverlay = () => player.getChild('TouchOverlay') as unknown as TouchOverlay | undefined;
     const isOnVideo = (target: EventTarget | null) => {
         const tech = player.tech(true)?.el();
-        return !!tech && target instanceof Node && tech.contains(target);
+        return target instanceof Node && (!!tech?.contains(target) || target === touchOverlay()?.el());
     };
 
-    const zoneAt = (clientX: number): Zone => {
-        const rect = playerEl.getBoundingClientRect();
-        const fraction = (clientX - rect.left) / rect.width;
-        return fraction < 1 / 3 ? 'rewind' : fraction > 2 / 3 ? 'forward' : 'middle';
-    };
+    passOnlyTapsToOverlay(player, touchOverlay);
+    enableDoubleClickSeek(player, touchOverlay);
+    enableHoldToSpeedUp(player, isOnVideo);
+}
 
-    const canSeek = () => Number.isFinite(player.duration()) && player.duration() > 0;
+// videojs-mobile-ui counts every touch that ends on its overlay as a tap, so lifting the two fingers
+// of a pinch would seek, and a drag or a hold for 2x would bring up its play button. Hold its tap
+// handler back for anything that is not a tap.
+function passOnlyTapsToOverlay(player: Player, touchOverlay: () => TouchOverlay | undefined) {
+    const playerEl = player.el() as HTMLElement;
+    // Where and when the touch started, while it can still be a tap
+    let tap: { x: number, y: number, time: number } | null = null;
+    let heldBack: TouchOverlay | null = null;
 
-    const seek = (zone: Zone) => {
-        const now = performance.now();
-        const continuing = streak?.zone === zone && now - streak.time < SEEK_STREAK_MS;
-        streak = {zone, time: now, seconds: (continuing ? streak.seconds : 0) + SEEK_STEP_SECONDS};
-
-        const step = zone === 'rewind' ? -SEEK_STEP_SECONDS : SEEK_STEP_SECONDS;
-        player.currentTime(Math.min(Math.max(player.currentTime() + step, 0), player.duration()));
-        showFeedback(zone, streak.seconds);
-    };
-
-    const isStreaking = (zone: Zone) => streak?.zone === zone && performance.now() - streak.time < SEEK_STREAK_MS;
-
-    const showFeedback = (zone: Zone, seconds: number) => {
-        const shown = zone === 'rewind' ? feedback.rewind : feedback.forward;
-        const other = zone === 'rewind' ? feedback.forward : feedback.rewind;
-        other.el.classList.remove('vjs-seek-feedback-visible');
-        shown.label.textContent = `${seconds} seconds`;
-        shown.el.classList.add('vjs-seek-feedback-visible');
-        if (feedbackTimer !== null) {
-            player.clearTimeout(feedbackTimer);
-        }
-        feedbackTimer = player.setTimeout(() => {
-            shown.el.classList.remove('vjs-seek-feedback-visible');
-            feedbackTimer = null;
-        }, FEEDBACK_MS);
-    };
-
-    const togglePlay = () => {
-        // As video.js does for a click on the video
-        if (!player.controls()) {
+    playerEl.addEventListener('touchstart', (event: TouchEvent) => {
+        if (event.touches.length > 1) {
+            tap = null; // A second finger: a pinch
             return;
         }
+        heldBack?.enable();
+        heldBack = null;
+        const touch = event.touches[0];
+        tap = {x: touch.clientX, y: touch.clientY, time: performance.now()};
+    }, {capture: true, passive: true});
+
+    playerEl.addEventListener('touchmove', (event: TouchEvent) => {
+        const touch = event.touches[0];
+        if (tap && touch && Math.hypot(touch.clientX - tap.x, touch.clientY - tap.y) > TAP_SLOP_PX) {
+            tap = null;
+        }
+    }, {capture: true, passive: true});
+
+    // In the capture phase, before the overlay's own touchend handler
+    playerEl.addEventListener('touchend', (event: TouchEvent) => {
+        const overlay = touchOverlay();
+        if (!overlay || event.target !== overlay.el() || (tap && performance.now() - tap.time < HOLD_MS)) {
+            return;
+        }
+        if (!heldBack) {
+            overlay.disable();
+            heldBack = overlay;
+        }
+        if (event.cancelable) {
+            event.preventDefault(); // No click either, as the overlay would have done
+        }
+    }, {capture: true});
+}
+
+function enableDoubleClickSeek(player: Player, touchOverlay: () => TouchOverlay | undefined) {
+    const showFeedback = createSeekFeedback(player);
+    // The last click, so the next one on the same side soon after makes a double click
+    let lastClick: { side: Side | null, time: number, seconds: number } | null = null;
+    let pendingToggle: number | null = null;
+
+    const sideAt = (clientX: number): Side | null => {
+        const rect = player.el().getBoundingClientRect();
+        const fraction = (clientX - rect.left) / rect.width;
+        return fraction < SIDE_FRACTION ? 'rewind' : fraction > 1 - SIDE_FRACTION ? 'forward' : null;
+    };
+    const canSeek = () => Number.isFinite(player.duration()) && player.duration() > 0;
+
+    const togglePlay = () => {
         if (player.paused()) {
             player.play()?.catch(() => undefined);
         } else {
             player.pause();
         }
     };
-
-    // Touch taps. Listen in the capture phase so a seeking tap can be kept from video.js, which
-    // would otherwise toggle the controls on it.
-    playerEl.addEventListener('touchstart', (event: TouchEvent) => {
-        const touch = event.touches[0];
-        touchStart = event.touches.length === 1 && isOnVideo(event.target)
-            ? {x: touch.clientX, y: touch.clientY, time: performance.now()}
-            : null;
-    }, {capture: true, passive: true});
-
-    playerEl.addEventListener('touchend', (event: TouchEvent) => {
-        const start = touchStart;
-        touchStart = null;
-        const touch = event.changedTouches[0];
-        if (!start || !touch || event.touches.length > 0 || !canSeek()
-            || Math.hypot(touch.clientX - start.x, touch.clientY - start.y) > TAP_SLOP_PX
-            || performance.now() - start.time > TAP_MAX_MS) {
-            return; // Not a tap: a drag, a hold or more than one finger
-        }
-
-        const zone = zoneAt(touch.clientX);
-        const now = performance.now();
-        if (zone === 'middle') {
-            lastTap = null;
-            return;
-        }
-        if (isStreaking(zone)) {
-            seek(zone);
-        } else if (lastTap?.zone === zone && now - lastTap.time < DOUBLE_TAP_MS) {
-            player.userActive(lastTap.wasActive); // Undo the first tap's toggle of the controls
-            lastTap = null;
-            seek(zone);
-        } else {
-            lastTap = {zone, time: now, wasActive: player.userActive()};
-            return; // Let video.js toggle the controls
-        }
-        event.stopPropagation();
-        if (event.cancelable) {
-            event.preventDefault(); // No click, and no double-tap zoom
-        }
-    }, {capture: true});
-
-    // Mouse clicks
-    playerEl.addEventListener('click', (event: MouseEvent) => {
-        if (suppressClick) {
-            suppressClick = false; // The release that ends a hold is not a click
-            event.stopPropagation();
-            return;
-        }
-        if ((event as PointerEvent).pointerType === 'touch' || !isOnVideo(event.target) || !canSeek()) {
-            return;
-        }
-        if (pointerDownAt && Math.hypot(event.clientX - pointerDownAt.x, event.clientY - pointerDownAt.y) > TAP_SLOP_PX) {
-            return; // A drag
-        }
-        const zone = zoneAt(event.clientX);
-        if (zone === 'middle') {
-            return;
-        }
-
-        // Keep video.js from playing or pausing until it is clear this is a single click
-        event.stopPropagation();
-        if (pendingClick?.zone === zone || isStreaking(zone)) {
-            cancelPendingClick();
-            seek(zone);
-            return;
-        }
-        if (pendingClick) {
-            // A click on the other side; the earlier one was a single click after all
-            cancelPendingClick();
-            togglePlay();
-        }
-        pendingClick = {
-            zone,
-            timer: player.setTimeout(() => {
-                pendingClick = null;
-                togglePlay();
-            }, DOUBLE_TAP_MS),
-        };
-    }, {capture: true});
-
-    const cancelPendingClick = () => {
-        if (pendingClick) {
-            player.clearTimeout(pendingClick.timer);
-            pendingClick = null;
+    const cancelPendingToggle = () => {
+        if (pendingToggle !== null) {
+            player.clearTimeout(pendingToggle);
+            pendingToggle = null;
         }
     };
 
-    playerEl.addEventListener('dblclick', (event: MouseEvent) => {
-        // A double click on either side seeks; in the middle it still toggles fullscreen
-        if (isOnVideo(event.target) && zoneAt(event.clientX) !== 'middle') {
-            event.stopPropagation();
+    const handleClick = (event: MouseEvent) => {
+        const side = canSeek() ? sideAt(event.clientX) : null;
+        const now = performance.now();
+        if (side && lastClick?.side === side && now - lastClick.time < DOUBLE_TAP_MS) {
+            // The second click of a double click, or a further one that seeks 10 seconds more
+            cancelPendingToggle();
+            lastClick = {side, time: now, seconds: lastClick.seconds + SEEK_STEP_SECONDS};
+            const step = side === 'rewind' ? -SEEK_STEP_SECONDS : SEEK_STEP_SECONDS;
+            player.currentTime(Math.min(Math.max(player.currentTime() + step, 0), player.duration()));
+            showFeedback(side, lastClick.seconds);
+            return;
         }
-    }, {capture: true});
+        if (pendingToggle !== null) {
+            // A click elsewhere; the earlier one was a single click after all
+            cancelPendingToggle();
+            togglePlay();
+        }
+        lastClick = {side, time: now, seconds: 0};
+        if (side) {
+            pendingToggle = player.setTimeout(() => {
+                pendingToggle = null;
+                togglePlay();
+            }, DOUBLE_TAP_MS);
+        } else {
+            togglePlay();
+        }
+    };
 
-    // Press and hold on the right to speed up
+    const handleDoubleClick = (event: MouseEvent) => {
+        if (canSeek() && sideAt(event.clientX)) {
+            return; // Seeking, in handleClick
+        }
+        if (player.isFullscreen()) {
+            player.exitFullscreen();
+        } else {
+            player.requestFullscreen();
+        }
+    };
+
+    // video.js's own hooks for a click and a double click on the video
+    player.options({userActions: {click: handleClick, doubleClick: handleDoubleClick}});
+
+    // On an iPad with a trackpad or mouse, clicks land on videojs-mobile-ui's overlay instead
+    player.on('click', (event: MouseEvent) => {
+        if (player.controls() && event.target === touchOverlay()?.el()) {
+            handleClick(event);
+        }
+    });
+    player.on('dblclick', (event: MouseEvent) => {
+        if (player.controls() && event.target === touchOverlay()?.el()) {
+            handleDoubleClick(event);
+        }
+    });
+}
+
+function enableHoldToSpeedUp(player: Player, isOnVideo: (target: EventTarget | null) => boolean) {
+    const playerEl = player.el() as HTMLElement;
+    createBoostIndicator(playerEl);
+
+    let hold: { pointerId: number, x: number, y: number, timer: number | null, savedRate: number | null } | null = null;
+    let suppressClick = false;
+
     playerEl.addEventListener('pointerdown', (event: PointerEvent) => {
         suppressClick = false;
-        pointerDownAt = {x: event.clientX, y: event.clientY};
         if (hold || !event.isPrimary || event.button !== 0 || !isOnVideo(event.target)
-            || zoneAt(event.clientX) !== 'forward' || player.paused() || player.playbackRate() >= BOOST_RATE) {
+            || player.paused() || player.playbackRate() >= BOOST_RATE) {
             return;
         }
         hold = {
@@ -243,6 +232,14 @@ export function enableSeekGestures(player: Player) {
         hold = null;
     };
 
+    // The release that ends a hold is not a click
+    playerEl.addEventListener('click', (event: MouseEvent) => {
+        if (suppressClick) {
+            suppressClick = false;
+            event.stopPropagation();
+        }
+    }, {capture: true});
+
     // Moving before the hold kicks in makes it a drag, a scroll or a pan, not a hold
     const handlePointerMove = (event: PointerEvent) => {
         if (hold && hold.timer !== null && hold.pointerId === event.pointerId
@@ -273,18 +270,34 @@ export function enableSeekGestures(player: Player) {
     }, {capture: true});
 }
 
-function createSeekFeedback(playerEl: HTMLElement, zone: 'rewind' | 'forward') {
-    const el = document.createElement('div');
-    el.className = `vjs-seek-feedback vjs-seek-feedback-${zone}`;
-    el.setAttribute('aria-hidden', 'true');
-    const icon = document.createElement('span');
-    icon.className = `vjs-seek-feedback-icon vjs-icon-${zone === 'rewind' ? 'replay' : 'forward'}-10`;
-    const label = document.createElement('span');
-    label.className = 'vjs-seek-feedback-label';
-    el.append(icon, label);
-    playerEl.appendChild(el);
+function createSeekFeedback(player: Player) {
+    const create = (side: Side) => {
+        const el = document.createElement('div');
+        el.className = `vjs-seek-feedback vjs-seek-feedback-${side}`;
+        el.setAttribute('aria-hidden', 'true');
+        const icon = document.createElement('span');
+        icon.className = `vjs-seek-feedback-icon vjs-icon-${side === 'rewind' ? 'replay' : 'forward'}-10`;
+        const label = document.createElement('span');
+        el.append(icon, label);
+        player.el().appendChild(el);
+        return {el, label};
+    };
+    const feedback = {rewind: create('rewind'), forward: create('forward')};
+    let timer: number | null = null;
 
-    return {el, label};
+    return (side: Side, seconds: number) => {
+        const shown = feedback[side];
+        feedback[side === 'rewind' ? 'forward' : 'rewind'].el.classList.remove('vjs-seek-feedback-visible');
+        shown.label.textContent = `${seconds} seconds`;
+        shown.el.classList.add('vjs-seek-feedback-visible');
+        if (timer !== null) {
+            player.clearTimeout(timer);
+        }
+        timer = player.setTimeout(() => {
+            shown.el.classList.remove('vjs-seek-feedback-visible');
+            timer = null;
+        }, FEEDBACK_MS);
+    };
 }
 
 function createBoostIndicator(playerEl: HTMLElement) {

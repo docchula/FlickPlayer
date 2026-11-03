@@ -77,6 +77,9 @@ importers:
       videojs-hotkeys:
         specifier: ^0.2.30
         version: 0.2.30
+      videojs-mobile-ui:
+        specifier: ^1.2.10
+        version: 1.2.10(video.js@8.24.2)
       videojs-youtube:
         specifier: ^3.0.1
         version: 3.0.1(video.js@8.24.2)
@@ -4056,6 +4059,12 @@ packages:
 
   videojs-hotkeys@0.2.30:
     resolution: {integrity: sha512-G8kEQZPapoWDoEajh2Nroy4bCN1qVEul5AuzZqBS7ZCG45K7hqTYKgf1+fmYvG8m8u84sZmVMUvSWZBjaFW66Q==}
+
+  videojs-mobile-ui@1.2.10:
+    resolution: {integrity: sha512-oCO0vrhrE1jfqclP4PJtljYSFEF6TIit97nT6ng1z1qZ1g8xdmuzjzes6gmEDjGDeJnC+OwJbe4723UJtBDmGg==}
+    engines: {node: '>=14', npm: '>=6'}
+    peerDependencies:
+      video.js: ^8
 
   videojs-vtt.js@0.15.5:
     resolution: {integrity: sha512-yZbBxvA7QMYn15Lr/ZfhhLPrNpI/RmCSCqgIff57GC2gIrV5YfyzLfLyZMj0NnZSAz8syB4N0nHXpZg9MyrMOQ==}
@@ -8374,6 +8383,11 @@ snapshots:
   videojs-font@4.2.0: {}
 
   videojs-hotkeys@0.2.30: {}
+
+  videojs-mobile-ui@1.2.10(video.js@8.24.2):
+    dependencies:
+      global: 4.4.0
+      video.js: 8.24.2
 
   videojs-vtt.js@0.15.5:
     dependencies:

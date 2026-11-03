@@ -1,4 +1,5 @@
 import videojs from 'video.js';
+import type Component from 'video.js/dist/types/component';
 import type Player from 'video.js/dist/types/player';
 import {BOOST_RATE, DOUBLE_TAP_MS, enableSeekGestures, HOLD_MS} from './seek-gestures';
 
@@ -16,18 +17,8 @@ describe('enableSeekGestures', () => {
     let right: number;
     let y: number;
 
-    function tap(x: number) {
-        const touch = new Touch({identifier: 1, target: video, clientX: x, clientY: y, pageX: x, pageY: y});
-        video.dispatchEvent(new TouchEvent('touchstart', {
-            touches: [touch], targetTouches: [touch], changedTouches: [touch], bubbles: true, cancelable: true,
-        }));
-        const end = new TouchEvent('touchend', {changedTouches: [touch], bubbles: true, cancelable: true});
-        video.dispatchEvent(end);
-        return end;
-    }
-
-    function pointer(type: string, x: number, pointerType = 'mouse') {
-        video.dispatchEvent(new PointerEvent(type, {
+    function pointer(type: string, x: number, pointerType = 'mouse', target: Element = video) {
+        target.dispatchEvent(new PointerEvent(type, {
             pointerId: 1, isPrimary: true, button: 0, pointerType, clientX: x, clientY: y, bubbles: true, cancelable: true,
         }));
     }
@@ -78,6 +69,7 @@ describe('enableSeekGestures', () => {
         });
         spyOn(player, 'requestFullscreen').and.returnValue(Promise.resolve());
 
+        spyOn(player as never, 'mobileUi').and.callThrough();
         enableSeekGestures(player);
         video = player.tech(true).el() as HTMLElement;
         const rect = player.el().getBoundingClientRect();
@@ -92,56 +84,32 @@ describe('enableSeekGestures', () => {
         host.remove();
     });
 
-    describe('on touch', () => {
-        it('goes forward 10 seconds on a double tap on the right, leaving the controls as they were', () => {
-            player.userActive(false);
-            tap(right);
-            expect(player.userActive()).toBeTrue(); // video.js shows the controls on the first tap
-
-            const secondTap = tap(right);
-
-            expect(time).toBe(40);
-            expect(player.userActive()).toBeFalse();
-            expect(secondTap.defaultPrevented).toBeTrue();
-        });
-
-        it('keeps going back 10 seconds more with each further tap on the left', () => {
-            tap(left);
-            tap(left);
-            tap(left);
-            tap(left);
-
-            expect(time).toBe(0);
-            expect(player.el().querySelector('.vjs-seek-feedback-rewind').textContent).toContain('30 seconds');
-        });
-
-        it('only toggles the controls on a single tap', async () => {
-            const before = player.userActive();
-            tap(right);
-            await sleep(DOUBLE_TAP_MS + 50);
-            tap(right);
-
-            expect(time).toBe(30);
-            expect(player.userActive()).toBe(before);
-        });
-
-        it('does not seek on a double tap in the middle', () => {
-            tap(middle);
-            tap(middle);
-
-            expect(time).toBe(30);
+    it('leaves double tap on touch to videojs-mobile-ui, without its fullscreen on rotate', () => {
+        expect((player as unknown as { mobileUi: jasmine.Spy }).mobileUi).toHaveBeenCalledWith({
+            fullscreen: {disabled: true},
+            touchControls: {seekSeconds: 10, tapTimeout: DOUBLE_TAP_MS},
         });
     });
 
-    describe('with a mouse', () => {
-        it('goes back 10 seconds on a double click on the left without pausing or going fullscreen', async () => {
-            doubleClick(left);
+    describe('with a mouse or trackpad', () => {
+        it('goes forward 10 seconds on a double click on the right without pausing or going fullscreen', async () => {
+            doubleClick(right);
             await sleep(DOUBLE_TAP_MS + 50);
 
-            expect(time).toBe(20);
+            expect(time).toBe(40);
             expect(player.pause).not.toHaveBeenCalled();
             expect(player.play).not.toHaveBeenCalled();
             expect(player.requestFullscreen).not.toHaveBeenCalled();
+        });
+
+        it('keeps going back 10 seconds more with each further click on the left', () => {
+            click(left);
+            click(left, 2);
+            click(left, 3);
+            click(left, 4);
+
+            expect(time).toBe(0);
+            expect(player.el().querySelector('.vjs-seek-feedback-rewind').textContent).toContain('30 seconds');
         });
 
         it('pauses on a single click on either side once no second click follows', async () => {
@@ -161,27 +129,37 @@ describe('enableSeekGestures', () => {
             expect(player.requestFullscreen).toHaveBeenCalled();
             expect(time).toBe(30);
         });
+
+        it('only plays or pauses before the length of the video is known', () => {
+            player.duration(NaN);
+            doubleClick(right);
+
+            expect(time).toBe(30);
+            expect(player.pause).toHaveBeenCalledTimes(1);
+            expect(player.play).toHaveBeenCalledTimes(1);
+            expect(player.requestFullscreen).toHaveBeenCalled();
+        });
     });
 
     describe('press and hold', () => {
-        it('plays at 2x while the right side is held, then goes back to the earlier speed', async () => {
-            pointer('pointerdown', right, 'touch');
+        it('plays at 2x while held, then goes back to the earlier speed', async () => {
+            pointer('pointerdown', left, 'touch');
             await sleep(HOLD_MS + 50);
 
             expect(rate).toBe(BOOST_RATE);
             expect(player.hasClass('vjs-speed-boost')).toBeTrue();
 
-            pointer('pointerup', right, 'touch');
+            pointer('pointerup', left, 'touch');
 
             expect(rate).toBe(1.25);
             expect(player.hasClass('vjs-speed-boost')).toBeFalse();
         });
 
         it('does not pause when a held mouse button is released', async () => {
-            pointer('pointerdown', right);
+            pointer('pointerdown', middle);
             await sleep(HOLD_MS + 50);
-            pointer('pointerup', right);
-            video.dispatchEvent(new MouseEvent('click', {clientX: right, clientY: y, bubbles: true, cancelable: true}));
+            pointer('pointerup', middle);
+            video.dispatchEvent(new MouseEvent('click', {clientX: middle, clientY: y, bubbles: true, cancelable: true}));
             await sleep(DOUBLE_TAP_MS + 50);
 
             expect(rate).toBe(1.25);
@@ -196,12 +174,7 @@ describe('enableSeekGestures', () => {
             expect(rate).toBe(1.25);
         });
 
-        it('does nothing on the left, after moving, or while paused', async () => {
-            pointer('pointerdown', left, 'touch');
-            await sleep(HOLD_MS + 50);
-            pointer('pointerup', left, 'touch');
-            expect(rate).toBe(1.25);
-
+        it('does nothing after moving, while paused, or on the control bar', async () => {
             pointer('pointerdown', right, 'touch');
             pointer('pointermove', right - 40, 'touch');
             await sleep(HOLD_MS + 50);
@@ -213,6 +186,84 @@ describe('enableSeekGestures', () => {
             await sleep(HOLD_MS + 50);
             pointer('pointerup', right, 'touch');
             expect(rate).toBe(1.25);
+
+            paused = false;
+            const controlBar = player.getChild('ControlBar').el();
+            pointer('pointerdown', middle, 'mouse', controlBar);
+            await sleep(HOLD_MS + 50);
+            pointer('pointerup', middle, 'mouse', controlBar);
+            expect(rate).toBe(1.25);
+        });
+    });
+
+    describe('with videojs-mobile-ui\'s overlay, as on a phone or tablet', () => {
+        let overlay: Component;
+        let overlayEl: Element;
+
+        const finger = (id: number, x: number) => new Touch({identifier: id, target: overlayEl, clientX: x, clientY: y});
+
+        function touch(type: string, touches: Touch[], changedTouches: Touch[]) {
+            const event = new TouchEvent(type, {
+                touches, targetTouches: touches, changedTouches, bubbles: true, cancelable: true,
+            });
+            overlayEl.dispatchEvent(event);
+            return event;
+        }
+
+        function tap(x: number) {
+            const one = finger(1, x);
+            touch('touchstart', [one], [one]);
+            touch('touchend', [], [one]);
+        }
+
+        beforeEach(() => {
+            overlay = player.addChild('TouchOverlay', {seekSeconds: 10, tapTimeout: DOUBLE_TAP_MS});
+            overlayEl = overlay.el();
+        });
+
+        it('goes forward 10 seconds on a double tap', async () => {
+            tap(right);
+            tap(right);
+            await sleep(DOUBLE_TAP_MS + 50);
+
+            expect(time).toBe(40);
+        });
+
+        it('does not seek when the two fingers of a pinch are lifted', async () => {
+            const [a, b] = [finger(1, right - 40), finger(2, right + 40)];
+            touch('touchstart', [a], [a]);
+            touch('touchstart', [a, b], [b]);
+            const [movedA, movedB] = [finger(1, right - 80), finger(2, right + 80)];
+            touch('touchmove', [movedA, movedB], [movedA, movedB]);
+            touch('touchend', [movedB], [movedA]);
+            touch('touchend', [], [movedB]);
+            await sleep(DOUBLE_TAP_MS + 50);
+
+            expect(time).toBe(30);
+            expect(overlay.hasClass('show-play-toggle')).toBeFalse();
+        });
+
+        it('takes neither a drag nor the end of a hold for 2x as a tap', async () => {
+            const start = finger(1, middle);
+            const moved = finger(1, middle + 40);
+            touch('touchstart', [start], [start]);
+            touch('touchmove', [moved], [moved]);
+            touch('touchend', [], [moved]);
+            expect(overlay.hasClass('show-play-toggle')).toBeFalse();
+
+            pointer('pointerdown', middle, 'touch', overlayEl);
+            touch('touchstart', [start], [start]);
+            await sleep(HOLD_MS + 50);
+            expect(rate).toBe(BOOST_RATE);
+            pointer('pointerup', middle, 'touch', overlayEl);
+            const end = touch('touchend', [], [start]);
+
+            expect(rate).toBe(1.25);
+            expect(overlay.hasClass('show-play-toggle')).toBeFalse();
+            expect(end.defaultPrevented).toBeTrue(); // No click from the release either
+
+            tap(middle);
+            expect(overlay.hasClass('show-play-toggle')).toBeTrue();
         });
     });
 });
