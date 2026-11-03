@@ -1,0 +1,93 @@
+.page {
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.lead {
+  font-size: 1.05rem;
+}
+
+.note {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--ion-color-primary);
+  border-radius: 4px;
+  background: var(--ion-color-light);
+  color: var(--ion-color-light-contrast);
+}
+
+.note-warning {
+  border-left-color: var(--ion-color-warning);
+}
+
+.steps {
+  padding-left: 1.5rem;
+
+  > li {
+    margin-bottom: 1.5rem;
+  }
+
+  > li::marker {
+    font-weight: 700;
+  }
+
+  h2 {
+    margin: 0 0 0.25rem;
+    font-size: 1.05rem;
+  }
+
+  p {
+    margin: 0.25rem 0;
+  }
+}
+
+.address {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+
+  code {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--ion-color-medium);
+    border-radius: 4px;
+    user-select: all;
+  }
+}
+
+.shot {
+  display: block;
+  width: 100%;
+  max-width: 36rem;
+  height: auto;
+  margin: 0.5rem 0 0.75rem;
+  border: 1px solid var(--ion-color-medium);
+  border-radius: 8px;
+}
+
+.shot-narrow {
+  max-width: 22rem;
+}
+
+.hint {
+  color: var(--ion-color-medium);
+  font-size: 0.9rem;
+}
+
+kbd {
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--ion-color-medium);
+  border-radius: 4px;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.section {
+  font-size: 1.05rem;
+  margin-top: 2rem;
+}
+
+.tips {
+  padding-left: 1.25rem;
+}

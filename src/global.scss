@@ -248,3 +248,56 @@ body.flick-has-background-image {
   }
 }
 
+/* Chrome's Live Caption from the player (live-caption-control.ts) */
+.video-js .vjs-live-caption-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 3em;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2em;
+  padding: 1.5em;
+  overflow: auto;
+  color: #fff;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.video-js .vjs-live-caption-panel[hidden] {
+  display: none;
+}
+
+.video-js .vjs-live-caption-panel p {
+  max-width: 30em;
+  margin: 0;
+  font-size: 1.6em;
+  line-height: 1.4;
+}
+
+.video-js .vjs-live-caption-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.8em;
+}
+
+.video-js .vjs-live-caption-actions button {
+  padding: 0.5em 1.2em;
+  border: 1px solid currentColor;
+  border-radius: 2em;
+  color: inherit;
+  font-size: 1.4em;
+  background: transparent;
+  cursor: pointer;
+}
+
+.video-js .vjs-live-caption-actions button:first-child {
+  border-color: #fff;
+  color: #000;
+  background: #fff;
+}

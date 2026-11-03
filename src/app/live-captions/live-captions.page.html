@@ -1,0 +1,114 @@
+<ion-header>
+    <ion-toolbar>
+        <ion-buttons slot="start">
+            <ion-back-button defaultHref="/"></ion-back-button>
+        </ion-buttons>
+        <ion-title>Live captions</ion-title>
+    </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+    <div class="page">
+        <p class="lead">
+            Google Chrome can write captions for a lecture as it plays, in Thai and in English.
+            It takes about two minutes to set up, and only once.
+        </p>
+
+        <div class="note" role="note">
+            <strong>Computers only.</strong>
+            Live captions work in <strong>Google Chrome on a Windows or Mac computer</strong>.
+            They do not work on an iPad, iPhone or Android phone, or in Safari, Edge or Firefox.
+        </div>
+
+        @if (!computer) {
+        <div class="note note-warning" role="alert">
+            This looks like a phone or tablet. Open Flick in Google Chrome on a computer to use live captions.
+        </div>
+        } @else if (!inChrome) {
+        <div class="note note-warning" role="alert">
+            This browser is not Google Chrome. Open Flick in
+            <a href="https://www.google.com/chrome/" target="_blank" rel="noopener">Google Chrome</a>
+            first, then follow these steps there.
+        </div>
+        }
+
+        <p class="hint">The pictures show Chrome in English. If your Chrome is in Thai, the buttons are in the same places.</p>
+
+        <ol class="steps">
+            <li>
+                <h2>Copy the address of Chrome's settings</h2>
+                <p>Websites are not allowed to open Chrome's settings for you, so you will paste this address yourself.</p>
+                <div class="address">
+                    <code>{{ settingsAddress }}</code>
+                    <ion-button size="small" (click)="copyAddress()">
+                        <ion-icon slot="start" [name]="copied() ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+                        {{ copied() ? 'Copied' : 'Copy' }}
+                    </ion-button>
+                </div>
+                @if (copied() === false) {
+                <p class="hint">Copying did not work. Select the address above and copy it yourself.</p>
+                }
+            </li>
+
+            <li>
+                <h2>Open it in a new tab</h2>
+                <p>
+                    Press <kbd>{{ keys.newTab }}</kbd> for a new tab, paste with <kbd>{{ keys.paste }}</kbd>,
+                    then press <kbd>{{ keys.go }}</kbd>.
+                </p>
+                <p class="hint">Or click Chrome's <strong>⋮</strong> menu (top right), then <strong>Settings</strong>, then <strong>Accessibility</strong>.</p>
+            </li>
+
+            <li>
+                <h2>Turn on Live Caption</h2>
+                <p>Click the switch next to <strong>Live Caption</strong> so it turns blue.</p>
+                <p class="hint">
+                    Shortcut: the captions button in Flick's player, next to full screen, moves the lecture into a
+                    small window. Click the captions button at its bottom right and turn on <strong>Live Caption</strong> there.
+                </p>
+                <img class="shot" src="assets/live-captions/step-3-turn-on.webp" width="1440" height="400" loading="lazy"
+                    alt="Chrome's Accessibility settings, with the switch next to Live Caption circled">
+            </li>
+
+            <li>
+                <h2>Add both Thai and English</h2>
+                <p>Under <strong>Supported Live Caption languages</strong>, click <strong>Add languages</strong>.</p>
+                <img class="shot" src="assets/live-captions/step-4-add-languages.webp" width="1440" height="520" loading="lazy"
+                    alt="The Supported Live Caption languages section, with the Add languages button circled">
+                <p>Type <strong>Thai</strong> in the search box, tick <strong>Thai - ไทย</strong>, then click <strong>Add</strong>.</p>
+                <img class="shot shot-narrow" src="assets/live-captions/step-4-tick-thai.webp" width="1080" height="1010" loading="lazy"
+                    alt="The Add languages window, with Thai - ไทย ticked and the Add button circled">
+                <p class="hint">
+                    English is usually in the list already. If it is not, add it the same way.
+                    Lectures are mostly in Thai with English terms, and some are given in English, so you need both.
+                </p>
+            </li>
+
+            <li>
+                <h2>Make Thai the default</h2>
+                <p>Click <strong>⋮</strong> next to <strong>Thai</strong>, then <strong>Make default</strong>.</p>
+                <img class="shot" src="assets/live-captions/step-5-make-default.webp" width="1440" height="440" loading="lazy"
+                    alt="The menu next to Thai, with Make default circled">
+                <p>Wait until both languages say <strong>Speech files downloaded</strong>, with Thai marked (default).</p>
+                <img class="shot" src="assets/live-captions/step-5-done.webp" width="1440" height="390" loading="lazy"
+                    alt="English and Thai (default), both showing Speech files downloaded">
+                <p class="hint">For a lecture given in English, make English the default the same way.</p>
+            </li>
+
+            <li>
+                <h2>Play the lecture</h2>
+                <p>
+                    Go back to the lecture's tab and press play. Captions appear in a box at the bottom of the screen,
+                    which you can drag anywhere.
+                </p>
+            </li>
+        </ol>
+
+        <h2 class="section">If something does not work</h2>
+        <ul class="tips">
+            <li>No captions? Check that both languages have finished downloading, and that the lecture is playing.</li>
+            <li>Captions may fall behind at high speed. They keep up best at 1.5× or slower.</li>
+            <li>To turn captions off, turn off the same Live Caption switch.</li>
+        </ul>
+    </div>
+</ion-content>

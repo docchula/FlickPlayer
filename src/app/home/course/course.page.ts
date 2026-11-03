@@ -45,6 +45,7 @@ import {PomodoroTimerComponent} from '../../shared/pomodoro-timer.component';
 import {ThemeMenuComponent} from '../../shared/theme-menu.component';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../../consent.service';
+import {addLiveCaptionControl} from './player/live-caption-control';
 
 // The video.js SeekBar handlers wrapped by CoursePage.requireDragToSeekOnTouch()
 interface SeekBarPointerHandlers {
@@ -205,6 +206,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
                 this.viewVideo(this.pendingVideoToPlay);
                 this.pendingVideoToPlay = null;
             }
+            addLiveCaptionControl(this.videoPlayer);
             // @ts-ignore
             this.videoPlayer.hotkeys({
                 volumeStep: 0.1,
