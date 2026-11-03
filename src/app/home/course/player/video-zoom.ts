@@ -1,10 +1,14 @@
+import videojs from 'video.js';
 import type Player from 'video.js/dist/types/player';
-import type Component from 'video.js/dist/types/component';
+import type MenuButton from 'video.js/dist/types/menu/menu-button';
+import type MenuItem from 'video.js/dist/types/menu/menu-item';
 
 export const MAX_ZOOM = 4;
 // Where the slide sits in a lecture recording, as fractions of the frame: the lecturer and the
 // faculty's seal take the left third, and the screen the rest, a 16:9 picture centred top to bottom
 export const SLIDE = {left: 1 / 3, top: 1 / 6, width: 2 / 3, height: 2 / 3};
+// localStorage key, set while a student has the zoom lock turned on
+export const ZOOM_LOCKED_KEY = 'flickZoomLocked';
 const KEY_ZOOM_STEP = 1.25;
 // A pinch on a trackpad arrives as ctrl+wheel events whose deltaY is 100x the log of the scale
 // change. A mouse wheel notch is much larger, so cap each event to keep one notch near 1.2x.
@@ -14,6 +18,8 @@ const MAX_WHEEL_DELTA = 20;
 const DRAG_SLOP_PX = 4;
 // How long the zoom level stays up after the last change
 const LEVEL_MS = 800;
+// How long the note on turning the zoom lock on or off stays up
+const LOCK_NOTE_MS = 2000;
 
 // The Safari-only event for trackpad and touch pinches
 interface GestureEvent extends UIEvent {
@@ -25,11 +31,16 @@ interface GestureEvent extends UIEvent {
 /**
  * Zoom into the video, to read the small print on a lecture slide.
  *
+ * The magnifier in the control bar opens a menu:
+ * - Zoom to slide fills the player with the slide, and Reset zoom goes back.
+ * - Zoom lock, off until the student turns it on, stops a stray pinch or Ctrl + scroll from
+ *   zooming the video. The choice is kept on the device.
+ *
+ * With the zoom lock off:
  * - iPad: pinch with two fingers. Once zoomed in, drag with one finger to move around.
  * - Trackpad (macOS, Windows): pinch, and scroll with two fingers to move around.
  * - Mouse: Ctrl/⌘ + wheel, and drag to move around.
- * - Everyone: the magnifier button in the control bar zooms straight to the slide and back, and
- *   + / - step the zoom while the player has focus.
+ * - Keyboard: + / - step the zoom while the player has focus.
  *
  * The zoom is kept as fractions of the player's size, so it holds through fullscreen, and resets
  * when another video is loaded.
@@ -47,13 +58,29 @@ export function enableVideoZoom(player: Player) {
     playerEl.appendChild(level);
     let levelTimer: number | null = null;
 
-    const button = addZoomButton(player, () => {
+    const menu = addZoomMenu(player);
+    const slideItem = menu.addItem('Zoom to slide', () => {
         if (scale > 1) {
             zoomTo(1, 0.5, 0.5, true);
         } else {
             zoomToSlide();
         }
     });
+    let locked = loadZoomLocked();
+    player.toggleClass('vjs-zoom-unlocked', !locked);
+    const lockItem = menu.addItem('Zoom lock', () => {
+        locked = !locked;
+        lockItem.selected(locked);
+        player.toggleClass('vjs-zoom-unlocked', !locked);
+        saveZoomLocked(locked);
+        showNote(locked ? 'Zoom locked' : 'Pinch or Ctrl + scroll to zoom', LOCK_NOTE_MS);
+    }, locked);
+    lockItem.el().insertAdjacentHTML('afterbegin', `
+        <svg class="vjs-zoom-lock-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <rect x="5" y="11" width="14" height="10" rx="2" fill="currentColor"/>
+            <path class="vjs-zoom-lock-closed" d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path class="vjs-zoom-lock-open" d="M8 11V8a4 4 0 0 1 7.9-1" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>`);
 
     const techEl = () => player.tech(true)?.el() as HTMLElement | undefined;
     // On phones and tablets, touches on the video land on videojs-mobile-ui's overlay over it
@@ -80,12 +107,12 @@ export function enableVideoZoom(player: Player) {
             : '';
         if (player.hasClass('vjs-zoomed') !== scale > 1) {
             player.toggleClass('vjs-zoomed', scale > 1);
-            button.controlText(scale > 1 ? 'Reset zoom' : 'Zoom to slide');
+            menu.setLabel(slideItem, scale > 1 ? 'Reset zoom' : 'Zoom to slide');
         }
     };
 
-    const showLevel = () => {
-        level.textContent = `${scale.toFixed(1)}×`;
+    const showNote = (text: string, ms: number) => {
+        level.textContent = text;
         level.classList.add('vjs-zoom-level-visible');
         if (levelTimer !== null) {
             player.clearTimeout(levelTimer);
@@ -93,8 +120,9 @@ export function enableVideoZoom(player: Player) {
         levelTimer = player.setTimeout(() => {
             level.classList.remove('vjs-zoom-level-visible');
             levelTimer = null;
-        }, LEVEL_MS);
+        }, ms);
     };
+    const showLevel = () => showNote(`${scale.toFixed(1)}×`, LEVEL_MS);
 
     // Keep the video covering the whole player
     const clampOffsets = () => {
@@ -182,7 +210,7 @@ export function enableVideoZoom(player: Player) {
 
     playerEl.addEventListener('touchstart', (event: TouchEvent) => {
         touchCount = event.touches.length;
-        if (isOnVideo(event.target) || pinch || touchPan) {
+        if (!locked && (isOnVideo(event.target) || pinch || touchPan)) {
             startTouchGesture(event);
         }
     }, {passive: true});
@@ -224,10 +252,16 @@ export function enableVideoZoom(player: Player) {
     // events above; they still have to be cancelled, or Safari zooms the page.
     let gesture: { scale: number } | null = null;
     playerEl.addEventListener('gesturestart', (event: Event) => {
+        if (locked) {
+            return;
+        }
         event.preventDefault();
         gesture = touchCount === 0 ? {scale} : null;
     });
     playerEl.addEventListener('gesturechange', (event: Event) => {
+        if (locked) {
+            return;
+        }
         event.preventDefault();
         if (gesture) {
             const {u, v} = pointOf(event as GestureEvent);
@@ -235,6 +269,9 @@ export function enableVideoZoom(player: Player) {
         }
     });
     playerEl.addEventListener('gestureend', (event: Event) => {
+        if (locked) {
+            return;
+        }
         event.preventDefault();
         gesture = null;
     });
@@ -244,7 +281,7 @@ export function enableVideoZoom(player: Player) {
 
     // Wheel: a trackpad pinch or Ctrl/⌘ + wheel zooms; scrolling pans while zoomed in
     playerEl.addEventListener('wheel', (event: WheelEvent) => {
-        if (!isOnVideo(event.target)) {
+        if (locked || !isOnVideo(event.target)) {
             return;
         }
         const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : 1;
@@ -266,7 +303,7 @@ export function enableVideoZoom(player: Player) {
     let suppressClick = false;
     playerEl.addEventListener('pointerdown', (event: PointerEvent) => {
         suppressClick = false;
-        if (event.pointerType === 'mouse' && event.button === 0 && scale > 1 && isOnVideo(event.target)) {
+        if (!locked && event.pointerType === 'mouse' && event.button === 0 && scale > 1 && isOnVideo(event.target)) {
             mouseDrag = {x: event.clientX, y: event.clientY, moved: false};
         }
     });
@@ -306,7 +343,7 @@ export function enableVideoZoom(player: Player) {
 
     // Keyboard, while the player has focus
     playerEl.addEventListener('keydown', (event: KeyboardEvent) => {
-        if (event.ctrlKey || event.metaKey || event.altKey) {
+        if (locked || event.ctrlKey || event.metaKey || event.altKey) {
             return;
         }
         if (event.key === '+' || event.key === '=') {
@@ -317,18 +354,17 @@ export function enableVideoZoom(player: Player) {
     });
 }
 
-function addZoomButton(player: Player, onClick: () => void) {
+function addZoomMenu(player: Player) {
     const controlBar = player.getChild('controlBar');
     const fullscreenToggle = controlBar.getChild('fullscreenToggle');
     const index = fullscreenToggle ? controlBar.children().indexOf(fullscreenToggle) : undefined;
-    const button = controlBar.addChild('button', {
+    const menuButton = controlBar.addChild('MenuButton', {
         className: 'vjs-zoom-control',
-        controlText: 'Zoom to slide',
-        clickHandler: onClick,
-    }, index) as Component & { controlText(text?: string): string };
+        controlText: 'Zoom',
+    }, index) as MenuButton;
 
     // A magnifier; the vertical stroke of the plus is hidden while zoomed in, leaving a minus
-    button.el().querySelector('.vjs-icon-placeholder')?.insertAdjacentHTML('beforeend', `
+    menuButton.menuButton_.el().querySelector('.vjs-icon-placeholder')?.insertAdjacentHTML('beforeend', `
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/>
             <path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
@@ -336,5 +372,42 @@ function addZoomButton(player: Player, onClick: () => void) {
             <path class="vjs-zoom-control-plus" d="M10.5 7.5v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>`);
 
-    return button;
+    const MenuItemComponent = videojs.getComponent('MenuItem') as typeof MenuItem;
+    return {
+        // Given `checked`, the item is a switch that starts in that state
+        addItem(label: string, run: () => void, checked?: boolean) {
+            const item = new MenuItemComponent(player, {
+                label,
+                selectable: checked !== undefined,
+                multiSelectable: true,
+                selected: checked,
+            });
+            item.on(['tap', 'click'], run);
+            menuButton.menu.addItem(item);
+            return item;
+        },
+        setLabel(item: MenuItem, label: string) {
+            item.el().querySelector('.vjs-menu-item-text').textContent = label;
+        },
+    };
+}
+
+function loadZoomLocked() {
+    try {
+        return localStorage.getItem(ZOOM_LOCKED_KEY) === 'true';
+    } catch {
+        return false; // Storage blocked; the zoom starts unlocked
+    }
+}
+
+function saveZoomLocked(locked: boolean) {
+    try {
+        if (locked) {
+            localStorage.setItem(ZOOM_LOCKED_KEY, 'true');
+        } else {
+            localStorage.removeItem(ZOOM_LOCKED_KEY);
+        }
+    } catch {
+        // Storage blocked; the choice holds until the page is closed
+    }
 }
