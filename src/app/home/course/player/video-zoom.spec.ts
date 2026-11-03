@@ -1,6 +1,6 @@
 import videojs from 'video.js';
 import type Player from 'video.js/dist/types/player';
-import {enableVideoZoom, MAX_ZOOM, ZOOM_LOCKED_KEY} from './video-zoom';
+import {enableVideoZoom, MAX_ZOOM, ZOOM_ON_KEY} from './video-zoom';
 
 describe('enableVideoZoom', () => {
     let host: HTMLElement;
@@ -65,25 +65,38 @@ describe('enableVideoZoom', () => {
         rect = player.el().getBoundingClientRect();
     }
 
-    beforeEach(() => localStorage.removeItem(ZOOM_LOCKED_KEY));
+    beforeEach(() => localStorage.removeItem(ZOOM_ON_KEY));
 
     afterEach(() => {
         player.dispose();
         host.remove();
-        localStorage.removeItem(ZOOM_LOCKED_KEY);
+        localStorage.removeItem(ZOOM_ON_KEY);
     });
 
-    describe('with the zoom lock off, as it starts', () => {
+    describe('with the Zoom switch off, as it starts', () => {
         beforeEach(createPlayer);
 
-        it('puts a zoom menu before full screen, with Zoom to slide and the zoom lock switched off', () => {
+        it('puts a zoom menu before full screen, with Zoom to slide and the Zoom switch, off', () => {
             const control = player.el().querySelector('.vjs-zoom-control');
             expect(control.nextElementSibling.classList).toContain('vjs-fullscreen-control');
             expect(control.querySelector('button').getAttribute('title')).toBe('Zoom');
 
             expect(menuItem('Zoom to slide')).toBeDefined();
-            expect(menuItem('Zoom lock').getAttribute('aria-checked')).toBe('false');
-            expect(player.hasClass('vjs-zoom-unlocked')).toBeTrue();
+            expect(menuItem('Zoom').getAttribute('role')).toBe('menuitemcheckbox');
+            expect(menuItem('Zoom').getAttribute('aria-checked')).toBe('false');
+            expect(menuItem('Zoom').querySelector('.vjs-zoom-switch')).not.toBeNull();
+            expect(player.hasClass('vjs-zoom-on')).toBeFalse();
+        });
+
+        it('leaves pinches, Ctrl + wheel and + / - to the browser, without zooming the video', () => {
+            expect(wheel({deltaY: -20, ctrlKey: true, ...at(0.5, 0.5)}).defaultPrevented).toBeFalse();
+            touches('touchstart', [at(0.4, 0.5), at(0.6, 0.5)]);
+            expect(touches('touchmove', [at(0.3, 0.5), at(0.7, 0.5)]).defaultPrevented).toBeFalse();
+            touches('touchend', []);
+            player.el().dispatchEvent(new KeyboardEvent('keydown', {key: '+', bubbles: true}));
+
+            expect(view().scale).toBe(1);
+            expect(player.hasClass('vjs-zoomed')).toBeFalse();
         });
 
         it('zooms straight to the slide from the menu, and back', () => {
@@ -116,22 +129,70 @@ describe('enableVideoZoom', () => {
             expect((50 - y) / scale).toBeCloseTo(50, 5);
         });
 
-        it('turns the zoom lock on from the menu, says so, and remembers it on the device', () => {
-            menuItem('Zoom lock').click();
+        it('keeps the zoomed slide in place: scrolling and dragging over it move the page instead', () => {
+            menuItem('Zoom to slide').click();
+            const before = view();
+            expect(before.scale).toBeCloseTo(1.5, 5);
 
-            expect(menuItem('Zoom lock').getAttribute('aria-checked')).toBe('true');
-            expect(player.hasClass('vjs-zoom-unlocked')).toBeFalse();
-            expect(note()).toBe('Zoom locked');
-            expect(localStorage.getItem(ZOOM_LOCKED_KEY)).toBe('true');
-            expect(wheel({deltaY: -20, ctrlKey: true, ...at(0.5, 0.5)}).defaultPrevented).toBeFalse();
-            expect(view().scale).toBe(1);
+            expect(wheel({deltaY: 40, ...at(0.5, 0.5)}).defaultPrevented).toBeFalse();
+            touches('touchstart', [at(0.5, 0.5)]);
+            expect(touches('touchmove', [at(0.6, 0.5)]).defaultPrevented).toBeFalse();
+            touches('touchend', []);
+            pointer('pointerdown', at(0.5, 0.5));
+            pointer('pointermove', at(0.6, 0.5));
+            pointer('pointerup', at(0.6, 0.5));
 
-            menuItem('Zoom lock').click();
+            expect(view()).toEqual(before);
+        });
 
-            expect(menuItem('Zoom lock').getAttribute('aria-checked')).toBe('false');
+        it('turns the Zoom switch on from the menu, says how to zoom, and remembers it on the device', () => {
+            menuItem('Zoom').click();
+
+            expect(menuItem('Zoom').getAttribute('aria-checked')).toBe('true');
+            expect(player.hasClass('vjs-zoom-on')).toBeTrue();
             expect(note()).toBe('Pinch or Ctrl + scroll to zoom');
-            expect(localStorage.getItem(ZOOM_LOCKED_KEY)).toBeNull();
+            expect(localStorage.getItem(ZOOM_ON_KEY)).toBe('true');
             expect(wheel({deltaY: -20, ctrlKey: true, ...at(0.5, 0.5)}).defaultPrevented).toBeTrue();
+            expect(view().scale).toBeGreaterThan(1);
+        });
+    });
+
+    it('still turns the Zoom switch on when the browser blocks storage', async () => {
+        spyOn(Storage.prototype, 'getItem').and.throwError('SecurityError');
+        spyOn(Storage.prototype, 'setItem').and.throwError('SecurityError');
+        await createPlayer();
+        expect(menuItem('Zoom').getAttribute('aria-checked')).toBe('false');
+
+        menuItem('Zoom').click();
+
+        expect(player.hasClass('vjs-zoom-on')).toBeTrue();
+    });
+
+    describe('with the Zoom switch turned on before', () => {
+        beforeEach(async () => {
+            localStorage.setItem(ZOOM_ON_KEY, 'true');
+            await createPlayer();
+        });
+
+        it('starts with the switch on', () => {
+            expect(menuItem('Zoom').getAttribute('aria-checked')).toBe('true');
+            expect(player.hasClass('vjs-zoom-on')).toBeTrue();
+        });
+
+        it('turning it off leaves the view as it is, on the slide and in full screen', () => {
+            player.isFullscreen(true);
+            menuItem('Zoom to slide').click();
+            const before = view();
+
+            menuItem('Zoom').click();
+
+            expect(menuItem('Zoom').getAttribute('aria-checked')).toBe('false');
+            expect(note()).toBe('Zoom off');
+            expect(localStorage.getItem(ZOOM_ON_KEY)).toBeNull();
+            expect(view()).toEqual(before);
+            expect(before.scale).toBeCloseTo(1.5, 5);
+            expect(player.isFullscreen()).toBeTrue();
+            expect(wheel({deltaY: -20, ctrlKey: true, ...at(0.5, 0.5)}).defaultPrevented).toBeFalse();
         });
 
         it('zooms in around the pointer on a trackpad pinch or Ctrl + wheel, instead of zooming the page', () => {
@@ -239,56 +300,6 @@ describe('enableVideoZoom', () => {
             player.trigger('loadstart');
             expect(view().scale).toBe(1);
             expect(player.hasClass('vjs-zoomed')).toBeFalse();
-        });
-    });
-
-    it('still turns the zoom lock on when the browser blocks storage', async () => {
-        spyOn(Storage.prototype, 'getItem').and.throwError('SecurityError');
-        spyOn(Storage.prototype, 'setItem').and.throwError('SecurityError');
-        await createPlayer();
-        expect(menuItem('Zoom lock').getAttribute('aria-checked')).toBe('false');
-
-        menuItem('Zoom lock').click();
-
-        expect(player.hasClass('vjs-zoom-unlocked')).toBeFalse();
-    });
-
-    describe('with the zoom lock turned on before', () => {
-        beforeEach(async () => {
-            localStorage.setItem(ZOOM_LOCKED_KEY, 'true');
-            await createPlayer();
-        });
-
-        it('starts with the lock on', () => {
-            expect(menuItem('Zoom lock').getAttribute('aria-checked')).toBe('true');
-            expect(player.hasClass('vjs-zoom-unlocked')).toBeFalse();
-        });
-
-        it('leaves pinches, Ctrl + wheel and + / - to the browser, without zooming the video', () => {
-            expect(wheel({deltaY: -20, ctrlKey: true, ...at(0.5, 0.5)}).defaultPrevented).toBeFalse();
-            touches('touchstart', [at(0.4, 0.5), at(0.6, 0.5)]);
-            expect(touches('touchmove', [at(0.3, 0.5), at(0.7, 0.5)]).defaultPrevented).toBeFalse();
-            touches('touchend', []);
-            player.el().dispatchEvent(new KeyboardEvent('keydown', {key: '+', bubbles: true}));
-
-            expect(view().scale).toBe(1);
-            expect(player.hasClass('vjs-zoomed')).toBeFalse();
-        });
-
-        it('still zooms to the slide, and keeps it in place: scrolling and dragging over it move the page instead', () => {
-            menuItem('Zoom to slide').click();
-            const before = view();
-            expect(before.scale).toBeCloseTo(1.5, 5);
-
-            expect(wheel({deltaY: 40, ...at(0.5, 0.5)}).defaultPrevented).toBeFalse();
-            touches('touchstart', [at(0.5, 0.5)]);
-            expect(touches('touchmove', [at(0.6, 0.5)]).defaultPrevented).toBeFalse();
-            touches('touchend', []);
-            pointer('pointerdown', at(0.5, 0.5));
-            pointer('pointermove', at(0.6, 0.5));
-            pointer('pointerup', at(0.6, 0.5));
-
-            expect(view()).toEqual(before);
         });
     });
 });

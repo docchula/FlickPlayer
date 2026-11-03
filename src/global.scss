@@ -170,11 +170,11 @@ ion-list-header {
     }
 }
 
-/* Zooming into the video (video-zoom.ts). Pinches and drags only zoom the video with the zoom
-   lock off. On phones and tablets videojs-mobile-ui's overlay takes the touches on the video, so
+/* Zooming into the video (video-zoom.ts). Pinches and drags only zoom the video with the Zoom
+   switch on. On phones and tablets videojs-mobile-ui's overlay takes the touches on the video, so
    it gets the same rules. */
-.video-js.vjs-zoom-unlocked .vjs-tech,
-.video-js.vjs-zoom-unlocked .vjs-touch-overlay {
+.video-js.vjs-zoom-on .vjs-tech,
+.video-js.vjs-zoom-on .vjs-touch-overlay {
   /* A pinch on the video zooms the video, not the page */
   touch-action: pan-x pan-y;
 }
@@ -183,8 +183,8 @@ ion-list-header {
   overflow: hidden;
 }
 
-.video-js.vjs-zoom-unlocked.vjs-zoomed .vjs-tech,
-.video-js.vjs-zoom-unlocked.vjs-zoomed .vjs-touch-overlay {
+.video-js.vjs-zoom-on.vjs-zoomed .vjs-tech,
+.video-js.vjs-zoom-on.vjs-zoomed .vjs-touch-overlay {
   /* One finger moves around the zoomed video instead of scrolling the page */
   touch-action: none;
   cursor: grab;
@@ -220,16 +220,37 @@ ion-list-header {
   display: none;
 }
 
-.video-js .vjs-zoom-lock-icon {
+.video-js .vjs-zoom-switch {
+  position: relative;
+  flex: none;
   align-self: center;
-  width: 1.1em;
+  width: 2em;
   height: 1.1em;
-  margin-right: 0.4em;
+  margin-left: 0.6em;
+  border-radius: 0.55em;
+  background: rgba(255, 255, 255, 0.35);
+  transition: background-color 0.2s ease;
 }
 
-.video-js .vjs-zoom-control .vjs-selected .vjs-zoom-lock-open,
-.video-js .vjs-zoom-control .vjs-menu-item:not(.vjs-selected) .vjs-zoom-lock-closed {
-  display: none;
+.video-js .vjs-zoom-switch::after {
+  content: '';
+  position: absolute;
+  top: 0.15em;
+  left: 0.15em;
+  width: 0.8em;
+  height: 0.8em;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s ease;
+}
+
+.video-js .vjs-zoom-switch-on .vjs-zoom-switch {
+  background: #fff;
+}
+
+.video-js .vjs-zoom-switch-on .vjs-zoom-switch::after {
+  background: #2b333f;
+  transform: translateX(0.9em);
 }
 
 .video-js .vjs-zoom-level {
