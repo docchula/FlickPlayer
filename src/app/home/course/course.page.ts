@@ -35,7 +35,7 @@ import {
 import {DomSanitizer, Title} from '@angular/platform-browser';
 import {PlayHistory} from '../../play-tracker.service';
 import {addIcons} from "ionicons";
-import {checkmarkOutline, closeOutline, documentAttachOutline, documentTextOutline, download, pauseCircleOutline} from "ionicons/icons";
+import {checkmarkOutline, closeOutline, documentAttachOutline, documentTextOutline, download, logoClosedCaptioning, pauseCircleOutline} from "ionicons/icons";
 import type Player from 'video.js/dist/types/player';
 import {ulid} from 'ulid';
 import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
@@ -45,6 +45,7 @@ import {PomodoroTimerComponent} from '../../shared/pomodoro-timer.component';
 import {ThemeMenuComponent} from '../../shared/theme-menu.component';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../../consent.service';
+import {liveCaptionComputer} from '../../live-captions/live-captions';
 
 // The video.js SeekBar handlers wrapped by CoursePage.requireDragToSeekOnTouch()
 interface SeekBarPointerHandlers {
@@ -117,6 +118,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     searchQuery$ = new Subject<string>();
     isAndroid = /Android/i.test(navigator.userAgent);
     isIos = /iPad/i.test(navigator.userAgent) || /iPhone/i.test(navigator.userAgent);
+    liveCaptions = !!liveCaptionComputer();
     lastPlayedVideoKey: number = null;
     playLog: { startTime: number, endTime: number | null, playbackRate: number, createdAt: number, updatedAt: number }[] = [];
     progressTimedOut: string | null;
@@ -132,7 +134,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     isPlayerReady = false;
 
     constructor() {
-        addIcons({ download, documentAttachOutline, documentTextOutline, checkmarkOutline, closeOutline, pauseCircleOutline });
+        addIcons({ download, documentAttachOutline, documentTextOutline, checkmarkOutline, closeOutline, pauseCircleOutline, logoClosedCaptioning });
     }
 
     ngOnInit() {

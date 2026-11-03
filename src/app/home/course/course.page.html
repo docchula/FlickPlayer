@@ -60,6 +60,13 @@
                             Transcript
                         </ion-button>
                         }
+                        @if (liveCaptions) {
+                        <ion-button href="/live-captions" target="_blank" fill="outline" size="small"
+                            class="set-playback-speed-button" title="How to turn on live captions in Thai and English">
+                            <ion-icon slot="start" name="logo-closed-captioning"></ion-icon>
+                            Live captions
+                        </ion-button>
+                        }
                         @if (currentVideo.sourceExternal?.includes('1.mp4')) {
                         <span>
                             | <a [href]="sanitize('//player.docchula.com/?url='+currentVideo.sourceExternal)"
