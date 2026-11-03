@@ -170,8 +170,10 @@ ion-list-header {
     }
 }
 
-/* Zooming into the video (video-zoom.ts) */
-.video-js .vjs-tech {
+/* Zooming into the video (video-zoom.ts). On phones and tablets videojs-mobile-ui's overlay takes
+   the touches on the video, so it gets the same rules. */
+.video-js .vjs-tech,
+.video-js .vjs-touch-overlay {
   /* A pinch on the video zooms the video, not the page */
   touch-action: pan-x pan-y;
 }
@@ -180,17 +182,20 @@ ion-list-header {
   overflow: hidden;
 }
 
-.video-js.vjs-zoomed .vjs-tech {
+.video-js.vjs-zoomed .vjs-tech,
+.video-js.vjs-zoomed .vjs-touch-overlay {
   /* One finger moves around the zoomed video instead of scrolling the page */
   touch-action: none;
   cursor: grab;
 }
 
-.video-js.vjs-zoomed.vjs-zoom-dragging .vjs-tech {
+.video-js.vjs-zoomed.vjs-zoom-dragging .vjs-tech,
+.video-js.vjs-zoomed.vjs-zoom-dragging .vjs-touch-overlay {
   cursor: grabbing;
 }
 
-.video-js.vjs-zoomed.vjs-user-inactive.vjs-playing .vjs-tech {
+.video-js.vjs-zoomed.vjs-user-inactive.vjs-playing .vjs-tech,
+.video-js.vjs-zoomed.vjs-user-inactive.vjs-playing .vjs-touch-overlay {
   cursor: none;
 }
 

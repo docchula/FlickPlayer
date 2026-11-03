@@ -28,12 +28,12 @@ describe('enableVideoZoom', () => {
         return event;
     }
 
-    function touches(type: string, points: { clientX: number, clientY: number }[]) {
-        const list = points.map((point, i) => new Touch({identifier: i + 1, target: video, ...point}));
+    function touches(type: string, points: { clientX: number, clientY: number }[], target: Element = video) {
+        const list = points.map((point, i) => new Touch({identifier: i + 1, target, ...point}));
         const event = new TouchEvent(type, {
             touches: list, targetTouches: list, changedTouches: list, bubbles: true, cancelable: true,
         });
-        video.dispatchEvent(event);
+        target.dispatchEvent(event);
         return event;
     }
 
@@ -99,6 +99,18 @@ describe('enableVideoZoom', () => {
     it('zooms on a two-finger pinch over the video', () => {
         touches('touchstart', [at(0.4, 0.5), at(0.6, 0.5)]);
         const move = touches('touchmove', [at(0.3, 0.5), at(0.7, 0.5)]);
+
+        expect(move.defaultPrevented).toBeTrue();
+        expect(view().scale).toBeCloseTo(2, 5);
+    });
+
+    it('zooms on a pinch on videojs-mobile-ui\'s overlay, which covers the video on phones and tablets', () => {
+        const overlay = document.createElement('div');
+        overlay.className = 'vjs-touch-overlay';
+        player.el().appendChild(overlay);
+
+        touches('touchstart', [at(0.4, 0.5), at(0.6, 0.5)], overlay);
+        const move = touches('touchmove', [at(0.3, 0.5), at(0.7, 0.5)], overlay);
 
         expect(move.defaultPrevented).toBeTrue();
         expect(view().scale).toBeCloseTo(2, 5);

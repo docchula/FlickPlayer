@@ -56,9 +56,10 @@ export function enableVideoZoom(player: Player) {
     });
 
     const techEl = () => player.tech(true)?.el() as HTMLElement | undefined;
+    // On phones and tablets, touches on the video land on videojs-mobile-ui's overlay over it
     const isOnVideo = (target: EventTarget | null) => {
         const tech = techEl();
-        return !!tech && target instanceof Node && tech.contains(target);
+        return target instanceof Element && (!!tech?.contains(target) || target.classList.contains('vjs-touch-overlay'));
     };
 
     // A point on the page as fractions of the player's width and height
