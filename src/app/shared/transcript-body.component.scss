@@ -1,0 +1,115 @@
+@use 'study-shared';
+
+:host {
+    display: block;
+}
+
+.transcript-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.25rem 0.75rem;
+    margin-bottom: 0.5rem;
+
+    .card-note {
+        flex: 1 1 16rem;
+    }
+}
+
+// On the card the transcript scrolls by itself, so a long lecture does not push the list of lectures away.
+.transcript {
+    position: relative;
+    max-height: 26rem;
+    margin: 0;
+    padding: 0 0.25rem 0 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+:host(.reader) .transcript {
+    max-height: none;
+    overflow: visible;
+    font-size: 1.05rem;
+}
+
+.transcript-paragraph {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 0.6rem;
+    padding: 0.45rem 0.5rem;
+    border-radius: 0.5rem;
+
+    &.is-current {
+        background: rgba(var(--ion-color-primary-rgb), 0.1);
+    }
+}
+
+.paragraph-text {
+    margin: 0;
+    line-height: 1.6;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.time-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    margin-top: 0.15rem;
+    padding: 0.1rem 0.55rem;
+    border: 1px solid rgba(var(--ion-color-primary-rgb), 0.45);
+    border-radius: 1rem;
+    background: transparent;
+    color: var(--ion-color-primary);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+button.time-chip {
+    cursor: pointer;
+
+    &:hover {
+        background: rgba(var(--ion-color-primary-rgb), 0.1);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--ion-color-primary);
+        outline-offset: 2px;
+    }
+}
+
+// One stamped line inside a paragraph, which plays the lecture from where it is said.
+.transcript-line {
+    display: inline;
+    padding: 0;
+    border: 0;
+    border-radius: 0.2em;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: inherit;
+    text-align: inherit;
+    white-space: inherit;
+
+    &.is-current {
+        background: rgba(var(--ion-color-primary-rgb), 0.16);
+    }
+}
+
+button.transcript-line {
+    cursor: pointer;
+
+    &:hover {
+        text-decoration: underline;
+        text-decoration-color: rgba(var(--ion-color-primary-rgb), 0.6);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--ion-color-primary);
+        outline-offset: 1px;
+    }
+}
