@@ -33,6 +33,11 @@ span.date-divider {
   vertical-align: middle;
 }
 
+.html-video-skin {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+}
+
 @media screen and (min-width: 992px) {
   ion-content {
     .scroll-area {
