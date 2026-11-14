@@ -17,12 +17,13 @@
     <ion-grid>
         <ion-row>
             <ion-col size="12" size-lg [hidden]="!currentVideo" [ngClass]="currentVideo ? 'scroll-area' : ''">
-                <video #videoPlayer class="video-js vjs-default-skin fullwidth" controls preload="metadata"
-                    data-setup='{"aspectRatio":"1280:640", "playbackRates": [0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3]}'
+                <video-player #videoPlayer class="fullwidth" tabindex="1"
+                    [attr.content-title]="currentVideo?.title ?? null"
+                    [defaultPlaybackRates]="playbackRates"
                     [hidden]="currentVideo && currentVideo.sources.length === 0"
-                    (contextmenu)="preventMouseEvent($event)" tabindex="1">
-                    Your browser does not support the video tag.
-                </video>
+                    (contextmenu)="preventMouseEvent($event)">
+                    <video-skin #videoSkin class="html-video-skin"></video-skin>
+                </video-player>
                 @if (progressTimedOut) {
                 <ion-card color="danger">
                     <ion-card-header>
