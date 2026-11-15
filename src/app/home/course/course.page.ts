@@ -4,7 +4,7 @@ import {ActivatedRoute, Router} from '@angular/router';
 import {CourseMembers, EvaluationRecord, Lecture, ManService} from '../../man.service';
 import {first, map, switchMap} from 'rxjs/operators';
 import '@videojs/html/video/player';
-import '@videojs/html/video/skin';
+import '../../shared/flick-video-skin';
 import '@videojs/html/media/hlsjs-video';
 import '@videojs/html/media/dash-video';
 import '@videojs/html/media/youtube-video';

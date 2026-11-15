@@ -22,7 +22,7 @@
                     [defaultPlaybackRates]="playbackRates"
                     [hidden]="currentVideo && currentVideo.sources.length === 0"
                     (contextmenu)="preventMouseEvent($event)">
-                    <video-skin #videoSkin class="html-video-skin"></video-skin>
+                    <flick-video-skin #videoSkin class="html-video-skin"></flick-video-skin>
                 </video-player>
                 @if (progressTimedOut) {
                 <ion-card color="danger">
