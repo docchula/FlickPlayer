@@ -100,7 +100,12 @@
                     </ion-list-header>
                     @for (attachment of currentVideo.attachments; track attachment.src) {
                     <ion-item>
-                        <ion-label>{{ attachment.name }}</ion-label>
+                        <ion-label>
+                            {{ attachment.name }}
+                            @if (attachment.size != null) {
+                            <small class="attachment-size">{{ formatFileSize(attachment.size) }}</small>
+                            }
+                        </ion-label>
                         <a [href]="attachment.src" download target="_blank" slot="end">
                             <ion-icon name="download" size="small"></ion-icon>
                         </a>

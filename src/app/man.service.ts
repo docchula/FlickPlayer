@@ -391,7 +391,7 @@ const COURSE_QUERY = `query Course($id: ID!) {
         videos {
             id title lecturer record_date duration thumbnail has_document
             sources { server path src type }
-            attachments { server path name }
+            attachments { server path name size }
         }
     }
     streamKey
@@ -598,7 +598,8 @@ export interface Lecture {
         server: string | null,
         path: string,
         src?: string,
-        name?: string
+        name?: string,
+        size?: number | null
     }[];
     sourceExternal?: string;
     duration?: number;
