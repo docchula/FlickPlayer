@@ -48,8 +48,9 @@ export const mathExtension: MarkedExtension = {
 export const markedWithMath = new Marked(mathExtension);
 
 // Replaces the math placeholders under `root` with KaTeX output. Invalid TeX is shown as the raw source.
+// Placeholders already rendered are skipped, so it is safe to call again after more content appears.
 export function renderMath(root: HTMLElement) {
-    root.querySelectorAll<HTMLElement>(`.${INLINE_CLASS}, .${DISPLAY_CLASS}`).forEach(el => {
+    root.querySelectorAll<HTMLElement>(`.${INLINE_CLASS}:not(.math-rendered), .${DISPLAY_CLASS}:not(.math-rendered)`).forEach(el => {
         const tex = el.textContent ?? '';
         katex.render(tex, el, {
             displayMode: el.classList.contains(DISPLAY_CLASS),
