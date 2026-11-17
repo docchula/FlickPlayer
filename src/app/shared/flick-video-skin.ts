@@ -68,7 +68,8 @@ const PLAYBACK_RATE_STYLES = `
  * video.js keeps the controls visible for as long as the media is paused, but its idle tracking still runs: after the
  * idle delay `<media-controls>` drops `data-user-active` while keeping `data-visible`. Hide the controls in that state
  * so a paused frame can be viewed (or captured) without them, just like during playback. Any pointer, touch or key
- * activity sets `data-user-active` again and brings them back. Controls stay up before the first play, after the media
+ * activity sets `data-user-active` again and brings them back. The video title, which video.js shows alongside the
+ * controls, is hidden with them. Controls stay up before the first play, after the media
  * has ended (for the replay button) and while a menu or other popup is open.
  */
 const IDLE_CONTROLS = 'media-controls[data-started][data-visible]:not([data-user-active])';
@@ -83,6 +84,11 @@ ${PAUSED_IDLE} :is(.video-controls-center, .video-controls-backdrop, .video-cont
 
 ${PAUSED_IDLE} :is(.video-controls-center, .video-controls-backdrop, .video-controls-content) * {
   pointer-events: none !important;
+}
+
+.media-skin:has(${IDLE_CONTROLS}):not(:has(${KEEP_CONTROLS})) .media-title {
+  opacity: 0;
+  transition: opacity var(--media-duration-controls, .3s);
 }
 
 @media (pointer: fine) {
