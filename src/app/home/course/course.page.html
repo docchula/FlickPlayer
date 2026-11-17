@@ -102,7 +102,7 @@
                     <ion-item>
                         <ion-label>
                             {{ attachment.name }}
-                            @if (attachment.size != null) {
+                            @if (attachment.size !== null && attachment.size !== undefined) {
                             <small class="attachment-size">{{ formatFileSize(attachment.size) }}</small>
                             }
                         </ion-label>
