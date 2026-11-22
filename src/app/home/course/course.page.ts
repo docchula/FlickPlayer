@@ -46,8 +46,16 @@ import {PomodoroTimerComponent} from '../../shared/pomodoro-timer.component';
 import {ThemeMenuComponent} from '../../shared/theme-menu.component';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../../consent.service';
+import {SeekThumbnailCue, seekThumbnailCues} from './seek-thumbnails';
 
 const IS_SAFARI = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+/** The part of the player store that holds the tracks an app adds */
+interface TextTrackStore {
+    state: {
+        addTextTrack?: (init: { kind: string, label: string, cues: SeekThumbnailCue[] }) => { remove(): void };
+    };
+}
 
 @Component({
     selector: 'app-course',
@@ -104,6 +112,8 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     media: HTMLMediaElement | null = null;
     private media$ = new BehaviorSubject<HTMLMediaElement | null>(null);
     private mediaListeners: AbortController | null = null;
+    /** Thumbnails track of the current video in the player store */
+    private seekThumbnails: { remove(): void } | null = null;
     currentVideo!: Lecture;
     year: string | null = null;
     course: string | null = null;
@@ -305,6 +315,8 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     private detachMedia() {
         this.mediaListeners?.abort();
         this.mediaListeners = null;
+        this.seekThumbnails?.remove();
+        this.seekThumbnails = null;
         if (this.media) {
             try {
                 this.media.pause();
@@ -318,12 +330,14 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     // Replace the media component and attach listeners. Listeners are added before the element is
-    // inserted so that no early event is missed.
-    private attachMedia(sources: Lecture['sources']) {
+    // inserted so that no early event is missed. Seek thumbnails are captured from any of thumbnailSources,
+    // which need not be playable here.
+    private attachMedia(sources: Lecture['sources'], thumbnailSources: Lecture['sources'] = sources) {
         this.detachMedia();
         if (sources.length === 0) {
             return;
         }
+        this.showSeekThumbnails(thumbnailSources, this.currentVideo?.duration);
         const media = this.createMedia(sources);
         const abort = new AbortController();
         this.mediaListeners = abort;
@@ -345,6 +359,9 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         media.addEventListener('loadedmetadata', () => {
             if (!this.currentVideo.duration) {
                 this.currentVideo.duration = media.duration;
+            }
+            if (!this.seekThumbnails) {
+                this.showSeekThumbnails(thumbnailSources, media.duration);
             }
             // On video load, seek to last played position
             const endTime = this.currentVideo.history?.end_time;
@@ -441,8 +458,19 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         this.isEvaluated = false;
         this.sessionUid = ulid();
         this.playLog = [];
-        this.attachMedia(video.sources);
+        this.attachMedia(video.sources, allSources);
         this.videoPlayerElement?.nativeElement.focus();
+    }
+
+    // Add a thumbnails track to the player store, where the skin's time slider finds it. App tracks stay in the store
+    // across media changes, so detachMedia() removes it.
+    private showSeekThumbnails(sources: Lecture['sources'], duration: number | undefined) {
+        const cues = seekThumbnailCues(sources, duration);
+        const store = (this.videoPlayerElement?.nativeElement as (HTMLElement & { store?: TextTrackStore }) | undefined)?.store;
+        if (cues.length === 0 || typeof store?.state.addTextTrack !== 'function') {
+            return;
+        }
+        this.seekThumbnails = store.state.addTextTrack({kind: 'metadata', label: 'thumbnails', cues});
     }
 
     async setPlaybackSpeed() {
