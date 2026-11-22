@@ -18,6 +18,13 @@ import {User} from "@angular/fire/auth";
 import {AuthService} from "../auth.service";
 import {ThemeMenuComponent} from "../shared/theme-menu.component";
 
+type LoginOutcome =
+  | { status: "success" }
+  | { status: "error"; error: unknown }
+  | { status: "timeout" }
+  | { status: "cancelled" }
+  | { status: "aborted" };
+
 @Component({
   selector: "app-welcome",
   templateUrl: "./welcome.page.html",
@@ -97,13 +104,7 @@ export class WelcomePage implements OnInit, OnDestroy {
     this.isSigningIn.set(true);
 
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    let result:
-      | { status: "success" }
-      | { status: "error"; error: any }
-      | { status: "timeout" }
-      | { status: "cancelled" }
-      | { status: "aborted" }
-      | null = null;
+    let result: LoginOutcome;
 
     try {
       // Trigger signIn() BEFORE any `await` so browsers keep the synchronous
@@ -111,9 +112,9 @@ export class WelcomePage implements OnInit, OnDestroy {
       const rawSignInPromise = this.authService.signIn();
 
       let signInSettled = false;
-      const signInOutcome = rawSignInPromise
+      const signInOutcome: Promise<LoginOutcome> = rawSignInPromise
         .then(() => ({ status: "success" as const }))
-        .catch((error: any) => ({ status: "error" as const, error }))
+        .catch((error: unknown) => ({ status: "error" as const, error }))
         .finally(() => {
           signInSettled = true;
         });
@@ -134,7 +135,7 @@ export class WelcomePage implements OnInit, OnDestroy {
       } else {
         this.activeLoginLoading = loading;
 
-        const timeoutOutcome = new Promise<{ status: "timeout" }>((resolve) => {
+        const timeoutOutcome = new Promise<LoginOutcome>((resolve) => {
           timeoutId = setTimeout(
             () => resolve({ status: "timeout" }),
             this.SIGN_IN_TIMEOUT_MS
@@ -151,7 +152,7 @@ export class WelcomePage implements OnInit, OnDestroy {
           );
         });
 
-        const abortOutcome = new Promise<{ status: "aborted" }>((resolve) => {
+        const abortOutcome = new Promise<LoginOutcome>((resolve) => {
           abortSignal.addEventListener(
             "abort",
             () => resolve({ status: "aborted" }),
@@ -159,10 +160,11 @@ export class WelcomePage implements OnInit, OnDestroy {
           );
         });
 
-        const dismissOutcome = loading.onDidDismiss().then(({ role }) => ({
-          status:
-            role === "backdrop" ? ("cancelled" as const) : ("aborted" as const),
-        }));
+        const dismissOutcome: Promise<LoginOutcome> = loading
+          .onDidDismiss()
+          .then(({ role }) => ({
+            status: role === "backdrop" ? "cancelled" : "aborted",
+          }));
 
         await loading.present();
 
@@ -178,7 +180,7 @@ export class WelcomePage implements OnInit, OnDestroy {
           dismissOutcome,
         ]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       result = { status: "error", error };
     } finally {
       if (timeoutId !== null) {
@@ -190,18 +192,18 @@ export class WelcomePage implements OnInit, OnDestroy {
       }
     }
 
-    if (result?.status === "timeout") {
+    if (result.status === "timeout") {
       await this.alertError(
         "Sign-In Timed Out",
         "Sign-in took too long or the pop-up was blocked. Please allow pop-ups and try again."
       );
     } else if (
-      result?.status === "error" &&
+      result.status === "error" &&
       !this.isPopupCancelError(result.error)
     ) {
       await this.alertError(
         "Login Failed",
-        `Unable to sign in. Please try again. (${result.error?.code ?? "unknown"}: ${result.error?.message ?? result.error})`
+        `Unable to sign in. Please try again. (${this.formatSignInError(result.error)})`
       );
     }
   }
@@ -222,10 +224,33 @@ export class WelcomePage implements OnInit, OnDestroy {
     }
   }
 
-  private isPopupCancelError(error: any): boolean {
+  private getErrorCode(error: unknown): string | undefined {
+    if (typeof error === "object" && error !== null && "code" in error) {
+      const { code } = error as { code?: unknown };
+      return typeof code === "string" ? code : undefined;
+    }
+    return undefined;
+  }
+
+  private formatSignInError(error: unknown): string {
+    const code = this.getErrorCode(error) ?? "unknown";
+    if (error instanceof Error) {
+      return `${code}: ${error.message}`;
+    }
+    if (typeof error === "object" && error !== null && "message" in error) {
+      const { message } = error as { message?: unknown };
+      if (typeof message === "string") {
+        return `${code}: ${message}`;
+      }
+    }
+    return `${code}: ${String(error)}`;
+  }
+
+  private isPopupCancelError(error: unknown): boolean {
+    const code = this.getErrorCode(error);
     return (
-      error?.code === "auth/popup-closed-by-user" ||
-      error?.code === "auth/cancelled-popup-request"
+      code === "auth/popup-closed-by-user" ||
+      code === "auth/cancelled-popup-request"
     );
   }
 
