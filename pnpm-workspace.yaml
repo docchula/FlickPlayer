@@ -6,6 +6,7 @@ allowBuilds:
   lmdb: true
   msgpackr-extract: true
   protobufjs: false
+  workerd: true
 minimumReleaseAgeExclude:
   - tslib@2.9.1
 overrides:
