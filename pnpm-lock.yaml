@@ -64,16 +64,13 @@ importers:
         version: 0.19.1
       laravel-echo:
         specifier: ^2.6.3
-        version: 2.6.3(pusher-js@8.6.0)
+        version: 2.6.3
       marked:
         specifier: ^18.1.2
         version: 18.1.2
       primeng:
         specifier: ^21.1.10
         version: 21.1.10(48057225bc32f64a0663b6b5b7c50e46)
-      pusher-js:
-        specifier: ^8.6.0
-        version: 8.6.0
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
@@ -3772,9 +3769,6 @@ packages:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
 
-  pusher-js@8.6.0:
-    resolution: {integrity: sha512-wShJPfCS/kYkCBVzVW67wa9cnQIgHTszEK2XHNrFkOgGruuGw081aERAxfRjfdFU+WcIt8x6dvbwkTW4iZuQ8Q==}
-
   qified@0.10.1:
     resolution: {integrity: sha512-+Owyggi9IxT1ePKGafcI87ubSmxol6smwJ+RAHDQlx9+9cPwFWDiKFFCPuWhr9ignlGpZ9vDQLw67N4dcTVFEA==}
     engines: {node: '>=20'}
@@ -4124,9 +4118,6 @@ packages:
   tuf-js@4.1.0:
     resolution: {integrity: sha512-50QV99kCKH5P/Vs4E2Gzp7BopNV+KzTXqWeaxrfu5IQJBOULRsTIS9seSsOVT8ZnGXzCyx55nYWAi4qJzpZKEQ==}
     engines: {node: ^20.17.0 || >=22.9.0}
-
-  tweetnacl@1.0.3:
-    resolution: {integrity: sha512-6rt+RN7aOi1nGMyC4Xa5DdYiukl2UWCbcJft7YhxReBGQD7OAM8Pbxw6YMo4r2diNEA8FEmu32YOn9rhaiE5yw==}
 
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
@@ -7543,9 +7534,7 @@ snapshots:
     dependencies:
       '@keyv/serialize': 1.1.1
 
-  laravel-echo@2.6.3(pusher-js@8.6.0):
-    optionalDependencies:
-      pusher-js: 8.6.0
+  laravel-echo@2.6.3: {}
 
   less@4.9.0:
     dependencies:
@@ -8107,10 +8096,6 @@ snapshots:
 
   punycode@2.3.1: {}
 
-  pusher-js@8.6.0:
-    dependencies:
-      tweetnacl: 1.0.3
-
   qified@0.10.1:
     dependencies:
       hookified: 2.2.0
@@ -8546,8 +8531,6 @@ snapshots:
       make-fetch-happen: 15.0.6
     transitivePeerDependencies:
       - supports-color
-
-  tweetnacl@1.0.3: {}
 
   type-check@0.4.0:
     dependencies:

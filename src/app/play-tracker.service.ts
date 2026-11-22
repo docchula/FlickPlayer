@@ -1,8 +1,7 @@
 import {inject, Injectable} from '@angular/core';
-import {first, map, switchMap, tap} from 'rxjs/operators';
+import {first, map, switchMap} from 'rxjs/operators';
 import {fromEventPattern, Observable} from 'rxjs';
 import {FieldValue, Timestamp} from '@angular/fire/firestore';
-import Pusher from 'pusher-js';
 import Echo from 'laravel-echo';
 import {Auth, idToken, user} from '@angular/fire/auth';
 
@@ -14,44 +13,54 @@ export class PlayTrackerService {
     idToken$ = idToken(this.auth);
     user$ = user(this.auth);
 
-    private readonly updates$: Observable<PlayHistoryValue>;
+    private idToken: string | null = null;
+    // One connection per FlickMan host, as each host sets its own subscriber cookie
+    private echos = new Map<string, Echo<'mercure'>>();
 
     constructor() {
-        // Setup websocket client
-        // @ts-ignore
-        window.Pusher = Pusher;
-        const echo = new Echo({
-            broadcaster: 'reverb',
-            key: 'wr2uu6n8zkbel4nalzzl',
-            authEndpoint: 'https://flick-man-app.docchula.com/broadcasting/auth',
-            // Real token is set once idToken$ emits, in the tap() below.
-            auth: {headers: {Authorization: ''}},
-            wsHost: "flick-man-ws.docchula.com",
-            wsPort: 443,
-            enabledTransports: ['wss', 'ws'],
+        // Keep the token current: the connector authenticates again to renew the cookie every few minutes
+        this.idToken$.subscribe(idToken => {
+            this.idToken = idToken;
+            this.echos.forEach(echo => echo.connector.options.auth.headers.Authorization = this.authorization());
         });
-        // @ts-ignore
-        this.updates$ = this.idToken$.pipe(
-            tap(idToken => {
-                if (idToken) {
-                    echo.connector.options.auth.headers.Authorization = "Bearer " + idToken;
-                }
-            }),
+    }
+
+    /**
+     * Play record updates of the signed-in user, from the FlickMan server at the given endpoint (ending with a slash).
+     */
+    retrieve(endpoint: string): Observable<PlayHistoryValue> {
+        const echo = this.echo(endpoint);
+
+        return this.idToken$.pipe(
             // combine the idToken with the user information (for UID)
             switchMap(idToken => this.user$.pipe(map(user => ({idToken, user})))),
-            first(userAndToken => userAndToken.user !== null),
+            first(userAndToken => userAndToken.idToken !== null && userAndToken.user !== null),
             // Return observable only once
             switchMap(userAndToken =>
                 fromEventPattern(handler => {
-                    echo.channel("user." + userAndToken.user.email).listen(".PlayRecordUpdated", handler);
-                }, () => echo.leaveChannel("user." + userAndToken.user.email))),
-            // @ts-ignore
-            map((data: Array<object>) => data[0].model),
+                    echo.private("user." + userAndToken.user.uid).listen(".PlayRecordUpdated", handler);
+                }, () => echo.leave("user." + userAndToken.user.uid))),
+            // The Mercure connector calls listeners with the event payload alone (pusher-js also passed metadata)
+            map((payload: {model: PlayHistoryValue}) => payload.model),
         );
     }
 
-    retrieve() {
-        return this.updates$;
+    private echo(endpoint: string): Echo<'mercure'> {
+        if (!this.echos.has(endpoint)) {
+            // Mercure (server-sent events) client, through FrankenPHP's built-in hub of FlickMan
+            this.echos.set(endpoint, new Echo({
+                broadcaster: 'mercure',
+                host: endpoint + '.well-known/mercure',
+                // Sets the hub's subscriber cookie; must share the hub's host, as the cookie is set for it alone
+                authEndpoint: endpoint + 'broadcasting/auth',
+                auth: {headers: {Authorization: this.authorization()}},
+            }));
+        }
+        return this.echos.get(endpoint);
+    }
+
+    private authorization(): string {
+        return this.idToken ? "Bearer " + this.idToken : '';
     }
 }
 

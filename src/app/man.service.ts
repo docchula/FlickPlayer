@@ -145,7 +145,7 @@ export class ManService {
                 map(data => data?.course ? toProgress(data.course.videos) : null),
             )),
             // Replace value with update from play tracker if available
-            combineLatestWith(this.playTracker.retrieve().pipe(startWith(null))),
+            combineLatestWith(this.playTracker.retrieve(this.getEndpointLocation()).pipe(startWith(null))),
             map(([data, update]) => {
                 const records = data?.records ?? {};
                 if (update) {
