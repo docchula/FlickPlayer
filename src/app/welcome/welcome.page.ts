@@ -1,4 +1,4 @@
-import {Component, inject, OnDestroy, OnInit} from "@angular/core";
+import {ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, signal} from "@angular/core";
 import {
   AlertController,
   IonButton,
@@ -22,6 +22,7 @@ import {ThemeMenuComponent} from "../shared/theme-menu.component";
   selector: "app-welcome",
   templateUrl: "./welcome.page.html",
   styleUrls: ["./welcome.page.scss"],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     IonContent,
     IonCard,
@@ -35,18 +36,23 @@ import {ThemeMenuComponent} from "../shared/theme-menu.component";
   ],
 })
 export class WelcomePage implements OnInit, OnDestroy {
-    private router = inject(Router);
-    private authService = inject(AuthService);
-    private manService = inject(ManService);
-    private loadingCtrl = inject(LoadingController);
-    alertCtrl = inject(AlertController);
+  private router = inject(Router);
+  private authService = inject(AuthService);
+  private manService = inject(ManService);
+  private loadingCtrl = inject(LoadingController);
+  alertCtrl = inject(AlertController);
+
+  private readonly SIGN_IN_TIMEOUT_MS = 10_000;
+  private loginAbortController: AbortController | null = null;
+  private activeLoginLoading: HTMLIonLoadingElement | null = null;
 
   authStateSubscription: Subscription;
-  isAuthChecked: boolean;
-  user: User;
-  isSafari =
+  isAuthChecked = false;
+  readonly isSigningIn = signal(false);
+  readonly user = signal<User | null>(null);
+  readonly isSafari =
     /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-  isIAB =
+  readonly isIAB =
     /FBAN/.test(navigator.userAgent) ||
     /FBAV/.test(navigator.userAgent) ||
     /Line\//.test(navigator.userAgent);
@@ -60,16 +66,16 @@ export class WelcomePage implements OnInit, OnDestroy {
       .then((loading) => {
         loading.present();
         this.authStateSubscription = this.authService.user.subscribe((user) => {
-          this.user = user;
+          this.user.set(user);
           if (user) {
-            // User is signed in.
+            this.cancelLogin("auth-resolved");
             this.goToHome().then(() => {
-              loading.dismiss();
+              loading.dismiss().catch(() => {});
             });
           } else {
             this.isAuthChecked = false;
           }
-          loading.dismiss();
+          loading.dismiss().catch(() => {});
         });
       })
       .catch((e) => console.log("Reject", e));
@@ -77,25 +83,154 @@ export class WelcomePage implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.authStateSubscription?.unsubscribe();
+    this.cancelLogin("destroy");
   }
 
   async login() {
-    const loading = await this.loadingCtrl.create({
-        message: "Signing in... Make sure to allow pop-ups.",
-      spinner: "crescent",
-    });
-    await loading.present();
-      await this.authService.signIn().catch(async (error) => {
-        await this.alertError(
-          "Login Failed",
-          `Unable to sign in. Please try again. (${error.code}: ${error.message})`
-        );
-      })
-      .finally(() => loading.dismiss());
+    if (this.isSigningIn()) {
+      return;
+    }
 
+    const controller = new AbortController();
+    const { signal: abortSignal } = controller;
+    this.loginAbortController = controller;
+    this.isSigningIn.set(true);
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let result:
+      | { status: "success" }
+      | { status: "error"; error: any }
+      | { status: "timeout" }
+      | { status: "cancelled" }
+      | { status: "aborted" }
+      | null = null;
+
+    try {
+      // Trigger signIn() BEFORE any `await` so browsers keep the synchronous
+      // user-gesture context and don't block or detach the OAuth pop-up.
+      const rawSignInPromise = this.authService.signIn();
+
+      let signInSettled = false;
+      const signInOutcome = rawSignInPromise
+        .then(() => ({ status: "success" as const }))
+        .catch((error: any) => ({ status: "error" as const, error }))
+        .finally(() => {
+          signInSettled = true;
+        });
+
+      const loading = await this.loadingCtrl.create({
+        message:
+          "Signing in... Make sure to allow pop-ups. Tap outside to cancel.",
+        spinner: "crescent",
+        backdropDismiss: true,
+      });
+
+      if (abortSignal.aborted) {
+        return;
+      }
+
+      if (signInSettled) {
+        result = await signInOutcome;
+      } else {
+        this.activeLoginLoading = loading;
+
+        const timeoutOutcome = new Promise<{ status: "timeout" }>((resolve) => {
+          timeoutId = setTimeout(
+            () => resolve({ status: "timeout" }),
+            this.SIGN_IN_TIMEOUT_MS
+          );
+          abortSignal.addEventListener(
+            "abort",
+            () => {
+              if (timeoutId !== null) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+              }
+            },
+            { once: true }
+          );
+        });
+
+        const abortOutcome = new Promise<{ status: "aborted" }>((resolve) => {
+          abortSignal.addEventListener(
+            "abort",
+            () => resolve({ status: "aborted" }),
+            { once: true }
+          );
+        });
+
+        const dismissOutcome = loading.onDidDismiss().then(({ role }) => ({
+          status:
+            role === "backdrop" ? ("cancelled" as const) : ("aborted" as const),
+        }));
+
+        await loading.present();
+
+        if (abortSignal.aborted) {
+          await loading.dismiss().catch(() => {});
+          return;
+        }
+
+        result = await Promise.race([
+          signInOutcome,
+          timeoutOutcome,
+          abortOutcome,
+          dismissOutcome,
+        ]);
+      }
+    } catch (error: any) {
+      result = { status: "error", error };
+    } finally {
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      if (this.loginAbortController === controller) {
+        await this.cancelLogin();
+      }
+    }
+
+    if (result?.status === "timeout") {
+      await this.alertError(
+        "Sign-In Timed Out",
+        "Sign-in took too long or the pop-up was blocked. Please allow pop-ups and try again."
+      );
+    } else if (
+      result?.status === "error" &&
+      !this.isPopupCancelError(result.error)
+    ) {
+      await this.alertError(
+        "Login Failed",
+        `Unable to sign in. Please try again. (${result.error?.code ?? "unknown"}: ${result.error?.message ?? result.error})`
+      );
+    }
+  }
+
+  private async cancelLogin(role = "cleanup") {
+    const controller = this.loginAbortController;
+    this.loginAbortController = null;
+    if (controller && !controller.signal.aborted) {
+      controller.abort(role);
+    }
+
+    const loading = this.activeLoginLoading;
+    this.activeLoginLoading = null;
+    this.isSigningIn.set(false);
+
+    if (loading) {
+      await loading.dismiss(undefined, role).catch(() => {});
+    }
+  }
+
+  private isPopupCancelError(error: any): boolean {
+    return (
+      error?.code === "auth/popup-closed-by-user" ||
+      error?.code === "auth/cancelled-popup-request"
+    );
   }
 
   logout() {
+    this.cancelLogin("logout");
     this.authService
       .signOut()
       .then()
@@ -107,7 +242,11 @@ export class WelcomePage implements OnInit, OnDestroy {
     if (this.isAuthChecked) {
       return this.router.navigate(["/home"]);
     }
-    this.user.getIdToken().then((idToken) => {
+    const currentUser = this.user();
+    if (!currentUser) {
+      return Promise.resolve();
+    }
+    currentUser.getIdToken().then((idToken) => {
       this.manService.setIdToken(idToken);
       this.manService
         .checkAuthorization()
