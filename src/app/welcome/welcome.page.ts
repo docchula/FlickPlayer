@@ -49,7 +49,7 @@ export class WelcomePage implements OnInit, OnDestroy {
   private loadingCtrl = inject(LoadingController);
   alertCtrl = inject(AlertController);
 
-  private readonly SIGN_IN_TIMEOUT_MS = 10_000;
+  private readonly SIGN_IN_TIMEOUT_MS = 20_000;
   private loginAbortController: AbortController | null = null;
   private activeLoginLoading: HTMLIonLoadingElement | null = null;
 

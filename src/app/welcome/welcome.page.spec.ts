@@ -157,7 +157,7 @@ describe('WelcomePage.goToHome', () => {
 });
 
 describe('WelcomePage.login', () => {
-    const SIGN_IN_TIMEOUT_MS = 10_000;
+    const SIGN_IN_TIMEOUT_MS = 20_000;
 
     let component: WelcomePage;
     let authService: {signIn: jasmine.Spy; signOut: jasmine.Spy; user: Subject<User | null>};
@@ -214,7 +214,7 @@ describe('WelcomePage.login', () => {
         await loginPromise;
     });
 
-    it('dismisses loading and clears the timeout when signIn succeeds before 10s', async () => {
+    it('dismisses loading and clears the timeout when signIn succeeds before 20s', async () => {
         const signInDeferred = createDeferred<void>();
         authService.signIn.and.returnValue(signInDeferred.promise);
 
@@ -236,7 +236,7 @@ describe('WelcomePage.login', () => {
         expect(alertSpy).not.toHaveBeenCalled();
     });
 
-    it('times out after 10_000 ms, dismisses loading, and shows a timeout alert', async () => {
+    it('times out after 20_000 ms, dismisses loading, and shows a timeout alert', async () => {
         authService.signIn.and.returnValue(new Promise(() => {}));
 
         const loginPromise = component.login();
