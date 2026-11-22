@@ -8,3 +8,7 @@ allowBuilds:
   protobufjs: false
 minimumReleaseAgeExclude:
   - tslib@2.9.1
+overrides:
+  '@grpc/grpc-js@<1.13.6': '>=1.13.6'
+  'glob@>=9.0.0 <14.0.2': '>=14.0.2'
+  'minimatch@>=7.0.0 <11.0.1': '>=11.0.1'
