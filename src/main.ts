@@ -13,7 +13,6 @@ import {getAnalytics, provideAnalytics, ScreenTrackingService, UserTrackingServi
 import {getPerformance, providePerformance} from '@angular/fire/performance';
 import {getRemoteConfig, provideRemoteConfig} from '@angular/fire/remote-config';
 import {provideHttpClient, withFetch, withInterceptorsFromDi} from '@angular/common/http';
-import {provideAnimationsAsync} from '@angular/platform-browser/animations/async';
 import {providePrimeNG} from 'primeng/config';
 import {bootstrapApplication, BrowserModule} from '@angular/platform-browser';
 import {AppRoutingModule} from './app/app-routing.module';
@@ -48,7 +47,6 @@ bootstrapApplication(AppComponent, {
         provideHttpClient(withFetch(), withInterceptorsFromDi()),
         ScreenTrackingService,
         UserTrackingService,
-        provideAnimationsAsync(),
         providePrimeNG({
             theme: {
                 preset: Aura,
