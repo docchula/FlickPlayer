@@ -10,17 +10,17 @@
     </ion-card-header>
 
     <ion-card-content>
-      @if (user) {
-          <h2>Hello, {{ user.displayName }}!</h2><br />
-          <ion-button expand="block" color="tertiary" shape="round" (click)="goToHome()">
-            View Courses
-          </ion-button>
-          <ion-button expand="block" color="secondary" shape="round" (click)="logout()">
-            Sign Out
-          </ion-button>
+      @if (user(); as currentUser) {
+        <h2>Hello, {{ currentUser.displayName }}!</h2><br />
+        <ion-button expand="block" color="tertiary" shape="round" (click)="goToHome()">
+          View Courses
+        </ion-button>
+        <ion-button expand="block" color="secondary" shape="round" (click)="logout()">
+          Sign Out
+        </ion-button>
       } @else {
         <p class="ion-margin">Sign in with your Docchula account</p>
-        <ion-button expand="full" shape="round" color="tertiary" class="ion-margin-top" (click)="login()">
+        <ion-button expand="full" shape="round" color="tertiary" class="ion-margin-top" [disabled]="isSigningIn()" (click)="login()">
           Sign in with Docchula
         </ion-button>
       }
@@ -50,4 +50,3 @@
       <p><a routerLink="/privacy-policy">Privacy Policy</a></p>
   </ion-text>
 </ion-content>
-
