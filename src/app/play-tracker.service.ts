@@ -39,8 +39,8 @@ export class PlayTrackerService {
                 fromEventPattern(handler => {
                     echo.private("user." + userAndToken.user.uid).listen(".PlayRecordUpdated", handler);
                 }, () => echo.leave("user." + userAndToken.user.uid))),
-            // @ts-ignore
-            map((data: Array<object>) => data[0].model),
+            // The Mercure connector calls listeners with the event payload alone (pusher-js also passed metadata)
+            map((payload: {model: PlayHistoryValue}) => payload.model),
         );
     }
 
