@@ -13,24 +13,25 @@ export class PlayTrackerService {
     idToken$ = idToken(this.auth);
     user$ = user(this.auth);
 
-    private readonly updates$: Observable<PlayHistoryValue>;
+    private idToken: string | null = null;
+    // One connection per FlickMan host, as each host sets its own subscriber cookie
+    private echos = new Map<string, Echo<'mercure'>>();
 
     constructor() {
-        // Setup Mercure (server-sent events) client, through FrankenPHP's built-in hub of FlickMan
-        const echo = new Echo({
-            broadcaster: 'mercure',
-            host: 'https://flick-man-app.docchula.com/.well-known/mercure',
-            // Sets the hub's subscriber cookie; must share the hub's host, as the cookie is set for it alone
-            authEndpoint: 'https://flick-man-app.docchula.com/broadcasting/auth',
-            // Real token is set by the subscription below.
-            auth: {headers: {Authorization: ''}},
-        });
         // Keep the token current: the connector authenticates again to renew the cookie every few minutes
         this.idToken$.subscribe(idToken => {
-            echo.connector.options.auth.headers.Authorization = idToken ? "Bearer " + idToken : '';
+            this.idToken = idToken;
+            this.echos.forEach(echo => echo.connector.options.auth.headers.Authorization = this.authorization());
         });
-        // @ts-ignore
-        this.updates$ = this.idToken$.pipe(
+    }
+
+    /**
+     * Play record updates of the signed-in user, from the FlickMan server at the given endpoint (ending with a slash).
+     */
+    retrieve(endpoint: string): Observable<PlayHistoryValue> {
+        const echo = this.echo(endpoint);
+
+        return this.idToken$.pipe(
             // combine the idToken with the user information (for UID)
             switchMap(idToken => this.user$.pipe(map(user => ({idToken, user})))),
             first(userAndToken => userAndToken.idToken !== null && userAndToken.user !== null),
@@ -44,8 +45,22 @@ export class PlayTrackerService {
         );
     }
 
-    retrieve() {
-        return this.updates$;
+    private echo(endpoint: string): Echo<'mercure'> {
+        if (!this.echos.has(endpoint)) {
+            // Mercure (server-sent events) client, through FrankenPHP's built-in hub of FlickMan
+            this.echos.set(endpoint, new Echo({
+                broadcaster: 'mercure',
+                host: endpoint + '.well-known/mercure',
+                // Sets the hub's subscriber cookie; must share the hub's host, as the cookie is set for it alone
+                authEndpoint: endpoint + 'broadcasting/auth',
+                auth: {headers: {Authorization: this.authorization()}},
+            }));
+        }
+        return this.echos.get(endpoint);
+    }
+
+    private authorization(): string {
+        return this.idToken ? "Bearer " + this.idToken : '';
     }
 }
 

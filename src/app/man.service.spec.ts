@@ -11,12 +11,14 @@ describe('ManService', () => {
     let service: ManService;
     let httpMock: HttpTestingController;
     let playTrackerUpdate: unknown = null;
+    let playTrackerEndpoints: string[] = [];
 
     const APP_ENDPOINT = 'https://flick-man-app.docchula.com/';
     const VALID_TOKEN = 'x'.repeat(40);
 
     beforeEach(() => {
         playTrackerUpdate = null;
+        playTrackerEndpoints = [];
         TestBed.configureTestingModule({
             providers: [
                 provideZonelessChangeDetection,
@@ -28,7 +30,10 @@ describe('ManService', () => {
                 {provide: AuthService, useValue: {idToken: of(null)}},
                 // Reads playTrackerUpdate at call time so individual tests can vary
                 // it without needing to reconfigure the TestBed module.
-                {provide: PlayTrackerService, useValue: {retrieve: () => of(playTrackerUpdate)}},
+                {provide: PlayTrackerService, useValue: {retrieve: (endpoint: string) => {
+                    playTrackerEndpoints.push(endpoint);
+                    return of(playTrackerUpdate);
+                }}},
             ],
         });
         service = TestBed.inject(ManService);
@@ -399,6 +404,16 @@ describe('ManService', () => {
             ]));
 
             expect(result.evaluations[99]).toEqual({id: 5, video_id: 99, type: 'end_play'});
+            sub.unsubscribe();
+        }));
+
+        it('listens to the play tracker on the current endpoint', fakeAsync(() => {
+            service.changeEndpoint();
+            const sub = service.getPlayRecord(null, null, '42', new Subject()).subscribe();
+            tick(1);
+            httpMock.expectOne('https://flick-man-cdn.docchula.com/graphql').flush(progress([]));
+
+            expect(playTrackerEndpoints).toEqual(['https://flick-man-cdn.docchula.com/']);
             sub.unsubscribe();
         }));
     });
