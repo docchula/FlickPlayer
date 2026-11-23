@@ -7,7 +7,6 @@ import {DEBUG_MODE} from '@angular/fire/compat/analytics';
 import {INSTRUMENTATION_ENABLED} from '@angular/fire/compat/performance';
 import {DEFAULTS} from '@angular/fire/compat/remote-config';
 import {initializeApp, provideFirebaseApp} from '@angular/fire/app';
-import {getFirestore, provideFirestore} from '@angular/fire/firestore';
 import {getAuth, provideAuth} from '@angular/fire/auth';
 import {getAnalytics, provideAnalytics, ScreenTrackingService, UserTrackingService} from '@angular/fire/analytics';
 import {getPerformance, providePerformance} from '@angular/fire/performance';
@@ -19,7 +18,6 @@ import {AppRoutingModule} from './app/app-routing.module';
 import {WelcomePageModule} from './app/welcome/welcome.module';
 import {ServiceWorkerModule} from '@angular/service-worker';
 import {AppComponent} from './app/app.component';
-import Aura from '@primeuix/themes/aura';
 import {ThemeService} from './app/theme.service';
 
 if (environment.production) {
@@ -39,7 +37,6 @@ bootstrapApplication(AppComponent, {
         {provide: DEFAULTS, useValue: environment.defaultRemoteConfig},
         provideIonicAngular(),
         provideFirebaseApp(() => initializeApp(environment.firebase)),
-        provideFirestore(() => getFirestore()),
         provideAuth(() => getAuth()),
         provideAnalytics(() => getAnalytics()),
         providePerformance(() => getPerformance()),
@@ -47,11 +44,9 @@ bootstrapApplication(AppComponent, {
         provideHttpClient(withFetch(), withInterceptorsFromDi()),
         ScreenTrackingService,
         UserTrackingService,
-        providePrimeNG({
-            theme: {
-                preset: Aura,
-            },
-        }),
+        // The Aura theme preset is applied by ModalEvaluationComponent, the only PrimeNG user,
+        // so it stays out of the initial bundle.
+        providePrimeNG(),
     ],
 })
   .catch(err => console.log(err));

@@ -5,7 +5,6 @@ import { FormsModule } from '@angular/forms';
 import { HomePage } from './home.page';
 import { ListPage } from './list/list.page';
 import { HomeRoutingModule } from './home-routing.module';
-import { CoursePage } from './course/course.page';
 import { IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon, IonContent, IonGrid, IonRow, IonCol, IonCard, IonCardHeader, IonCardTitle, IonBackButton, IonText, IonCardContent, IonList, IonListHeader, IonLabel, IonItem, IonProgressBar } from "@ionic/angular";
 
 @NgModule({
@@ -35,8 +34,7 @@ import { IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon, IonCon
         IonProgressBar,
         IonBackButton,
         HomePage, 
-        ListPage, 
-        CoursePage
+        ListPage
     ]
 })
 

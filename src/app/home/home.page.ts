@@ -37,7 +37,6 @@ import {AsyncPipe, DatePipe, NgStyle} from '@angular/common';
 import {ThemeMenuComponent} from '../shared/theme-menu.component';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../consent.service';
-import {confirmAiDisclaimer, ModalDocumentComponent} from './course/modal-document.component';
 import {ModalPlayStatsComponent} from './modal-play-stats.component';
 import {buildRecentGrid, formatDay, RecentRow, serverNow} from './play-stats';
 
@@ -188,6 +187,8 @@ export class HomePage implements OnInit {
     }
 
     async openDocument(hit: DocumentSearchHit) {
+        // Loaded on demand: the document viewer brings in KaTeX and marked.
+        const {confirmAiDisclaimer, ModalDocumentComponent} = await import('./course/modal-document.component');
         if (!await confirmAiDisclaimer(this.alertController)) {
             return;
         }

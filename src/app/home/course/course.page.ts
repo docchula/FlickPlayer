@@ -40,8 +40,6 @@ import {addIcons} from "ionicons";
 import {checkmarkOutline, closeOutline, documentAttachOutline, documentTextOutline, download, pauseCircleOutline} from "ionicons/icons";
 import {ulid} from 'ulid';
 import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
-import {ModalEvaluationComponent} from './modal-evaluation.component';
-import {confirmAiDisclaimer, ModalDocumentComponent} from './modal-document.component';
 import {PomodoroTimerComponent} from '../../shared/pomodoro-timer.component';
 import {ThemeMenuComponent} from '../../shared/theme-menu.component';
 import {Analytics, logEvent} from '@angular/fire/analytics';
@@ -520,6 +518,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     async openEvaluationModal() {
+        const {ModalEvaluationComponent} = await import('./modal-evaluation.component');
         const modal = await this.modalCtrl.create({
             component: ModalEvaluationComponent,
             componentProps: { video: this.currentVideo },
@@ -528,6 +527,8 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     async openDocumentModal() {
+        // Loaded on demand: the document viewer brings in KaTeX and marked.
+        const {confirmAiDisclaimer, ModalDocumentComponent} = await import('./modal-document.component');
         if (!await confirmAiDisclaimer(this.alertController)) {
             return;
         }
