@@ -1,0 +1,122 @@
+// Ionic attaches modals to the app root, so their size can only be set from unscoped styles.
+// Phones keep Ionic's full-screen modal.
+@media (min-width: 768px) and (min-height: 600px) {
+    ion-modal.study-reader-modal {
+        --width: min(1200px, 95vw);
+        --height: 92vh;
+        --max-width: 100%;
+        --max-height: 100%;
+    }
+}
+
+app-study-aids-reader {
+    .reader-tabs ion-segment {
+        max-width: 24rem;
+        margin: 0 auto;
+    }
+
+    .study-reader {
+        padding: 1.25rem 1rem 3rem;
+        color: var(--ion-text-color);
+    }
+
+    .reader-column {
+        display: block;
+        max-width: 52rem;
+        margin: 0 auto;
+    }
+
+    .quiz-column {
+        max-width: 44rem;
+    }
+
+    .reader-loading {
+        display: flex;
+        justify-content: center;
+        padding: 2rem 0;
+    }
+
+    .reader-note {
+        max-width: 44rem;
+        margin: 2rem auto;
+        color: var(--ion-color-medium);
+        text-align: center;
+    }
+
+    .reader-outline {
+        display: none;
+    }
+
+    .outline-title {
+        margin: 0 0 0.5rem;
+        color: var(--ion-color-medium);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .outline-entry {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.35rem 0.6rem;
+        border: 0;
+        border-left: 2px solid transparent;
+        background: transparent;
+        color: var(--ion-text-color);
+        font: inherit;
+        font-size: 0.85rem;
+        line-height: 1.35;
+        text-align: left;
+        cursor: pointer;
+
+        &:hover {
+            background: rgba(var(--ion-color-primary-rgb), 0.06);
+        }
+
+        &.active {
+            border-left-color: var(--ion-color-primary);
+            color: var(--ion-color-primary);
+            font-weight: 600;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--ion-color-primary);
+            outline-offset: -2px;
+        }
+    }
+
+    .outline-time {
+        flex: none;
+        color: var(--ion-color-medium);
+        font-variant-numeric: tabular-nums;
+    }
+
+    // Wide enough to keep the list of sections beside the summary.
+    @media (min-width: 992px) {
+        .study-reader {
+            padding: 1.5rem 2rem 3rem;
+        }
+
+        .reader-summary.with-outline {
+            display: grid;
+            grid-template-columns: 15rem minmax(0, 1fr);
+            align-items: start;
+            gap: 2rem;
+
+            .reader-column {
+                margin: 0;
+            }
+        }
+
+        .reader-outline {
+            display: block;
+            position: sticky;
+            top: 0;
+            max-height: calc(92vh - 10rem);
+            overflow-y: auto;
+        }
+    }
+}

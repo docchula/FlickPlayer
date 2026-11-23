@@ -1,0 +1,5 @@
+@use 'checklist';
+
+app-checklist-view {
+    @include checklist.layout;
+}

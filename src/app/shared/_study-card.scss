@@ -1,0 +1,107 @@
+// The look the study aids card shares with the Pomodoro card above it.
+@use 'study-shared';
+
+:host {
+    // A block, so the settings sheet can tell when it hides the card (see study-aids/displayed.ts).
+    display: block;
+    width: 100%;
+}
+
+.study-card {
+    margin: 0.75rem 0 0 0;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: var(--flick-welcome-card-shadow, 0 4px 16px rgba(0, 0, 0, 0.08));
+}
+
+.card-head {
+    display: flex;
+    align-items: center;
+}
+
+.card-toggle {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.75rem 0.5rem 0.75rem 1rem;
+    border: 0;
+    background: transparent;
+    color: var(--ion-text-color);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:focus-visible {
+        outline: 2px solid var(--ion-color-primary);
+        outline-offset: -2px;
+    }
+}
+
+.card-heading {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    min-width: 0;
+}
+
+.card-title {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.card-badge {
+    padding: 0.1rem 0.5rem;
+    border-radius: 1rem;
+    background: rgba(var(--ion-color-warning-rgb), 0.25);
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.card-meta {
+    color: var(--ion-color-medium);
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.collapse-icon {
+    flex: none;
+    color: var(--ion-color-medium);
+    font-size: 1.2rem;
+}
+
+// Opens the reading window; outside the toggle, since a button cannot hold another.
+.card-expand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin-right: 0.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ion-color-medium);
+    font-size: 1.15rem;
+    cursor: pointer;
+
+    &:hover {
+        background: rgba(var(--ion-color-primary-rgb), 0.1);
+        color: var(--ion-color-primary);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--ion-color-primary);
+    }
+}
+
+.card-body {
+    padding: 0 1rem 1rem;
+    color: var(--ion-text-color);
+}
