@@ -476,7 +476,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
             return;
         }
         const cues = seekThumbnailCues(sources, duration);
-        if (cues.length > 0) {
+        if (cues.length > 1) {
             this.seekThumbnails = store.state.addTextTrack({kind: 'metadata', label: 'thumbnails', cues});
         }
     }
