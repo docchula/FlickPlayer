@@ -49,6 +49,7 @@ import {ConsentService} from '../../consent.service';
 import {SeekThumbnailCue, seekThumbnailCues} from './seek-thumbnails';
 
 const IS_SAFARI = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+const IS_MOBILE_OR_TABLET = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 /** The part of the player store that holds the tracks an app adds */
 interface TextTrackStore {
@@ -466,6 +467,9 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     // the lecture if it has one (E-Learning videos), otherwise cues captured from the sources. App tracks stay in the
     // store across media changes, so detachMedia() removes it.
     private showSeekThumbnails(sources: Lecture['sources'], duration: number | undefined) {
+        if (IS_MOBILE_OR_TABLET) {
+            return;
+        }
         const store = (this.videoPlayerElement?.nativeElement as (HTMLElement & { store?: TextTrackStore }) | undefined)?.store;
         if (typeof store?.state.addTextTrack !== 'function') {
             return;
