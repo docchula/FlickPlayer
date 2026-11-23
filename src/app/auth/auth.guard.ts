@@ -1,6 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {Observable} from 'rxjs';
-import {filter, map} from 'rxjs/operators';
+import {Router, UrlTree} from '@angular/router';
 import {AuthService} from '../auth.service';
 
 @Injectable({
@@ -8,18 +7,19 @@ import {AuthService} from '../auth.service';
 })
 export class AuthGuard {
     private authService = inject(AuthService);
+    private router = inject(Router);
 
-    canActivate(): Observable<boolean> {
-        // available parameters: route: ActivatedRouteSnapshot, state: RouterStateSnapshot
+    canActivate(): Promise<boolean | UrlTree> {
         return this.isLoggedIn();
     }
 
-    canLoad(): boolean | Observable<boolean> | Promise<boolean> {
-        // available parameters: route: Route
+    canMatch(): Promise<boolean | UrlTree> {
         return this.isLoggedIn();
     }
 
-    isLoggedIn(): Observable<boolean> {
-        return this.authService.user.pipe(filter(v => v !== null), map(user => !!user));
+    /** Waits for Firebase to settle the auth state, then lets signed-in users through and sends everyone else to sign in. */
+    async isLoggedIn(): Promise<boolean | UrlTree> {
+        const user = await this.authService.resolvedUser();
+        return user ? true : this.router.parseUrl('/');
     }
 }
