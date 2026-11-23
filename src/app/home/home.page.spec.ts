@@ -1,6 +1,7 @@
 import {TestBed, fakeAsync, tick} from '@angular/core/testing';
 import {Router} from '@angular/router';
-import {AlertController, ModalController} from '@ionic/angular';
+import {AlertController} from '@ionic/angular/alert-controller';
+import {ModalController} from '@ionic/angular/modal-controller';
 import {Analytics} from '@angular/fire/analytics';
 import {of, throwError} from 'rxjs';
 import {HomePage, SearchResults} from './home.page';

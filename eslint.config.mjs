@@ -39,6 +39,18 @@ export default defineConfig([globalIgnores(["**/node_modules/"]), {
         "@typescript-eslint/ban-ts-comment": "off",
         "@typescript-eslint/no-unused-vars": "off",
         "no-prototype-builtins": "off",
+
+        // The @ionic/angular entry re-exports every component, which makes esbuild count all of
+        // them as reachable from the initial bundle. Import each from its own subpath instead.
+        "no-restricted-imports": ["error", {
+            paths: [{
+                name: "@ionic/angular",
+                message: "Import from the component's subpath, e.g. '@ionic/angular/ion-button' or '@ionic/angular/modal-controller'.",
+            }, {
+                name: "@ionic/angular/lazy",
+                message: "The lazy build registers every Ionic component. Use the standalone subpaths, e.g. '@ionic/angular/toast-controller'.",
+            }],
+        }],
     },
 }, {
     files: ["**/*.html"],

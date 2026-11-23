@@ -1,25 +1,23 @@
 import {Component, ElementRef, inject, OnDestroy, ViewChild} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {
-    AlertController,
-    IonButton,
-    IonButtons,
-    IonContent,
-    IonHeader,
-    IonIcon,
-    IonItem,
-    IonLabel,
-    IonRange,
-    IonSegment,
-    IonSegmentButton,
-    IonSelect,
-    IonSelectOption,
-    IonText,
-    IonTitle,
-    IonToggle,
-    IonToolbar,
-    ModalController,
-} from '@ionic/angular';
+import {AlertController} from '@ionic/angular/alert-controller';
+import {IonButton} from '@ionic/angular/ion-button';
+import {IonButtons} from '@ionic/angular/ion-buttons';
+import {IonContent} from '@ionic/angular/ion-content';
+import {IonHeader} from '@ionic/angular/ion-header';
+import {IonIcon} from '@ionic/angular/ion-icon';
+import {IonItem} from '@ionic/angular/ion-item';
+import {IonLabel} from '@ionic/angular/ion-label';
+import {IonRange} from '@ionic/angular/ion-range';
+import {IonSegment} from '@ionic/angular/ion-segment';
+import {IonSegmentButton} from '@ionic/angular/ion-segment-button';
+import {IonSelect} from '@ionic/angular/ion-select';
+import {IonSelectOption} from '@ionic/angular/ion-select-option';
+import {IonText} from '@ionic/angular/ion-text';
+import {IonTitle} from '@ionic/angular/ion-title';
+import {IonToggle} from '@ionic/angular/ion-toggle';
+import {IonToolbar} from '@ionic/angular/ion-toolbar';
+import {ModalController} from '@ionic/angular/modal-controller';
 import {addIcons} from 'ionicons';
 import {add, close, moonOutline, sunnyOutline} from 'ionicons/icons';
 import {ThemeService} from '../theme.service';

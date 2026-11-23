@@ -8,32 +8,30 @@ import '../../shared/flick-video-skin';
 import '@videojs/html/media/hlsjs-video';
 import '@videojs/html/media/dash-video';
 import '@videojs/html/media/youtube-video';
-import {
-    AlertController,
-    IonBackButton,
-    IonButton,
-    IonButtons,
-    IonCard,
-    IonCardContent,
-    IonCardHeader,
-    IonCardTitle,
-    IonCol,
-    IonContent,
-    IonGrid,
-    IonHeader,
-    IonIcon,
-    IonItem,
-    IonLabel,
-    IonList,
-    IonListHeader,
-    IonProgressBar,
-    IonRow,
-    IonSearchbar,
-    IonText,
-    IonTitle,
-    IonToolbar,
-    ModalController,
-} from '@ionic/angular';
+import {AlertController} from '@ionic/angular/alert-controller';
+import {IonBackButton} from '@ionic/angular/ion-back-button';
+import {IonButton} from '@ionic/angular/ion-button';
+import {IonButtons} from '@ionic/angular/ion-buttons';
+import {IonCard} from '@ionic/angular/ion-card';
+import {IonCardContent} from '@ionic/angular/ion-card-content';
+import {IonCardHeader} from '@ionic/angular/ion-card-header';
+import {IonCardTitle} from '@ionic/angular/ion-card-title';
+import {IonCol} from '@ionic/angular/ion-col';
+import {IonContent} from '@ionic/angular/ion-content';
+import {IonGrid} from '@ionic/angular/ion-grid';
+import {IonHeader} from '@ionic/angular/ion-header';
+import {IonIcon} from '@ionic/angular/ion-icon';
+import {IonItem} from '@ionic/angular/ion-item';
+import {IonLabel} from '@ionic/angular/ion-label';
+import {IonList} from '@ionic/angular/ion-list';
+import {IonListHeader} from '@ionic/angular/ion-list-header';
+import {IonProgressBar} from '@ionic/angular/ion-progress-bar';
+import {IonRow} from '@ionic/angular/ion-row';
+import {IonSearchbar} from '@ionic/angular/ion-searchbar';
+import {IonText} from '@ionic/angular/ion-text';
+import {IonTitle} from '@ionic/angular/ion-title';
+import {IonToolbar} from '@ionic/angular/ion-toolbar';
+import {ModalController} from '@ionic/angular/modal-controller';
 import {DomSanitizer, Title} from '@angular/platform-browser';
 import {PlayHistory} from '../../play-tracker.service';
 import {addIcons} from "ionicons";

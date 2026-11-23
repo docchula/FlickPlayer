@@ -1,12 +1,20 @@
 import {Component, inject, Input} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 
-import {IonButton, IonButtons, IonContent, IonHeader, IonItem, IonLabel, IonTitle, IonToolbar, ModalController} from '@ionic/angular';
+import {IonButton} from '@ionic/angular/ion-button';
+import {IonButtons} from '@ionic/angular/ion-buttons';
+import {IonContent} from '@ionic/angular/ion-content';
+import {IonHeader} from '@ionic/angular/ion-header';
+import {IonItem} from '@ionic/angular/ion-item';
+import {IonLabel} from '@ionic/angular/ion-label';
+import {IonTitle} from '@ionic/angular/ion-title';
+import {IonToolbar} from '@ionic/angular/ion-toolbar';
+import {ModalController} from '@ionic/angular/modal-controller';
+import {ToastController} from '@ionic/angular/toast-controller';
 import {Lecture, ManService} from '../../man.service';
 import {Rating} from 'primeng/rating';
 import {PrimeNG} from 'primeng/config';
 import Aura from '@primeuix/themes/aura';
-import {ToastController} from '@ionic/angular/lazy';
 
 @Component({
     selector: 'app-modal-evaluation',

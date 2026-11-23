@@ -2,7 +2,8 @@ import {enableProdMode, importProvidersFrom, inject, provideAppInitializer } fro
 
 import {environment} from './environments/environment';
 import {RouteReuseStrategy} from '@angular/router';
-import {IonicRouteStrategy, provideIonicAngular} from '@ionic/angular';
+import {IonicRouteStrategy} from '@ionic/angular/ionic-route-strategy';
+import {provideIonicAngular} from '@ionic/angular/provide';
 import {DEBUG_MODE} from '@angular/fire/compat/analytics';
 import {INSTRUMENTATION_ENABLED} from '@angular/fire/compat/performance';
 import {DEFAULTS} from '@angular/fire/compat/remote-config';

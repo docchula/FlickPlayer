@@ -1,15 +1,13 @@
 import {Component, inject, OnDestroy, OnInit} from '@angular/core';
-import {
-    IonButton,
-    IonCard,
-    IonCardContent,
-    IonCardHeader,
-    IonCardTitle,
-    IonIcon,
-    IonInput,
-    IonLabel,
-    PopoverController,
-} from '@ionic/angular';
+import {IonButton} from '@ionic/angular/ion-button';
+import {IonCard} from '@ionic/angular/ion-card';
+import {IonCardContent} from '@ionic/angular/ion-card-content';
+import {IonCardHeader} from '@ionic/angular/ion-card-header';
+import {IonCardTitle} from '@ionic/angular/ion-card-title';
+import {IonIcon} from '@ionic/angular/ion-icon';
+import {IonInput} from '@ionic/angular/ion-input';
+import {IonLabel} from '@ionic/angular/ion-label';
+import {PopoverController} from '@ionic/angular/popover-controller';
 import {PomodoroService, DURATION_FIELDS, DurationField, PomodoroDurations, PhaseNotification} from '../pomodoro.service';
 import {AsyncPipe} from '@angular/common';
 import {addIcons} from 'ionicons';

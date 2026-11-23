@@ -1,14 +1,12 @@
 import {Component, inject} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {
-    IonButton,
-    IonIcon,
-    IonItem,
-    IonLabel,
-    IonList,
-    IonPopover,
-    ModalController,
-} from '@ionic/angular';
+import {IonButton} from '@ionic/angular/ion-button';
+import {IonIcon} from '@ionic/angular/ion-icon';
+import {IonItem} from '@ionic/angular/ion-item';
+import {IonLabel} from '@ionic/angular/ion-label';
+import {IonList} from '@ionic/angular/ion-list';
+import {IonPopover} from '@ionic/angular/ion-popover';
+import {ModalController} from '@ionic/angular/modal-controller';
 import {addIcons} from 'ionicons';
 import {
     checkmark,
@@ -20,7 +18,6 @@ import {
 import {ulid} from 'ulid';
 import {ThemeService} from '../theme.service';
 import {ThemeMode} from '../theme/theme.model';
-import {ThemeEditorComponent} from './theme-editor.component';
 
 @Component({
     selector: 'app-theme-menu',
@@ -47,6 +44,8 @@ export class ThemeMenuComponent {
     }
 
     private async openEditor(): Promise<void> {
+        // Loaded on demand: the editor's form controls are not needed to paint the first page.
+        const {ThemeEditorComponent} = await import('./theme-editor.component');
         const modal = await this.modalCtrl.create({
             component: ThemeEditorComponent,
             breakpoints: [0, 0.9],

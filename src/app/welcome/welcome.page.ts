@@ -1,15 +1,14 @@
 import {ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, signal} from "@angular/core";
-import {
-  AlertController,
-  IonButton,
-  IonCard,
-  IonCardContent,
-  IonCardHeader,
-  IonCardTitle,
-  IonContent,
-  IonText,
-  LoadingController,
-} from "@ionic/angular";
+import {AlertController} from "@ionic/angular/alert-controller";
+import {IonButton} from "@ionic/angular/ion-button";
+import {IonCard} from "@ionic/angular/ion-card";
+import {IonCardContent} from "@ionic/angular/ion-card-content";
+import {IonCardHeader} from "@ionic/angular/ion-card-header";
+import {IonCardTitle} from "@ionic/angular/ion-card-title";
+import {IonContent} from "@ionic/angular/ion-content";
+import {IonRouterLinkWithHref} from "@ionic/angular/ion-router-link";
+import {IonText} from "@ionic/angular/ion-text";
+import {LoadingController} from "@ionic/angular/loading-controller";
 import {Router, RouterLink} from "@angular/router";
 import {ManService} from "../man.service";
 import {HttpErrorResponse} from "@angular/common/http";
@@ -39,7 +38,7 @@ type LoginOutcome =
     IonButton,
     IonText,
     ThemeMenuComponent,
-    RouterLink,
+    RouterLink, IonRouterLinkWithHref,
   ],
 })
 export class WelcomePage implements OnInit, OnDestroy {

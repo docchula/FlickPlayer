@@ -4,20 +4,19 @@ import {EMPTY, Observable, of, Subject} from 'rxjs';
 import {debounceTime, distinctUntilChanged, map, switchMap, tap} from 'rxjs/operators';
 import {ManService, SearchVideoResult} from '../../man.service';
 import {colorByFolderName, contrastByFolderName} from '../../../helpers';
-import {
-    IonBackButton,
-    IonButtons,
-    IonContent,
-    IonHeader,
-    IonItem,
-    IonLabel,
-    IonList,
-    IonListHeader,
-    IonSearchbar,
-    IonSpinner,
-    IonTitle,
-    IonToolbar,
-} from '@ionic/angular';
+import {IonBackButton} from '@ionic/angular/ion-back-button';
+import {IonButtons} from '@ionic/angular/ion-buttons';
+import {IonContent} from '@ionic/angular/ion-content';
+import {IonHeader} from '@ionic/angular/ion-header';
+import {IonItem} from '@ionic/angular/ion-item';
+import {IonLabel} from '@ionic/angular/ion-label';
+import {IonList} from '@ionic/angular/ion-list';
+import {IonListHeader} from '@ionic/angular/ion-list-header';
+import {IonRouterLink} from '@ionic/angular/ion-router-link';
+import {IonSearchbar} from '@ionic/angular/ion-searchbar';
+import {IonSpinner} from '@ionic/angular/ion-spinner';
+import {IonTitle} from '@ionic/angular/ion-title';
+import {IonToolbar} from '@ionic/angular/ion-toolbar';
 import {AsyncPipe, NgStyle} from '@angular/common';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../../consent.service';
@@ -33,7 +32,7 @@ export interface EnrichedSearchResult extends SearchVideoResult {
     templateUrl: './list.page.html',
     styleUrls: ['./list.page.scss'],
     imports: [
-        IonHeader, IonToolbar, RouterLink, IonBackButton, IonTitle, NgStyle,
+        IonHeader, IonToolbar, RouterLink, IonRouterLink, IonBackButton, IonTitle, NgStyle,
         IonButtons,
         IonContent, IonList, IonListHeader, IonItem, IonLabel, AsyncPipe,
         ThemeMenuComponent,

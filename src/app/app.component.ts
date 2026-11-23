@@ -2,7 +2,8 @@ import {Component, inject, Injector} from '@angular/core';
 import {Event, NavigationCancel, NavigationEnd, NavigationError, Router} from '@angular/router';
 import {filter, first} from 'rxjs/operators';
 
-import {IonApp, IonRouterOutlet} from '@ionic/angular';
+import {IonApp} from '@ionic/angular/ion-app';
+import {IonRouterOutlet} from '@ionic/angular/ion-router-outlet';
 import {ScreenTrackingService, UserTrackingService} from '@angular/fire/analytics';
 import {ConsentService} from './consent.service';
 import {ConsentBannerComponent} from './shared/consent-banner.component';
