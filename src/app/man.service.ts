@@ -98,6 +98,9 @@ export class ManService {
                             source.name = source.name ?? (source.path.startsWith('DL ') ? source.path.substring(3) : source.path);
                             return source;
                         }) : [],
+                        thumbnail_track: thisLecture.thumbnail_track
+                            ? thisLecture.thumbnail_track + (thisLecture.thumbnail_track.includes('?') ? '&key=' : '?key=') + encodeURIComponent(data.key)
+                            : null,
                         identifier: thisLecture.identifier ?? String(thisLecture.id),
                         durationInMin: thisLecture.duration ? Math.round(thisLecture.duration / 60) : 0,
                     };
@@ -389,7 +392,7 @@ const COURSE_QUERY = `query Course($id: ID!) {
     course(id: $id) {
         id category name
         videos {
-            id title lecturer record_date duration thumbnail has_document
+            id title lecturer record_date duration thumbnail thumbnail_track has_document
             sources { server path src type }
             attachments { server path name size }
         }
@@ -450,6 +453,7 @@ interface CourseQueryData {
             lecturer: string | null,
             record_date: string | null,
             duration: number | null,
+            thumbnail_track: string | null,
             has_document: boolean,
             sources: Lecture['sources'],
             attachments: Lecture['attachments'],
@@ -506,6 +510,7 @@ function toCourseMembers(videos: CourseQueryData['course']['videos']): CourseMem
             lecturer: video.lecturer,
             date: video.record_date,
             duration: video.duration ?? undefined,
+            thumbnail_track: video.thumbnail_track,
             has_document: video.has_document,
             sources: video.sources,
             attachments: video.attachments,
@@ -602,6 +607,8 @@ export interface Lecture {
         size?: number | null
     }[];
     sourceExternal?: string;
+    /** WebVTT track of seek thumbnails made by the server (E-Learning videos), with the stream key */
+    thumbnail_track?: string | null;
     duration?: number;
     durationInMin?: number;
     history?: PlayHistoryValue;

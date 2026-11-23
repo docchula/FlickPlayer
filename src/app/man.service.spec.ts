@@ -214,6 +214,28 @@ describe('ManService', () => {
             httpMock.expectOne(APP_ENDPOINT + 'graphql').flush({data: {course: null, streamKey: 'secret'}});
         });
 
+        it('appends the stream key to the thumbnail track and leaves a missing track null', done => {
+            service.getVideosInCourse(null, null, '42').subscribe(result => {
+                expect(result.lectures['1'].thumbnail_track).toBe('https://flick-streamer.docchula.com/videos/e-learning/m.vtt?key=a%2Bb');
+                expect(result.lectures['2'].thumbnail_track).toBeNull();
+                done();
+            });
+
+            const video = {title: 'T', lecturer: null, record_date: null, duration: null, has_document: false, sources: [], attachments: []};
+            httpMock.expectOne(APP_ENDPOINT + 'graphql').flush({
+                data: {
+                    streamKey: 'a+b',
+                    course: {
+                        id: '42', category: '1st year', name: 'Anatomy',
+                        videos: [
+                            {...video, id: '1', thumbnail_track: 'https://flick-streamer.docchula.com/videos/e-learning/m.vtt'},
+                            {...video, id: '2', thumbnail_track: null},
+                        ],
+                    },
+                },
+            });
+        });
+
         it('builds source/attachment src, appends ?key= only for docchula sources, and normalizes attachment names', done => {
             service.getVideosInCourse(null, null, '42').subscribe(result => {
                 const lecture = result.lectures['1'];

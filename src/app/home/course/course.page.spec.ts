@@ -287,6 +287,21 @@ describe('CoursePage.detachMedia and attachMedia', () => {
         expect(ctx.seekThumbnails).toBeNull();
     });
 
+    it('adds the server thumbnail track of the lecture instead of capturing from the sources', () => {
+        const ctx = createMediaContext();
+        ctx.currentVideo.thumbnail_track = 'https://example.com/videos/e-learning/m.vtt?key=k';
+        const addTextTrack = jasmine.createSpy('addTextTrack').and.returnValue({remove: () => undefined});
+        Object.assign(ctx.videoPlayerElement.nativeElement, {store: {state: {addTextTrack}}});
+
+        ctx.attachMedia([{type: 'application/x-mpegURL', src: 'https://example.com/hls/2024/c/l/h264.mp4/index.m3u8', server: null}]);
+
+        expect(addTextTrack).toHaveBeenCalledOnceWith({
+            kind: 'metadata',
+            label: 'thumbnails',
+            src: 'https://example.com/videos/e-learning/m.vtt?key=k',
+        });
+    });
+
     it('waits for the media duration when the lecture has none', () => {
         const ctx = createMediaContext();
         ctx.currentVideo.duration = undefined;

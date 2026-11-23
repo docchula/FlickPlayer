@@ -53,7 +53,7 @@ const IS_SAFARI = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 /** The part of the player store that holds the tracks an app adds */
 interface TextTrackStore {
     state: {
-        addTextTrack?: (init: { kind: string, label: string, cues: SeekThumbnailCue[] }) => { remove(): void };
+        addTextTrack?: (init: { kind: string, label: string, cues?: SeekThumbnailCue[], src?: string }) => { remove(): void };
     };
 }
 
@@ -462,15 +462,23 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         this.videoPlayerElement?.nativeElement.focus();
     }
 
-    // Add a thumbnails track to the player store, where the skin's time slider finds it. App tracks stay in the store
-    // across media changes, so detachMedia() removes it.
+    // Add a thumbnails track to the player store, where the skin's time slider finds it: the server's WebVTT track of
+    // the lecture if it has one (E-Learning videos), otherwise cues captured from the sources. App tracks stay in the
+    // store across media changes, so detachMedia() removes it.
     private showSeekThumbnails(sources: Lecture['sources'], duration: number | undefined) {
-        const cues = seekThumbnailCues(sources, duration);
         const store = (this.videoPlayerElement?.nativeElement as (HTMLElement & { store?: TextTrackStore }) | undefined)?.store;
-        if (cues.length === 0 || typeof store?.state.addTextTrack !== 'function') {
+        if (typeof store?.state.addTextTrack !== 'function') {
             return;
         }
-        this.seekThumbnails = store.state.addTextTrack({kind: 'metadata', label: 'thumbnails', cues});
+        const src = this.currentVideo?.thumbnail_track;
+        if (src) {
+            this.seekThumbnails = store.state.addTextTrack({kind: 'metadata', label: 'thumbnails', src});
+            return;
+        }
+        const cues = seekThumbnailCues(sources, duration);
+        if (cues.length > 0) {
+            this.seekThumbnails = store.state.addTextTrack({kind: 'metadata', label: 'thumbnails', cues});
+        }
     }
 
     async setPlaybackSpeed() {
