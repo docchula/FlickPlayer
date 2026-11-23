@@ -8,5 +8,8 @@
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/__/auth/*", "/__/firebase/init.json"]
-  }
+  },
+  // Required by `wrangler preview` (used by Cloudflare for PR preview builds).
+  // Top-level settings (assets, compatibility, etc.) are inherited.
+  "previews": {}
 }
