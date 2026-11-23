@@ -1,5 +1,6 @@
 import {Component, inject} from '@angular/core';
-import {IonButton} from '@ionic/angular';
+import {IonButton} from '@ionic/angular/ion-button';
+import {IonRouterLinkWithHref} from '@ionic/angular/ion-router-link';
 import {AsyncPipe} from '@angular/common';
 import {RouterLink} from '@angular/router';
 import {ConsentService} from '../consent.service';
@@ -55,7 +56,7 @@ import {ConsentService} from '../consent.service';
             flex: 0 0 auto;
         }
     `],
-    imports: [IonButton, AsyncPipe, RouterLink],
+    imports: [IonButton, AsyncPipe, RouterLink, IonRouterLinkWithHref],
 })
 export class ConsentBannerComponent {
     consentService = inject(ConsentService);

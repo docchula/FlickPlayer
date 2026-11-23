@@ -28,7 +28,7 @@
     })();
   </script>
 
-    <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+  <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
   <meta name="format-detection" content="telephone=no"/>
   <meta name="msapplication-tap-highlight" content="no"/>
 
@@ -39,9 +39,65 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#1976d2">
+  <!--
+    A loading screen painted straight from this file, so the first paint does not wait for the
+    JavaScript bundles, Firebase Auth and the first route. AppComponent removes it once the
+    first navigation settles. Colours repeat the theme defaults because the main stylesheet may
+    not have loaded yet; a saved theme's variables, set by the script above, take precedence.
+  -->
+  <style>
+    #app-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      background: var(--ion-background-color, #ffffff);
+      color: var(--ion-text-color, #000000);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      transition: opacity 0.2s ease-out;
+    }
+    :root[data-theme='dark'] #app-splash {
+      background: var(--ion-background-color, #121212);
+      color: var(--ion-text-color, #ffffff);
+    }
+    #app-splash.app-splash-hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #app-splash .app-splash-title {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    #app-splash .app-splash-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      opacity: 0.6;
+      animation: app-splash-spin 0.8s linear infinite;
+    }
+    @keyframes app-splash-spin {
+      to { transform: rotate(360deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #app-splash .app-splash-spinner { animation-duration: 2.4s; }
+      #app-splash { transition: none; }
+    }
+  </style>
 </head>
 
 <body>
+  <div id="app-splash" role="status" aria-live="polite">
+    <p class="app-splash-title">MDCU Recorded Lecture</p>
+    <div class="app-splash-spinner" aria-hidden="true"></div>
+    <span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Loading…</span>
+  </div>
   <app-root></app-root>
   <noscript>Please enable JavaScript to continue using this application.</noscript>
 </body>

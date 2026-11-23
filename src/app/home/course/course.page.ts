@@ -8,40 +8,36 @@ import '../../shared/flick-video-skin';
 import '@videojs/html/media/hlsjs-video';
 import '@videojs/html/media/dash-video';
 import '@videojs/html/media/youtube-video';
-import {
-    AlertController,
-    IonBackButton,
-    IonButton,
-    IonButtons,
-    IonCard,
-    IonCardContent,
-    IonCardHeader,
-    IonCardTitle,
-    IonCol,
-    IonContent,
-    IonGrid,
-    IonHeader,
-    IonIcon,
-    IonItem,
-    IonLabel,
-    IonList,
-    IonListHeader,
-    IonProgressBar,
-    IonRow,
-    IonSearchbar,
-    IonText,
-    IonTitle,
-    IonToolbar,
-    ModalController,
-} from '@ionic/angular';
+import {AlertController} from '@ionic/angular/alert-controller';
+import {IonBackButton} from '@ionic/angular/ion-back-button';
+import {IonButton} from '@ionic/angular/ion-button';
+import {IonButtons} from '@ionic/angular/ion-buttons';
+import {IonCard} from '@ionic/angular/ion-card';
+import {IonCardContent} from '@ionic/angular/ion-card-content';
+import {IonCardHeader} from '@ionic/angular/ion-card-header';
+import {IonCardTitle} from '@ionic/angular/ion-card-title';
+import {IonCol} from '@ionic/angular/ion-col';
+import {IonContent} from '@ionic/angular/ion-content';
+import {IonGrid} from '@ionic/angular/ion-grid';
+import {IonHeader} from '@ionic/angular/ion-header';
+import {IonIcon} from '@ionic/angular/ion-icon';
+import {IonItem} from '@ionic/angular/ion-item';
+import {IonLabel} from '@ionic/angular/ion-label';
+import {IonList} from '@ionic/angular/ion-list';
+import {IonListHeader} from '@ionic/angular/ion-list-header';
+import {IonProgressBar} from '@ionic/angular/ion-progress-bar';
+import {IonRow} from '@ionic/angular/ion-row';
+import {IonSearchbar} from '@ionic/angular/ion-searchbar';
+import {IonText} from '@ionic/angular/ion-text';
+import {IonTitle} from '@ionic/angular/ion-title';
+import {IonToolbar} from '@ionic/angular/ion-toolbar';
+import {ModalController} from '@ionic/angular/modal-controller';
 import {DomSanitizer, Title} from '@angular/platform-browser';
 import {PlayHistory} from '../../play-tracker.service';
 import {addIcons} from "ionicons";
 import {checkmarkOutline, closeOutline, documentAttachOutline, documentTextOutline, download, pauseCircleOutline} from "ionicons/icons";
 import {ulid} from 'ulid';
 import {AsyncPipe, DatePipe, DecimalPipe, NgClass} from '@angular/common';
-import {ModalEvaluationComponent} from './modal-evaluation.component';
-import {confirmAiDisclaimer, ModalDocumentComponent} from './modal-document.component';
 import {PomodoroTimerComponent} from '../../shared/pomodoro-timer.component';
 import {ThemeMenuComponent} from '../../shared/theme-menu.component';
 import {Analytics, logEvent} from '@angular/fire/analytics';
@@ -520,6 +516,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     async openEvaluationModal() {
+        const {ModalEvaluationComponent} = await import('./modal-evaluation.component');
         const modal = await this.modalCtrl.create({
             component: ModalEvaluationComponent,
             componentProps: { video: this.currentVideo },
@@ -528,6 +525,8 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     async openDocumentModal() {
+        // Loaded on demand: the document viewer brings in KaTeX and marked.
+        const {confirmAiDisclaimer, ModalDocumentComponent} = await import('./modal-document.component');
         if (!await confirmAiDisclaimer(this.alertController)) {
             return;
         }

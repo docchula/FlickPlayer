@@ -1,7 +1,7 @@
 import {inject, Injectable} from '@angular/core';
 import {first, map, switchMap} from 'rxjs/operators';
 import {fromEventPattern, Observable} from 'rxjs';
-import {FieldValue, Timestamp} from '@angular/fire/firestore';
+import type {FieldValue, Timestamp} from '@angular/fire/firestore';
 import Echo from 'laravel-echo';
 import {Auth, idToken, user} from '@angular/fire/auth';
 

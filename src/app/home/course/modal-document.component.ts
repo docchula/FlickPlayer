@@ -1,7 +1,15 @@
 import {afterNextRender, Component, signal, ElementRef, inject, Injector, Input, OnInit, ViewEncapsulation} from '@angular/core';
-import {
-    AlertController, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonNote, IonSpinner, IonTitle, IonToolbar, ModalController,
-} from '@ionic/angular';
+import {AlertController} from '@ionic/angular/alert-controller';
+import {IonButton} from '@ionic/angular/ion-button';
+import {IonButtons} from '@ionic/angular/ion-buttons';
+import {IonContent} from '@ionic/angular/ion-content';
+import {IonHeader} from '@ionic/angular/ion-header';
+import {IonIcon} from '@ionic/angular/ion-icon';
+import {IonNote} from '@ionic/angular/ion-note';
+import {IonSpinner} from '@ionic/angular/ion-spinner';
+import {IonTitle} from '@ionic/angular/ion-title';
+import {IonToolbar} from '@ionic/angular/ion-toolbar';
+import {ModalController} from '@ionic/angular/modal-controller';
 import {addIcons} from 'ionicons';
 import {closeOutline, playOutline} from 'ionicons/icons';
 import {Lecture, ManService} from '../../man.service';

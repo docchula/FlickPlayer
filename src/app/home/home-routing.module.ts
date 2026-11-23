@@ -3,7 +3,10 @@ import {RouterModule, Routes} from '@angular/router';
 import {AuthGuard} from '../auth/auth.guard';
 import {HomePage} from './home.page';
 import {ListPage} from './list/list.page';
-import {CoursePage} from './course/course.page';
+
+// The course page carries the video player (hls.js, dash.js, Video.js), which the course
+// list does not need: load it on its own so /home can render without it.
+const loadCoursePage = () => import('./course/course.page').then(m => m.CoursePage);
 
 const routes: Routes = [
     {
@@ -16,7 +19,7 @@ const routes: Routes = [
             },
             {
                 path: 'course/:id',
-                component: CoursePage
+                loadComponent: loadCoursePage
             },
             {
                 path: ':year',
@@ -24,11 +27,11 @@ const routes: Routes = [
             },
             {
                 path: ':year/:course',
-                component: CoursePage
+                loadComponent: loadCoursePage
             },
             {
                 path: ':year/:id/:course',
-                component: CoursePage
+                loadComponent: loadCoursePage
             }
         ]
     }

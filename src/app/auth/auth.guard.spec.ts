@@ -1,50 +1,54 @@
 import {TestBed} from '@angular/core/testing';
-import {of} from 'rxjs';
-import {take, toArray} from 'rxjs/operators';
+import {provideRouter, Router, UrlTree} from '@angular/router';
 import {AuthGuard} from './auth.guard';
 import {AuthService} from '../auth.service';
 
 describe('AuthGuard', () => {
-    function createGuard(user: unknown): AuthGuard {
+    function createGuard(resolvedUser: () => Promise<unknown>): AuthGuard {
         TestBed.configureTestingModule({
-            providers: [{provide: AuthService, useValue: {user: of(user)}}]
+            providers: [
+                provideRouter([]),
+                {provide: AuthService, useValue: {resolvedUser}},
+            ]
         });
         return TestBed.inject(AuthGuard);
     }
 
-    it('isLoggedIn() emits true when a user is present', done => {
-        createGuard({uid: 'abc'}).isLoggedIn().subscribe(result => {
-            expect(result).toBe(true);
-            done();
-        });
+    it('allows a signed-in user', async () => {
+        const guard = createGuard(() => Promise.resolve({uid: 'abc'}));
+
+        expect(await guard.isLoggedIn()).toBe(true);
     });
 
-    it('isLoggedIn() emits false when the user is undefined (signed out, past the initial null)', done => {
-        createGuard(undefined).isLoggedIn().subscribe(result => {
-            expect(result).toBe(false);
-            done();
-        });
+    it('redirects a signed-out user to the sign-in page', async () => {
+        const guard = createGuard(() => Promise.resolve(null));
+
+        const result = await guard.isLoggedIn();
+
+        expect(result instanceof UrlTree).toBe(true);
+        expect(TestBed.inject(Router).serializeUrl(result as UrlTree)).toBe('/');
     });
 
-    it('isLoggedIn() never emits while the auth state is still null (initial loading state)', () => {
-        const emissions: boolean[] = [];
-        createGuard(null).isLoggedIn().subscribe(result => emissions.push(result));
+    it('waits for the auth state to settle before deciding', async () => {
+        let settle!: (user: unknown) => void;
+        const guard = createGuard(() => new Promise(resolve => settle = resolve));
+        let decided = false;
 
-        expect(emissions).toEqual([]);
+        const result = guard.isLoggedIn().then(r => {
+            decided = true;
+            return r;
+        });
+        await Promise.resolve();
+        expect(decided).toBe(false);
+
+        settle({uid: 'abc'});
+        expect(await result).toBe(true);
     });
 
-    it('canActivate() delegates to isLoggedIn()', done => {
-        createGuard({uid: 'abc'}).canActivate().subscribe(result => {
-            expect(result).toBe(true);
-            done();
-        });
-    });
+    it('canActivate() and canMatch() delegate to isLoggedIn()', async () => {
+        const guard = createGuard(() => Promise.resolve({uid: 'abc'}));
 
-    it('canLoad() delegates to isLoggedIn()', done => {
-        const result$ = createGuard({uid: 'abc'}).canLoad();
-        (result$ as ReturnType<AuthGuard['isLoggedIn']>).pipe(take(1), toArray()).subscribe(([result]) => {
-            expect(result).toBe(true);
-            done();
-        });
+        expect(await guard.canActivate()).toBe(true);
+        expect(await guard.canMatch()).toBe(true);
     });
 });

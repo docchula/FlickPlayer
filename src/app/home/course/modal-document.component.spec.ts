@@ -1,6 +1,8 @@
 import {ApplicationRef, Component} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {IonApp, ModalController, provideIonicAngular} from '@ionic/angular';
+import {IonApp} from '@ionic/angular/ion-app';
+import {ModalController} from '@ionic/angular/modal-controller';
+import {provideIonicAngular} from '@ionic/angular/provide';
 import {of} from 'rxjs';
 import {delay} from 'rxjs/operators';
 import {ModalDocumentComponent} from './modal-document.component';

@@ -1,10 +1,20 @@
 import {Component, inject, Input} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 
-import {IonButton, IonButtons, IonContent, IonHeader, IonItem, IonLabel, IonTitle, IonToolbar, ModalController} from '@ionic/angular';
+import {IonButton} from '@ionic/angular/ion-button';
+import {IonButtons} from '@ionic/angular/ion-buttons';
+import {IonContent} from '@ionic/angular/ion-content';
+import {IonHeader} from '@ionic/angular/ion-header';
+import {IonItem} from '@ionic/angular/ion-item';
+import {IonLabel} from '@ionic/angular/ion-label';
+import {IonTitle} from '@ionic/angular/ion-title';
+import {IonToolbar} from '@ionic/angular/ion-toolbar';
+import {ModalController} from '@ionic/angular/modal-controller';
+import {ToastController} from '@ionic/angular/toast-controller';
 import {Lecture, ManService} from '../../man.service';
 import {Rating} from 'primeng/rating';
-import {ToastController} from '@ionic/angular/lazy';
+import {PrimeNG} from 'primeng/config';
+import Aura from '@primeuix/themes/aura';
 
 @Component({
     selector: 'app-modal-evaluation',
@@ -15,6 +25,16 @@ export class ModalEvaluationComponent {
     private manService = inject(ManService);
     private modalCtrl = inject(ModalController);
     private toastController = inject(ToastController);
+
+    constructor() {
+        // This modal is the app's only PrimeNG user. Applying the theme here keeps the preset in
+        // this lazily loaded chunk rather than the initial bundle; PrimeNG components restyle
+        // themselves when the theme changes, so the order does not matter.
+        const primeng = inject(PrimeNG);
+        if (!primeng.theme()) {
+            primeng.setThemeConfig({theme: {preset: Aura}});
+        }
+    }
 
     @Input() video: Lecture;
     result: {

@@ -28,6 +28,15 @@ export class AuthService {
         getRedirectResult(this.auth).catch((error) => console.error('getRedirectResult failed', error));
     }
 
+    /**
+     * The signed-in user once Firebase has restored any saved session, or null when signed out.
+     * Unlike `user`, whose initial null also stands for "not known yet", this settles both ways.
+     */
+    async resolvedUser(): Promise<User | null> {
+        await this.auth.authStateReady();
+        return this.auth.currentUser;
+    }
+
     signIn() {
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({hd: 'docchula.com'});

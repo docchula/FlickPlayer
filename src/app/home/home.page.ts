@@ -7,37 +7,35 @@ import {colorByFolderName, contrastByFolderName, formatDuration, snippetToHtml} 
 import {addIcons} from "ionicons";
 import {documentTextOutline, filmOutline, logOutOutline, playOutline, searchOutline} from "ionicons/icons";
 import {catchError, debounce, distinctUntilChanged, map, switchMap, tap} from 'rxjs/operators';
-import {
-    AlertController,
-    IonButton,
-    IonButtons,
-    IonCard,
-    IonCardContent,
-    IonCardHeader,
-    IonCardTitle,
-    IonCol,
-    IonContent,
-    IonGrid,
-    IonHeader,
-    IonIcon,
-    IonItem,
-    IonLabel,
-    IonList,
-    IonRow,
-    IonSearchbar,
-    IonSegment,
-    IonSegmentButton,
-    IonSpinner,
-    IonText,
-    IonTitle,
-    IonToolbar,
-    ModalController,
-} from '@ionic/angular';
+import {AlertController} from '@ionic/angular/alert-controller';
+import {IonButton} from '@ionic/angular/ion-button';
+import {IonButtons} from '@ionic/angular/ion-buttons';
+import {IonCard} from '@ionic/angular/ion-card';
+import {IonCardContent} from '@ionic/angular/ion-card-content';
+import {IonCardHeader} from '@ionic/angular/ion-card-header';
+import {IonCardTitle} from '@ionic/angular/ion-card-title';
+import {IonCol} from '@ionic/angular/ion-col';
+import {IonContent} from '@ionic/angular/ion-content';
+import {IonGrid} from '@ionic/angular/ion-grid';
+import {IonHeader} from '@ionic/angular/ion-header';
+import {IonIcon} from '@ionic/angular/ion-icon';
+import {IonItem} from '@ionic/angular/ion-item';
+import {IonLabel} from '@ionic/angular/ion-label';
+import {IonList} from '@ionic/angular/ion-list';
+import {IonRouterLink, IonRouterLinkWithHref} from '@ionic/angular/ion-router-link';
+import {IonRow} from '@ionic/angular/ion-row';
+import {IonSearchbar} from '@ionic/angular/ion-searchbar';
+import {IonSegment} from '@ionic/angular/ion-segment';
+import {IonSegmentButton} from '@ionic/angular/ion-segment-button';
+import {IonSpinner} from '@ionic/angular/ion-spinner';
+import {IonText} from '@ionic/angular/ion-text';
+import {IonTitle} from '@ionic/angular/ion-title';
+import {IonToolbar} from '@ionic/angular/ion-toolbar';
+import {ModalController} from '@ionic/angular/modal-controller';
 import {AsyncPipe, DatePipe, NgStyle} from '@angular/common';
 import {ThemeMenuComponent} from '../shared/theme-menu.component';
 import {Analytics, logEvent} from '@angular/fire/analytics';
 import {ConsentService} from '../consent.service';
-import {confirmAiDisclaimer, ModalDocumentComponent} from './course/modal-document.component';
 import {ModalPlayStatsComponent} from './modal-play-stats.component';
 import {buildRecentGrid, formatDay, RecentRow, serverNow} from './play-stats';
 
@@ -65,7 +63,7 @@ export type SearchResults =
     styleUrls: ['home.page.scss'],
     imports: [
         IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon,
-        IonContent, IonGrid, IonRow, IonCol, IonCard, RouterLink, NgStyle,
+        IonContent, IonGrid, IonRow, IonCol, IonCard, RouterLink, IonRouterLink, IonRouterLinkWithHref, NgStyle,
         IonCardHeader, IonCardTitle, AsyncPipe, DatePipe, IonCardContent, IonItem,
         ThemeMenuComponent,
         IonLabel, IonText, IonSpinner, IonSearchbar, IonList, IonSegment, IonSegmentButton,
@@ -188,6 +186,8 @@ export class HomePage implements OnInit {
     }
 
     async openDocument(hit: DocumentSearchHit) {
+        // Loaded on demand: the document viewer brings in KaTeX and marked.
+        const {confirmAiDisclaimer, ModalDocumentComponent} = await import('./course/modal-document.component');
         if (!await confirmAiDisclaimer(this.alertController)) {
             return;
         }
