@@ -32,9 +32,9 @@ describe('seek-thumbnails', () => {
 
     describe('seekThumbnailCues', () => {
         it('covers the whole video with contiguous cues, each showing its middle', () => {
-            const cues = seekThumbnailCues([hls('h264.mp4')], 25);
-            expect(cues.map(c => [c.startTime, c.endTime])).toEqual([[0, 10], [10, 20], [20, 25]]);
-            expect(cues[2].text).toContain('/thumb-22500-w240.jpg');
+            const cues = seekThumbnailCues([hls('h264.mp4')], 45);
+            expect(cues.map(c => [c.startTime, c.endTime])).toEqual([[0, 20], [20, 40], [40, 45]]);
+            expect(cues[2].text).toContain('/thumb-42500-w240.jpg');
         });
 
         it('caps the number of images for long videos', () => {

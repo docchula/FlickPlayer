@@ -279,8 +279,8 @@ describe('CoursePage.detachMedia and attachMedia', () => {
         const init = addTextTrack.calls.mostRecent().args[0];
         expect(init.kind).toBe('metadata');
         expect(init.label).toBe('thumbnails');
-        expect(init.cues.length).toBe(10); // 100 s in 10 s stretches
-        expect(init.cues[0].text).toBe('https://example.com/thumb/2024/c/l/h264.mp4/thumb-5000-w240.jpg?key=k');
+        expect(init.cues.length).toBe(5); // 100 s in 20 s stretches
+        expect(init.cues[0].text).toBe('https://example.com/thumb/2024/c/l/h264.mp4/thumb-10000-w240.jpg?key=k');
 
         ctx.detachMedia();
         expect(remove).toHaveBeenCalled();
@@ -298,7 +298,7 @@ describe('CoursePage.detachMedia and attachMedia', () => {
         ctx.attachMedia(sources);
         expect(addTextTrack).not.toHaveBeenCalled();
 
-        Object.defineProperty(ctx.media!, 'duration', {get: () => 30});
+        Object.defineProperty(ctx.media!, 'duration', {get: () => 50});
         ctx.media!.dispatchEvent(new Event('loadedmetadata'));
         expect(addTextTrack).toHaveBeenCalledTimes(1);
         expect(addTextTrack.calls.mostRecent().args[0].cues.length).toBe(3);

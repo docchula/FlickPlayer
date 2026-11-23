@@ -10,7 +10,7 @@ const NGINX_VOD_HLS = /^(.+)\/hls\/((?:.+\/)?([^/]+\.mp4))\/[^/?#]+\.m3u8(\?[^#]
 /** Image width, the skin's default --media-slider-preview-max-width */
 const IMAGE_WIDTH = 240;
 /** Shortest stretch of video one image covers, in seconds */
-const MIN_INTERVAL = 10;
+const MIN_INTERVAL = 20;
 /** Most images per video, so a long lecture stays within what the slider can point at */
 const MAX_IMAGES = 240;
 
