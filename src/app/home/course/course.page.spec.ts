@@ -181,12 +181,15 @@ describe('CoursePage.detachMedia and attachMedia', () => {
         media$: BehaviorSubject<HTMLMediaElement | null>;
         mediaListeners: AbortController | null;
         videoSkinElement: {nativeElement: HTMLElement};
+        videoPlayerElement: {nativeElement: HTMLElement};
+        seekThumbnails: { remove(): void } | null;
         currentVideo: Partial<Lecture>;
         expectVideoTimeJump: boolean;
         isEvaluated: boolean;
         createMedia: (sources: Lecture['sources']) => HTMLMediaElement;
         detachMedia: () => void;
-        attachMedia: (sources: Lecture['sources']) => void;
+        attachMedia: (sources: Lecture['sources'], thumbnailSources?: Lecture['sources']) => void;
+        showSeekThumbnails: (sources: Lecture['sources'], duration: number | undefined) => void;
         updatePlayRecord: jasmine.Spy;
         openEvaluationModal: jasmine.Spy;
         logMediaNotSupported: jasmine.Spy;
@@ -199,12 +202,15 @@ describe('CoursePage.detachMedia and attachMedia', () => {
             media$: new BehaviorSubject<HTMLMediaElement | null>(null),
             mediaListeners: null,
             videoSkinElement: {nativeElement: document.createElement('div')},
+            videoPlayerElement: {nativeElement: document.createElement('div')},
+            seekThumbnails: null,
             currentVideo: {id: 1, duration: 100, history: {end_time: 40, played_at: null, video_id: 1}},
             expectVideoTimeJump: true,
             isEvaluated: false,
             createMedia: proto.createMedia,
             detachMedia: proto.detachMedia,
             attachMedia: proto.attachMedia,
+            showSeekThumbnails: proto.showSeekThumbnails,
             updatePlayRecord: jasmine.createSpy('updatePlayRecord'),
             openEvaluationModal: jasmine.createSpy('openEvaluationModal'),
             logMediaNotSupported: jasmine.createSpy('logMediaNotSupported'),
@@ -255,6 +261,47 @@ describe('CoursePage.detachMedia and attachMedia', () => {
 
         expect(seekedTime).toBe(40);
         expect(ctx.expectVideoTimeJump).toBeFalse();
+    });
+
+    it('adds a seek thumbnails track to the player store for an nginx-vod source, and removes it on detach', () => {
+        const ctx = createMediaContext();
+        const remove = jasmine.createSpy('remove');
+        const addTextTrack = jasmine.createSpy('addTextTrack').and.returnValue({remove});
+        Object.assign(ctx.videoPlayerElement.nativeElement, {store: {state: {addTextTrack}}});
+
+        // Playable source without thumbnails; the nginx-vod source is only passed for capturing them
+        ctx.attachMedia(
+            [{type: 'video/mp4', src: 'https://example.com/a.mp4', server: null}],
+            [{type: 'application/x-mpegURL', src: 'https://example.com/hls/2024/c/l/h264.mp4/index.m3u8?key=k', server: null}],
+        );
+
+        expect(addTextTrack).toHaveBeenCalledTimes(1);
+        const init = addTextTrack.calls.mostRecent().args[0];
+        expect(init.kind).toBe('metadata');
+        expect(init.label).toBe('thumbnails');
+        expect(init.cues.length).toBe(5); // 100 s in 20 s stretches
+        expect(init.cues[0].text).toBe('https://example.com/thumb/2024/c/l/h264.mp4/thumb-10000-w240.jpg?key=k');
+
+        ctx.detachMedia();
+        expect(remove).toHaveBeenCalled();
+        expect(ctx.seekThumbnails).toBeNull();
+    });
+
+    it('waits for the media duration when the lecture has none', () => {
+        const ctx = createMediaContext();
+        ctx.currentVideo.duration = undefined;
+        const addTextTrack = jasmine.createSpy('addTextTrack').and.returnValue({remove: () => undefined});
+        Object.assign(ctx.videoPlayerElement.nativeElement, {store: {state: {addTextTrack}}});
+        const sources = [{type: 'application/x-mpegURL', src: 'https://example.com/hls/2024/c/l/h264.mp4/index.m3u8', server: null}];
+        spyOn(ctx, 'createMedia').and.returnValue(document.createElement('video'));
+
+        ctx.attachMedia(sources);
+        expect(addTextTrack).not.toHaveBeenCalled();
+
+        Object.defineProperty(ctx.media!, 'duration', {get: () => 50});
+        ctx.media!.dispatchEvent(new Event('loadedmetadata'));
+        expect(addTextTrack).toHaveBeenCalledTimes(1);
+        expect(addTextTrack.calls.mostRecent().args[0].cues.length).toBe(3);
     });
 });
 
