@@ -23,7 +23,7 @@
     "@angular/router": "^21.2.26",
     "@angular/service-worker": "^21.2.26",
     "@ionic/angular": "^9.0.13",
-    "@primeuix/themes": "^1.2.5",
+    "@primeuix/themes": "^3.1.1",
     "@videojs/dash-video": "^10.6.0",
     "@videojs/hlsjs-video": "^10.6.0",
     "@videojs/html": "^10.6.0",
