@@ -5,9 +5,6 @@ import {CourseMembers, EvaluationRecord, Lecture, ManService} from '../../man.se
 import {first, map, switchMap} from 'rxjs/operators';
 import '@videojs/html/video/player';
 import '../../shared/flick-video-skin';
-import '@videojs/html/media/hlsjs-video';
-import '@videojs/html/media/dash-video';
-import '@videojs/html/media/youtube-video';
 import {AlertController} from '@ionic/angular/alert-controller';
 import {IonBackButton} from '@ionic/angular/ion-back-button';
 import {IonButton} from '@ionic/angular/ion-button';
@@ -45,6 +42,19 @@ import {ConsentService} from '../../consent.service';
 import {SeekThumbnailCue, seekThumbnailCues} from './seek-thumbnails';
 
 const IS_SAFARI = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+/** Custom element tags of the media engines that are loaded on demand */
+type LazyMediaTag = 'youtube-video' | 'hlsjs-video' | 'dash-video';
+
+/**
+ * One dynamic import() per engine. Each becomes its own chunk, so hls.js and dashjs are downloaded only when a
+ * lecture of that type is played. The browser caches the module, so repeated calls are free.
+ */
+const LAZY_MEDIA_LOADERS: Record<LazyMediaTag, () => Promise<unknown>> = {
+    'youtube-video': () => import('@videojs/html/media/youtube-video'),
+    'hlsjs-video': () => import('@videojs/html/media/hlsjs-video'),
+    'dash-video': () => import('@videojs/html/media/dash-video'),
+};
 
 /** The part of the player store that holds the tracks an app adds */
 interface TextTrackStore {
@@ -278,20 +288,26 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         this.titleService.setTitle(this.originalTitle);
     }
 
-    // Pick the media component for the source type. In v10 each engine is its own element.
-    private createMedia(sources: Lecture['sources']): HTMLMediaElement {
+    // Pick the media component for the source type. In v10 each engine is its own element, and the HLS, DASH and
+    // YouTube engines are loaded on demand so that hls.js and dashjs are only downloaded when a lecture needs them.
+    private async createMedia(sources: Lecture['sources']): Promise<HTMLMediaElement> {
         const type = (sources[0]?.type ?? '').toLowerCase();
+        let tag: LazyMediaTag | null = null;
+        if (type === 'video/youtube') {
+            tag = 'youtube-video';
+        } else if (type.startsWith('application/x-mpegurl') || type.startsWith('application/vnd.apple.mpegurl')) {
+            tag = 'hlsjs-video';
+        } else if (type.startsWith('application/dash+xml')) {
+            tag = 'dash-video';
+        }
+
         // The v10 elements implement the HTMLMediaElement API at runtime (the guide says every media
         // event and property still works), but their TypeScript types are adapters, hence `as unknown as`.
         let media: HTMLMediaElement;
-        if (type === 'video/youtube') {
-            media = document.createElement('youtube-video') as unknown as HTMLMediaElement;
-            media.setAttribute('src', sources[0].src);
-        } else if (type.startsWith('application/x-mpegurl') || type.startsWith('application/vnd.apple.mpegurl')) {
-            media = document.createElement('hlsjs-video') as unknown as HTMLMediaElement;
-            media.setAttribute('src', sources[0].src);
-        } else if (type.startsWith('application/dash+xml')) {
-            media = document.createElement('dash-video') as unknown as HTMLMediaElement;
+        if (tag) {
+            // Importing the module registers the custom element
+            await LAZY_MEDIA_LOADERS[tag]();
+            media = document.createElement(tag) as unknown as HTMLMediaElement;
             media.setAttribute('src', sources[0].src);
         } else {
             // Progressive files (MP4/WebM): <source> children give the browser its fallback choice
@@ -328,13 +344,22 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     // Replace the media component and attach listeners. Listeners are added before the element is
     // inserted so that no early event is missed. Seek thumbnails are captured from any of thumbnailSources,
     // which need not be playable here.
-    private attachMedia(sources: Lecture['sources'], thumbnailSources: Lecture['sources'] = sources) {
+    private async attachMedia(sources: Lecture['sources'], thumbnailSources: Lecture['sources'] = sources) {
         this.detachMedia();
         if (sources.length === 0) {
             return;
         }
         this.showSeekThumbnails(thumbnailSources, this.currentVideo?.duration);
-        const media = this.createMedia(sources);
+
+        let media: HTMLMediaElement;
+        try {
+            media = await this.createMedia(sources);
+        } catch (e) {
+            // The engine chunk failed to load (e.g. network error)
+            console.error('Failed to load the media engine', e);
+            return;
+        }
+
         const abort = new AbortController();
         this.mediaListeners = abort;
         const opts = {signal: abort.signal};
@@ -454,7 +479,8 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         this.isEvaluated = false;
         this.sessionUid = ulid();
         this.playLog = [];
-        this.attachMedia(video.sources, allSources);
+        // Not awaited on purpose: the engine may need to download first, and attachMedia() ignores stale calls
+        void this.attachMedia(video.sources, allSources);
         this.videoPlayerElement?.nativeElement.focus();
     }
 
