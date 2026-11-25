@@ -4,9 +4,6 @@ import {environment} from './environments/environment';
 import {RouteReuseStrategy} from '@angular/router';
 import {IonicRouteStrategy} from '@ionic/angular/ionic-route-strategy';
 import {provideIonicAngular} from '@ionic/angular/provide';
-import {DEBUG_MODE} from '@angular/fire/compat/analytics';
-import {INSTRUMENTATION_ENABLED} from '@angular/fire/compat/performance';
-import {DEFAULTS} from '@angular/fire/compat/remote-config';
 import {initializeApp, provideFirebaseApp} from '@angular/fire/app';
 import {getAuth, provideAuth} from '@angular/fire/auth';
 import {getAnalytics, provideAnalytics, ScreenTrackingService, UserTrackingService} from '@angular/fire/analytics';
@@ -33,9 +30,6 @@ bootstrapApplication(AppComponent, {
         provideAppInitializer(() => {
             inject(ThemeService);
         }),
-        {provide: INSTRUMENTATION_ENABLED, useValue: environment.production},
-        {provide: DEBUG_MODE, useValue: !environment.production},
-        {provide: DEFAULTS, useValue: environment.defaultRemoteConfig},
         provideIonicAngular(),
         provideFirebaseApp(() => initializeApp(environment.firebase)),
         provideAuth(() => getAuth()),
