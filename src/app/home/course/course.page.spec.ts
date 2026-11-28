@@ -1,4 +1,4 @@
-import {BehaviorSubject} from 'rxjs';
+import {BehaviorSubject, Subject} from 'rxjs';
 import {CoursePage} from './course.page';
 import {CourseMembers, EvaluationRecord, Lecture} from '../../man.service';
 import {PlayHistory} from '../../play-tracker.service';
@@ -180,6 +180,7 @@ describe('CoursePage.detachMedia and attachMedia', () => {
         media: HTMLMediaElement | null;
         media$: BehaviorSubject<HTMLMediaElement | null>;
         mediaListeners: AbortController | null;
+        attachGeneration: number;
         videoSkinElement: {nativeElement: HTMLElement};
         videoPlayerElement: {nativeElement: HTMLElement};
         seekThumbnails: { remove(): void } | null;
@@ -201,6 +202,7 @@ describe('CoursePage.detachMedia and attachMedia', () => {
             media: null,
             media$: new BehaviorSubject<HTMLMediaElement | null>(null),
             mediaListeners: null,
+            attachGeneration: 0,
             videoSkinElement: {nativeElement: document.createElement('div')},
             videoPlayerElement: {nativeElement: document.createElement('div')},
             seekThumbnails: null,
@@ -231,6 +233,51 @@ describe('CoursePage.detachMedia and attachMedia', () => {
         expect(pauseSpy).toHaveBeenCalled();
         expect(ctx.media).toBeNull();
         expect(ctx.media$.value).toBeNull();
+        expect(ctx.videoSkinElement.nativeElement.children.length).toBe(0);
+    });
+
+    it('keeps only the latest media when a lecture is selected while the previous engine is still loading', async () => {
+        const ctx = createMediaContext();
+        let resolveFirst!: (media: HTMLMediaElement) => void;
+        const firstMedia = document.createElement('video');
+        const secondMedia = document.createElement('video');
+        spyOn(ctx, 'createMedia').and.returnValues(
+            new Promise<HTMLMediaElement>(resolve => resolveFirst = resolve),
+            Promise.resolve(secondMedia),
+        );
+
+        const first = ctx.attachMedia([{type: 'application/x-mpegURL', src: 'https://example.com/a.m3u8', server: null}]);
+        await ctx.attachMedia([{type: 'video/mp4', src: 'https://example.com/b.mp4', server: null}]);
+        // The first lecture's engine finishes loading after the second lecture is attached
+        resolveFirst(firstMedia);
+        await first;
+
+        expect(ctx.media).toBe(secondMedia);
+        expect(ctx.media$.value).toBe(secondMedia);
+        expect(Array.from(ctx.videoSkinElement.nativeElement.children)).toEqual([secondMedia]);
+
+        // The stale media got no listeners: its loadedmetadata must not touch the current lecture
+        firstMedia.dispatchEvent(new Event('loadedmetadata'));
+        expect(ctx.expectVideoTimeJump).toBeTrue();
+    });
+
+    it('does not attach media whose engine finished loading after the page was destroyed', async () => {
+        const ctx = createMediaContext();
+        let resolveMedia!: (media: HTMLMediaElement) => void;
+        spyOn(ctx, 'createMedia').and.returnValue(new Promise<HTMLMediaElement>(resolve => resolveMedia = resolve));
+
+        const pending = ctx.attachMedia([{type: 'application/x-mpegURL', src: 'https://example.com/a.m3u8', server: null}]);
+        const destroyContext = Object.assign(ctx, {
+            stopPolling$: new Subject<boolean>(),
+            titleService: jasmine.createSpyObj('Title', ['setTitle']),
+            originalTitle: 'Flick',
+        });
+        (CoursePage.prototype as unknown as {ngOnDestroy: () => void}).ngOnDestroy.call(destroyContext);
+        resolveMedia(document.createElement('video'));
+        await pending;
+
+        expect(ctx.media).toBeNull();
+        expect(ctx.mediaListeners).toBeNull();
         expect(ctx.videoSkinElement.nativeElement.children.length).toBe(0);
     });
 

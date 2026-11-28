@@ -113,6 +113,9 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     media: HTMLMediaElement | null = null;
     private media$ = new BehaviorSubject<HTMLMediaElement | null>(null);
     private mediaListeners: AbortController | null = null;
+    // Incremented by every attachMedia() call and on destroy, so that a call still waiting for its engine
+    // chunk can tell that a newer lecture was selected (or the page was left) and drop its media
+    private attachGeneration = 0;
     /** Thumbnails track of the current video in the player store */
     private seekThumbnails: { remove(): void } | null = null;
     currentVideo!: Lecture;
@@ -279,6 +282,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
 
     ngOnDestroy() {
         this.stopPolling$.next(true);
+        this.attachGeneration++;
         this.detachMedia();
         this.titleService.setTitle(this.originalTitle);
     }
@@ -340,6 +344,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
     // inserted so that no early event is missed. Seek thumbnails are captured from any of thumbnailSources,
     // which need not be playable here.
     private async attachMedia(sources: Lecture['sources'], thumbnailSources: Lecture['sources'] = sources) {
+        const generation = ++this.attachGeneration;
         this.detachMedia();
         if (sources.length === 0) {
             return;
@@ -352,6 +357,10 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         } catch (e) {
             // The engine chunk failed to load (e.g. network error)
             console.error('Failed to load the media engine', e);
+            return;
+        }
+        if (generation !== this.attachGeneration) {
+            // A newer attachMedia() call or ngOnDestroy() ran while the engine was loading; it owns the player now
             return;
         }
 
@@ -474,7 +483,7 @@ export class CoursePage implements OnInit, AfterViewInit, OnDestroy {
         this.isEvaluated = false;
         this.sessionUid = ulid();
         this.playLog = [];
-        // Not awaited on purpose: the engine may need to download first, and attachMedia() ignores stale calls
+        // Not awaited on purpose: the engine may need to download first, and attachMedia() drops stale calls
         void this.attachMedia(video.sources, allSources);
         this.videoPlayerElement?.nativeElement.focus();
     }
