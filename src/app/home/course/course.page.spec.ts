@@ -133,11 +133,11 @@ describe('CoursePage.getCurrentPlayTimeString', () => {
 
 describe('CoursePage.createMedia', () => {
     const callCreateMedia = (sources: Lecture['sources']) =>
-        (CoursePage.prototype as unknown as {createMedia: (s: Lecture['sources']) => HTMLMediaElement})
+        (CoursePage.prototype as unknown as {createMedia: (s: Lecture['sources']) => Promise<HTMLMediaElement>})
             .createMedia.call(null, sources);
 
-    it('creates a youtube-video element for YouTube sources', () => {
-        const el = callCreateMedia([{type: 'video/youtube', src: 'https://youtu.be/abc', server: null}]);
+    it('creates a youtube-video element for YouTube sources', async () => {
+        const el = await callCreateMedia([{type: 'video/youtube', src: 'https://youtu.be/abc', server: null}]);
 
         expect(el.tagName.toLowerCase()).toBe('youtube-video');
         expect(el.getAttribute('src')).toBe('https://youtu.be/abc');
@@ -145,22 +145,22 @@ describe('CoursePage.createMedia', () => {
         expect(el.getAttribute('preload')).toBe('metadata');
     });
 
-    it('creates an hlsjs-video element for HLS sources', () => {
-        const el = callCreateMedia([{type: 'application/x-mpegURL', src: 'https://example.com/stream.m3u8', server: null}]);
+    it('creates an hlsjs-video element for HLS sources', async () => {
+        const el = await callCreateMedia([{type: 'application/x-mpegURL', src: 'https://example.com/stream.m3u8', server: null}]);
 
         expect(el.tagName.toLowerCase()).toBe('hlsjs-video');
         expect(el.getAttribute('src')).toBe('https://example.com/stream.m3u8');
     });
 
-    it('creates a dash-video element for DASH sources', () => {
-        const el = callCreateMedia([{type: 'application/dash+xml; codecs="avc1.42E01E"', src: 'https://example.com/manifest.mpd', server: null}]);
+    it('creates a dash-video element for DASH sources', async () => {
+        const el = await callCreateMedia([{type: 'application/dash+xml; codecs="avc1.42E01E"', src: 'https://example.com/manifest.mpd', server: null}]);
 
         expect(el.tagName.toLowerCase()).toBe('dash-video');
         expect(el.getAttribute('src')).toBe('https://example.com/manifest.mpd');
     });
 
-    it('creates a native video element with source children for progressive files', () => {
-        const el = callCreateMedia([
+    it('creates a native video element with source children for progressive files', async () => {
+        const el = await callCreateMedia([
             {type: 'video/mp4', src: 'https://example.com/video.mp4', server: null},
             {type: 'video/webm', src: 'https://example.com/video.webm', server: null},
         ]);
@@ -186,9 +186,9 @@ describe('CoursePage.detachMedia and attachMedia', () => {
         currentVideo: Partial<Lecture>;
         expectVideoTimeJump: boolean;
         isEvaluated: boolean;
-        createMedia: (sources: Lecture['sources']) => HTMLMediaElement;
+        createMedia: (sources: Lecture['sources']) => Promise<HTMLMediaElement>;
         detachMedia: () => void;
-        attachMedia: (sources: Lecture['sources'], thumbnailSources?: Lecture['sources']) => void;
+        attachMedia: (sources: Lecture['sources'], thumbnailSources?: Lecture['sources']) => Promise<void>;
         showSeekThumbnails: (sources: Lecture['sources'], duration: number | undefined) => void;
         updatePlayRecord: jasmine.Spy;
         openEvaluationModal: jasmine.Spy;
@@ -217,9 +217,9 @@ describe('CoursePage.detachMedia and attachMedia', () => {
         };
     }
 
-    it('detaches existing media, aborts listeners, and resets media$ to null', () => {
+    it('detaches existing media, aborts listeners, and resets media$ to null', async () => {
         const ctx = createMediaContext();
-        ctx.attachMedia([{type: 'video/mp4', src: 'https://example.com/a.mp4', server: null}]);
+        await ctx.attachMedia([{type: 'video/mp4', src: 'https://example.com/a.mp4', server: null}]);
 
         const attachedMedia = ctx.media!;
         const abortSpy = spyOn(ctx.mediaListeners!, 'abort').and.callThrough();
@@ -234,19 +234,19 @@ describe('CoursePage.detachMedia and attachMedia', () => {
         expect(ctx.videoSkinElement.nativeElement.children.length).toBe(0);
     });
 
-    it('does not attach a media element when sources are empty', () => {
+    it('does not attach a media element when sources are empty', async () => {
         const ctx = createMediaContext();
 
-        ctx.attachMedia([]);
+        await ctx.attachMedia([]);
 
         expect(ctx.media).toBeNull();
         expect(ctx.media$.value).toBeNull();
         expect(ctx.videoSkinElement.nativeElement.children.length).toBe(0);
     });
 
-    it('seeks to history.end_time on loadedmetadata when expectVideoTimeJump is true', () => {
+    it('seeks to history.end_time on loadedmetadata when expectVideoTimeJump is true', async () => {
         const ctx = createMediaContext();
-        ctx.attachMedia([{type: 'video/mp4', src: 'https://example.com/a.mp4', server: null}]);
+        await ctx.attachMedia([{type: 'video/mp4', src: 'https://example.com/a.mp4', server: null}]);
 
         let seekedTime = 0;
         Object.defineProperty(ctx.media!, 'currentTime', {
@@ -263,14 +263,14 @@ describe('CoursePage.detachMedia and attachMedia', () => {
         expect(ctx.expectVideoTimeJump).toBeFalse();
     });
 
-    it('adds a seek thumbnails track to the player store for an nginx-vod source, and removes it on detach', () => {
+    it('adds a seek thumbnails track to the player store for an nginx-vod source, and removes it on detach', async () => {
         const ctx = createMediaContext();
         const remove = jasmine.createSpy('remove');
         const addTextTrack = jasmine.createSpy('addTextTrack').and.returnValue({remove});
         Object.assign(ctx.videoPlayerElement.nativeElement, {store: {state: {addTextTrack}}});
 
         // Playable source without thumbnails; the nginx-vod source is only passed for capturing them
-        ctx.attachMedia(
+        await ctx.attachMedia(
             [{type: 'video/mp4', src: 'https://example.com/a.mp4', server: null}],
             [{type: 'application/x-mpegURL', src: 'https://example.com/hls/2024/c/l/h264.mp4/index.m3u8?key=k', server: null}],
         );
@@ -287,13 +287,13 @@ describe('CoursePage.detachMedia and attachMedia', () => {
         expect(ctx.seekThumbnails).toBeNull();
     });
 
-    it('adds the server thumbnail track of the lecture instead of capturing from the sources', () => {
+    it('adds the server thumbnail track of the lecture instead of capturing from the sources', async () => {
         const ctx = createMediaContext();
         ctx.currentVideo.thumbnail_track = 'https://example.com/videos/e-learning/m.vtt?key=k';
         const addTextTrack = jasmine.createSpy('addTextTrack').and.returnValue({remove: () => undefined});
         Object.assign(ctx.videoPlayerElement.nativeElement, {store: {state: {addTextTrack}}});
 
-        ctx.attachMedia([{type: 'application/x-mpegURL', src: 'https://example.com/hls/2024/c/l/h264.mp4/index.m3u8', server: null}]);
+        await ctx.attachMedia([{type: 'application/x-mpegURL', src: 'https://example.com/hls/2024/c/l/h264.mp4/index.m3u8', server: null}]);
 
         expect(addTextTrack).toHaveBeenCalledOnceWith({
             kind: 'metadata',
@@ -302,15 +302,15 @@ describe('CoursePage.detachMedia and attachMedia', () => {
         });
     });
 
-    it('waits for the media duration when the lecture has none', () => {
+    it('waits for the media duration when the lecture has none', async () => {
         const ctx = createMediaContext();
         ctx.currentVideo.duration = undefined;
         const addTextTrack = jasmine.createSpy('addTextTrack').and.returnValue({remove: () => undefined});
         Object.assign(ctx.videoPlayerElement.nativeElement, {store: {state: {addTextTrack}}});
         const sources = [{type: 'application/x-mpegURL', src: 'https://example.com/hls/2024/c/l/h264.mp4/index.m3u8', server: null}];
-        spyOn(ctx, 'createMedia').and.returnValue(document.createElement('video'));
+        spyOn(ctx, 'createMedia').and.resolveTo(document.createElement('video'));
 
-        ctx.attachMedia(sources);
+        await ctx.attachMedia(sources);
         expect(addTextTrack).not.toHaveBeenCalled();
 
         Object.defineProperty(ctx.media!, 'duration', {get: () => 50});
