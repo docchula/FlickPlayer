@@ -43,13 +43,8 @@ import {SeekThumbnailCue, seekThumbnailCues} from './seek-thumbnails';
 
 const IS_SAFARI = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
-/** Custom element tags of the media engines that are loaded on demand */
 type LazyMediaTag = 'youtube-video' | 'hlsjs-video' | 'dash-video';
 
-/**
- * One dynamic import() per engine. Each becomes its own chunk, so hls.js and dashjs are downloaded only when a
- * lecture of that type is played. The browser caches the module, so repeated calls are free.
- */
 const LAZY_MEDIA_LOADERS: Record<LazyMediaTag, () => Promise<unknown>> = {
     'youtube-video': () => import('@videojs/html/media/youtube-video'),
     'hlsjs-video': () => import('@videojs/html/media/hlsjs-video'),
